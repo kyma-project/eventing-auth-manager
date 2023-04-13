@@ -1,0 +1,11 @@
+apiVersion: operator.kyma-project.io/v1alpha1
+kind: EventingAuth
+metadata:
+  labels:
+    app.kubernetes.io/name: eventingauth
+    app.kubernetes.io/instance: eventingauth-sample
+    app.kubernetes.io/part-of: eventing-auth-manager
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: eventing-auth-manager
+  name: eventingauth-sample
+spec:

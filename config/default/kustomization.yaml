@@ -1,5 +1,5 @@
 # Adds namespace to all resources.
-namespace: eventing-auth-manager-system
+namespace: kyma-system
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named
@@ -9,10 +9,8 @@ namespace: eventing-auth-manager-system
 namePrefix: eventing-auth-manager-
 
 # Labels to add to all resources and selectors.
-#labels:
-#- includeSelectors: true
-#  pairs:
-#    someName: someValue
+commonLabels:
+  app.kubernetes.io/component: eventing-auth-manager.kyma-project.io
 
 resources:
 - ../crd
