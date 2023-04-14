@@ -18,45 +18,81 @@ package controllers
 
 import (
 	"context"
-
+	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"time"
 
 	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 )
 
-// EventingAuthReconciler reconciles a EventingAuth object
-type EventingAuthReconciler struct {
+const requeueAfterError = time.Minute * 1
+
+// eventingAuthReconciler reconciles a EventingAuth object
+type eventingAuthReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme    *runtime.Scheme
+	IasClient ias.Client
 }
 
-//+kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/finalizers,verbs=update
+func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, ias ias.Client) ManagedReconciler {
+	return &eventingAuthReconciler{
+		Client:    c,
+		Scheme:    s,
+		IasClient: ias,
+	}
+}
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the EventingAuth object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *EventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+// +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/finalizers,verbs=update
+func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
+	logger.Info("Reconciling EventingAuth", "name", req.Name, "namespace", req.Namespace)
 
-	// TODO(user): your logic here
+	cr, err := fetchEventingAuth(ctx, r.Client, req.NamespacedName)
+	if err != nil {
+		logger.Info("EventingAuth not found", "name", req.Name, "namespace", req.Namespace)
+		return ctrl.Result{}, err
+	}
+
+	_, err = r.IasClient.CreateApplication("dummy")
+	if err != nil {
+		logger.Error(err, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+		return ctrl.Result{
+			RequeueAfter: requeueAfterError,
+		}, err
+	}
+
+	if err := updateStatus(ctx, r.Client, cr, operatorv1alpha1.StateOk); err != nil {
+		logger.Error(err, "Failed to update status of EventingAuth", "name", cr.Name, "namespace", cr.Namespace)
+		return ctrl.Result{
+			RequeueAfter: requeueAfterError,
+		}, err
+	}
 
 	return ctrl.Result{}, nil
 }
 
+func fetchEventingAuth(ctx context.Context, c client.Client, name types.NamespacedName) (operatorv1alpha1.EventingAuth, error) {
+	var cr operatorv1alpha1.EventingAuth
+	err := c.Get(ctx, name, &cr)
+	if err != nil {
+		return cr, err
+	}
+	return cr, nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
-func (r *EventingAuthReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *eventingAuthReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&operatorv1alpha1.EventingAuth{}).
 		Complete(r)
+}
+
+type ManagedReconciler interface {
+	SetupWithManager(mgr ctrl.Manager) error
 }

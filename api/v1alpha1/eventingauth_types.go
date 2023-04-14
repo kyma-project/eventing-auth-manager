@@ -24,10 +24,8 @@ type State string
 
 // Valid IstioCR States.
 const (
-	Ready      State = "Ready"
-	Processing State = "Processing"
-	Error      State = "Error"
-	Deleting   State = "Deleting"
+	StateOk    State = "Ok"
+	StateError State = "Error"
 )
 
 // EventingAuthSpec defines the desired state of EventingAuth
@@ -42,9 +40,9 @@ type EventingAuthSpec struct {
 // EventingAuthStatus defines the observed state of EventingAuth
 type EventingAuthStatus struct {
 	// State signifies current state of CustomObject. Value
-	// can be one of ("Ready", "Processing", "Error", "Deleting").
+	// can be one of ("Ok", "Error").
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=Processing;Deleting;Ready;Error
+	// +kubebuilder:validation:Enum=Ok;Error
 	State State `json:"state"`
 	//  Conditions associated with EventingAuthStatus.
 	Conditions *[]metav1.Condition `json:"conditions,omitempty"`

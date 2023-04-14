@@ -14,14 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package controllers_test
 
 import (
+	"context"
+	"github.com/kyma-project/eventing-auth-manager/controllers"
+	"github.com/kyma-project/eventing-auth-manager/internal/ias"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"os"
 	"path/filepath"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -37,8 +45,18 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var cfg *rest.Config
-var k8sClient client.Client
+const (
+	defaultTimeout = time.Second * 5
+	namespace      = "test-namespace"
+)
+
+var (
+	cfg       *rest.Config
+	k8sClient client.Client
+	ctx       context.Context
+	cancel    context.CancelFunc
+)
+
 var testEnv *envtest.Environment
 
 func TestAPIs(t *testing.T) {
@@ -47,12 +65,13 @@ func TestAPIs(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
-var _ = BeforeSuite(func() {
+var _ = BeforeSuite(func(specCtx SpecContext) {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	ctx, cancel = context.WithCancel(context.TODO())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -62,19 +81,64 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = operatorv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	//+kubebuilder:scaffold:scheme
+	Expect(operatorv1alpha1.AddToScheme(scheme.Scheme)).Should(Succeed())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-})
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: namespace},
+		Spec:       corev1.NamespaceSpec{},
+	}
+	Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
+
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:             scheme.Scheme,
+		MetricsBindAddress: "0",
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), getIasTestClient())
+
+	Expect(reconciler.SetupWithManager(mgr)).Should(Succeed())
+
+	go func() {
+		defer GinkgoRecover()
+		Expect(mgr.Start(ctx)).Should(Succeed())
+	}()
+
+}, NodeTimeout(60*time.Second))
 
 var _ = AfterSuite(func() {
-	By("tearing down the test environment")
+	cancel()
+	By("Tearing down the test environment")
 	err := testEnv.Stop()
+
+	// Suggested workaround for timeout issue https://github.com/kubernetes-sigs/controller-runtime/issues/1571#issuecomment-1005575071
+	if err != nil {
+		time.Sleep(4 * time.Second)
+	}
+	err = testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
+
 })
+
+func getIasTestClient() ias.Client {
+	url := os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
+	clientId := os.Getenv("TEST_EVENTING_AUTH_IAS_CLIENT_ID")
+	clientSecret := os.Getenv("TEST_EVENTING_AUTH_IAS_CLIENT_SECRET")
+
+	if url != "" && clientId != "" && clientSecret != "" {
+		return ias.NewIasClient(url, clientId, clientSecret)
+	} else {
+		return iasClientStub{}
+	}
+}
+
+type iasClientStub struct {
+}
+
+func (i iasClientStub) CreateApplication(_ string) (ias.Application, error) {
+	return ias.Application{}, nil
+}

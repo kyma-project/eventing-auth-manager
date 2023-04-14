@@ -114,11 +114,9 @@ spec:
                 type: array
               state:
                 description: State signifies current state of CustomObject. Value
-                  can be one of ("Ready", "Processing", "Error", "Deleting").
+                  can be one of ("Ok", "Error").
                 enum:
-                - Processing
-                - Deleting
-                - Ready
+                - Ok
                 - Error
                 type: string
             required:

@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
+	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -89,10 +90,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.EventingAuthReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	// TODO Replace dummy values
+	iasClient := ias.NewIasClient("dummy", "dummy", "dummy")
+	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), iasClient)
+
+	if err = reconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EventingAuth")
 		os.Exit(1)
 	}
