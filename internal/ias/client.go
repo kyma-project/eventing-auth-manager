@@ -19,6 +19,10 @@ type client struct {
 }
 
 // CreateApplication creates an application in IAS
-func (c client) CreateApplication(name string) (Application, error) {
-	return Application{id: name}, nil
+func (c client) CreateApplication(_ string) (Application, error) {
+	return Application{
+		clientId:     "",
+		clientSecret: "",
+		tokenUrl:     "",
+	}, nil
 }
