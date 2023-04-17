@@ -83,11 +83,7 @@ func (c client) CreateApplication(ctx context.Context, name string) (Application
 	}
 	clientId := *applicationResponse.JSON200.UrnSapIdentityApplicationSchemasExtensionSci10Authentication.ClientId
 
-	return Application{
-		ClientId:     clientId,
-		ClientSecret: clientSecret,
-		TokenUrl:     fmt.Sprintf("%s/oauth/token?grant_type=client_credentials&client_id=%s", c.tenantUrl, clientId),
-	}, nil
+	return NewApplication(clientId, clientSecret, c.tenantUrl), nil
 }
 
 func extractApplicationId(createAppResponse *api.CreateApplicationResponse) (uuid.UUID, error) {
