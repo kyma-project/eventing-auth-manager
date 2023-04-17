@@ -90,8 +90,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO Replace dummy values
-	iasClient := ias.NewIasClient("dummy", "dummy", "dummy")
+	// TODO: Replace dummy values
+	iasClient, err := ias.NewIasClient("dummy", "dummy", "dummy")
+	if err != nil {
+		setupLog.Error(err, "unable to create ias client", "controller", "EventingAuth")
+		os.Exit(1)
+	}
+
 	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), iasClient)
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {

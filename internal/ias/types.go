@@ -1,7 +1,7 @@
 package ias
 
 type Application struct {
-	clientId     string
-	clientSecret string
-	tokenUrl     string
+	ClientId     string
+	ClientSecret string
+	TokenUrl     string
 }

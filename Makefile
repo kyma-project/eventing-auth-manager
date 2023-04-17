@@ -38,6 +38,11 @@ help: ## Display this help.
 
 ##@ Development
 
+.PHONY: gen-ias-client
+gen-ias-client: ## Generate IAS Client from OpenAPI spec
+	oapi-codegen --package=api -generate=client,types -o ./internal/ias/internal/api/ias.gen.go ./internal/ias/internal/api/openapi_spec.yaml
+
+
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases

@@ -18,6 +18,7 @@ package controllers_test
 
 import (
 	"context"
+	"fmt"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -130,7 +131,9 @@ func getIasTestClient() ias.Client {
 	clientSecret := os.Getenv("TEST_EVENTING_AUTH_IAS_CLIENT_SECRET")
 
 	if url != "" && clientId != "" && clientSecret != "" {
-		return ias.NewIasClient(url, clientId, clientSecret)
+		iasClient, err := ias.NewIasClient(url, clientId, clientSecret)
+		Expect(err).NotTo(HaveOccurred())
+		return iasClient
 	} else {
 		return iasClientStub{}
 	}
@@ -139,6 +142,10 @@ func getIasTestClient() ias.Client {
 type iasClientStub struct {
 }
 
-func (i iasClientStub) CreateApplication(_ string) (ias.Application, error) {
-	return ias.Application{}, nil
+func (i iasClientStub) CreateApplication(_ context.Context, name string) (ias.Application, error) {
+	return ias.Application{
+		ClientId:     fmt.Sprintf("client-id-for-%s", name),
+		ClientSecret: "test-client-secret",
+		TokenUrl:     "https://test-token-url.com",
+	}, nil
 }

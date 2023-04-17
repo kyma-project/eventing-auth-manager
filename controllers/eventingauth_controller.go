@@ -18,6 +18,8 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -59,7 +61,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	_, err = r.IasClient.CreateApplication("dummy")
+	_, err = r.IasClient.CreateApplication(ctx, fmt.Sprintf("eventing-auth-manager-%s", uuid.New()))
 	if err != nil {
 		logger.Error(err, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 		return ctrl.Result{

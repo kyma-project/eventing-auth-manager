@@ -1,0 +1,1682 @@
+openapi: 3.0.1
+info:
+  version: 1.0.0
+  title: SAP Cloud Identity Services Application Directory
+  description: To allow tenant administrators the management of applications in SAP Cloud Identity Services - Identity Authentication tenants. It offers endpoints for CRUD operations (GET, PUT, POST, PATCH, DELETE) over the applications.
+x-sap-shortText: Manage SAP Cloud Identity application configurations.
+externalDocs:
+  description: Identity Authentication service Documentation.
+  url: https://help.sap.com/docs/IDENTITY_AUTHENTICATION
+security:
+  - BasicAuth: []
+servers:
+  - url: https://{tenantId}.{host}/Applications/v1/
+    description: SAP Cloud Identity Services endpoint
+    variables:
+      tenantId:
+        description: Identity Authentication tenant
+        default: tenantId
+      host:
+        description: Identity Authentication host
+        default: accounts.ondemand.com
+tags:
+  - name: Applications
+    description: Retrieve, create, modify and delete application configurations.
+paths:
+  /{applicationIdentifier}:
+    get:
+      summary: Retrieves a single application.
+      description: Returns an existing application and information about it in the response.
+      operationId: getApplication
+      tags:
+        - Applications
+      parameters:
+        - name: applicationIdentifier
+          in: path
+          description: Identifier of the application in UUID format.
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: schema
+          in: query
+          description: Specifies the schemas that should be returned in the response.
+          required: false
+          schema:
+            type: string
+            maxLength: 128
+            enum:
+              - urn:sap:identity:application:schemas:core:1.0
+              - urn:sap:identity:application:schemas:extension:sci:1.0:Authentication
+              - urn:sap:identity:application:schemas:extension:sci:1.0:Provisioning
+              - urn:sap:identity:application:schemas:extension:sci:1.0:Authorization
+          examples:
+            coreSchema:
+              value: urn:sap:identity:application:schemas:core:1.0
+              summary: Request only the Core schema model.
+            authenticationSchema:
+              value: urn:sap:identity:application:schemas:extension:sci:1.0:Authentication
+              summary: Request only the authentication schema model.
+        - name: inherit
+          in: query
+          description: Specifies whether the application will have inherited properties from the parent or source application
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: A single application object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+        '401':
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access is denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error. The operation you requested led to an error during execution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Updates the application.
+      description: Updates an existing application by completely replacing all properties that are provided. Properties that are not provided are deleted.
+      operationId: updateApplication
+      tags:
+        - Applications
+      parameters:
+        - name: applicationIdentifier
+          in: path
+          description: Identifier of the application in a UUID format.
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Modified-on-behalf-of
+          in: header
+          description: Provides the entity that should be considered in a modified on behalf scenario.
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Application'
+      responses:
+        '200':
+          description: Confirmation of a successful update.
+        '400':
+          description: Invalid user input.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access is denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error. The operation you requested led to an error during execution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      summary: Patch a single or multiple properties of the application.
+      description: Allows to add, remove or replace a single or multiple properties of the application.
+      operationId: patchApplication
+      tags:
+        - Applications
+      parameters:
+        - name: applicationIdentifier
+          in: path
+          description: Identifier of the application in a UUID format.
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Modified-on-behalf-of
+          in: header
+          description: Provides the entity that should be considered in a modified on behalf scenario.
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationPatch'
+            examples:
+              addAssertionAttribute:
+                value:
+                  operations:
+                    - op: add
+                      path: /urn:sap:identity:application:schemas:extension:sci:1.0:Authentication/assertionAttributes/0
+                      value:
+                        assertionAttributeName: login_name
+                        userAttributeName: loginName
+                summary: Add a new assertion attribute.
+              addAssertionAttributeName:
+                value:
+                  operations:
+                    - op: add
+                      path: /urn:sap:identity:application:schemas:extension:sci:1.0:Authentication/assertionAttributes/0/assertionAttributeName
+                      value: loginName
+                summary: Change the name of the first assertion attribute.
+              removeDescription:
+                value:
+                  operations:
+                    - op: remove
+                      path: /description
+                summary: Remove description.
+              removeAssertionAttribute:
+                value:
+                  operations:
+                    - op: remove
+                      path: /urn:sap:identity:application:schemas:extension:sci:1.0:Authentication/assertionAttributes/1
+                summary: Remove the second assertion attribute.
+              replaceName:
+                value:
+                  operations:
+                    - op: replace
+                      path: /name
+                      value: new_name
+                summary: Change the name of the application.
+      responses:
+        '200':
+          description: Confirmation of successful update.
+        '400':
+          description: Invalid user input.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access is denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error. The operation you requested led to an error during execution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Deletes application.
+      description: Deletes an application.
+      operationId: deleteApplication
+      tags:
+        - Applications
+      parameters:
+        - name: applicationIdentifier
+          in: path
+          required: true
+          description: The application is deleted by its identifier. The identifier is in a UUID format.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Confirmation of the deletion. The application is deleted.
+        '401':
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access is denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error. The operation you requested led to an error during execution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /{applicationIdentifier}/apiSecrets:
+    get:
+      summary: Retrieves the secrets of an application.
+      description: Returns all secrets of a single application.
+      operationId: getApiSecrets
+      tags:
+        - Application Secrets
+      parameters:
+        - name: applicationIdentifier
+          in: path
+          description: Identifier of the application in UUID format.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: All secrets of a single application object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSecretsResponse'
+        '401':
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access is denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error. The operation you requested led to an error during execution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Creates a secret.
+      description: Creates a new secret for the application.
+      operationId: createApiSecret
+      tags:
+        - Application Secrets
+      parameters:
+        - name: applicationIdentifier
+          in: path
+          description: Identifier of the application in UUID format.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiSecretData'
+            examples:
+              addApiSecret:
+                value:
+                  authorizationScopes:
+                    - manageApp
+                    - oAuth
+                    - manageUsers
+                  description: test
+                  validTo: '2029-10-12T10:00:00Z'
+                summary: Add a new secret for the application.
+      responses:
+        '201':
+          description: Secret is created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSecretResponse'
+                description: Returns all data of the newly created secret.
+        '400':
+          description: Invalid user input.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access is denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error. The operation you requested led to an error during execution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Deletes a secret.
+      description: Deletes the secret with the specified hint. If there is an application with secrets with one and the same hint, the secret with the closest expiration date (validTo value) is deleted.
+      operationId: deleteApiSecret
+      tags:
+        - Application Secrets
+      parameters:
+        - name: applicationIdentifier
+          in: path
+          required: true
+          description: The secret to be delated should be associated with application with given identifier. The identifier is in a UUID format.
+          schema:
+            type: string
+            format: uuid
+        - name: hint
+          in: query
+          required: true
+          description: This is the hint to identify the exact secret to be deleted.
+          schema:
+            type: string
+            minLength: 4
+            maxLength: 4
+            pattern: '[A-Za-z0-9\[\]\_\:\=\?\@\-\.\/\~]*'
+      responses:
+        '200':
+          description: Confirmation of the deletion. The secret is deleted.
+        '401':
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access is denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error. The operation you requested led to an error during execution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /:
+    get:
+      summary: Fetches all or a subset of applications.
+      description: Returns all applications or a subset of applications.
+      operationId: getAllApplications
+      tags:
+        - Applications
+      parameters:
+        - name: schema
+          in: query
+          description: Specifies the schemas that should be returned in the response.
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+            enum:
+              - urn:sap:identity:application:schemas:core:1.0
+              - urn:sap:identity:application:schemas:extension:sci:1.0:Authentication
+              - urn:sap:identity:application:schemas:extension:sci:1.0:Provisioning
+              - urn:sap:identity:application:schemas:extension:sci:1.0:Authorization
+          example: urn:sap:identity:application:schemas:extension:sci:1.0:Authentication, urn:sap:identity:application:schemas:core:1.0
+        - name: filter
+          schema:
+            type: string
+            maxLength: 255
+          in: query
+          description: |
+            Defines the search criteria.
+            Supported operators:
+            | Operator | Behavior |
+            |---- | ------------- |
+            | eq | The attribute and operator values must be identical for a match.|
+            ### Supported Attributes:
+            #### Core Schema
+              * id
+              * parentApplicationId
+              * name
+            
+            ### Authentication Schema
+              * clientId
+          required: false
+          examples:
+            clientId:
+              value: clientId eq b92c95c0-42ea-45c0-9cbb-aa49c1020e42
+            name:
+              value: name eq SFSF
+            parentApplicationId:
+              value: parentApplicationId eq b92c95c0-42ea-45c0-9cbb-aa49c1020e42
+        - name: limit
+          in: query
+          description: Number of items to return.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 100
+            maximum: 100
+            minimum: 1
+          example: 50
+        - name: skip
+          in: query
+          description: Number of items to skip.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+          example: 50
+        - name: cursor
+          in: query
+          description: Cursor to the starting identifier in a page.
+          required: false
+          schema:
+            type: string
+            format: uuid
+          example: b92c95c0-42ea-45c0-9cbb-aa49c1020e42
+        - name: inherit
+          in: query
+          description: Specifies whether the application will have inherited properties from the parent or source application
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Returns an array of applications.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationsResponse'
+        '401':
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access is denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error. The operation you requested led to an error during execution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Creates an application.
+      description: Creates a new application.
+      operationId: createApplication
+      tags:
+        - Applications
+      parameters:
+        - name: Modified-on-behalf-of
+          in: header
+          description: Provides the entity that should be used in a modified on behalf scenario.
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Application'
+      responses:
+        '201':
+          description: The application is created.
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Relative pointer to the location of the newly created application.
+        '400':
+          description: Invalid user input.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access is denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error. The operation you requested led to an error during execution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+  schemas:
+    ApplicationPatch:
+      type: object
+      required:
+        - operations
+      properties:
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PatchOperation'
+    PatchOperation:
+      type: object
+      required:
+        - op
+        - path
+      properties:
+        op:
+          type: string
+          description: Indicates the operation to perform.
+          enum:
+            - add
+            - remove
+            - replace
+        path:
+          type: string
+          maxLength: 255
+          pattern: ^/.*$
+          description: An attribute path describing the target of the operation.
+        value:
+          $ref: '#/components/schemas/PatchOperationValue'
+    PatchOperationValue:
+      type: object
+      description: The payload to be applied on the target of the operation.
+      example: firstName
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+    ErrorDetail:
+      type: object
+      properties:
+        target:
+          type: string
+        message:
+          type: string
+    ApplicationsResponse:
+      type: object
+      properties:
+        totalResults:
+          type: integer
+          format: int32
+        itemsPerPage:
+          type: integer
+          format: int32
+        nextCursor:
+          type: string
+        applications:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationResponse'
+    ApplicationResponse:
+      type: object
+      allOf:
+        - properties:
+            id:
+              type: string
+              example: b92c95c0-42ea-45c0-9cbb-aa49c1020e42
+            meta:
+              $ref: '#/components/schemas/Meta'
+        - $ref: '#/components/schemas/Application'
+    ApiSecretsResponse:
+      type: object
+      properties:
+        secrets:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiSecretData'
+    ApiSecretResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/ApiSecretData'
+        - properties:
+            secret:
+              type: string
+              example: SSHl0p=EkHJl55J_Q=YV:o0p/Sha-ypqd:m
+        - example:
+            description: this is new test
+            authorizationScopes:
+              - manageApp
+              - manageUsers
+              - oAuth
+            validTo: '2024-01-24T10:58:50'
+            hint: SSHl
+            secret: SSHl0p=EkHJl55J_Q=YV:o0p/Sha-ypqd:m
+    SchemasEnum:
+      type: string
+      enum:
+        - urn:sap:identity:application:schemas:core:1.0
+        - urn:sap:identity:application:schemas:extension:sci:1.0:Authentication
+        - urn:sap:identity:application:schemas:extension:sci:1.0:Provisioning
+        - urn:sap:identity:application:schemas:extension:sci:1.0:Authorization
+    Application:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+          example: exampleEntityId
+        description:
+          type: string
+          maxLength: 255
+          example: Free text description of the Application
+        parentApplicationId:
+          type: string
+          format: uuid
+          example: 8cef5775-7080-44cd-b466-aa1a0a549c7b
+        multiTenantApp:
+          type: boolean
+          description: Only for SAP internal use.
+        privacyPolicy:
+          type: string
+          maxLength: 255
+          example: SAP_DEFAULT
+        termsOfUse:
+          type: string
+          maxLength: 255
+          example: SAP_DEFAULT
+        globalAccount:
+          type: string
+          maxLength: 255
+          example: accounts.sap.com
+        schemas:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchemasEnum'
+          example:
+            - urn:sap:identity:application:schemas:core:1.0
+            - urn:sap:identity:application:schemas:extension:sci:1.0:Authentication
+            - urn:sap:identity:application:schemas:extension:sci:1.0:Provisioning
+            - urn:sap:identity:application:schemas:extension:sci:1.0:Authorization
+        branding:
+          $ref: '#/components/schemas/Branding'
+        urn:sap:identity:application:schemas:extension:sci:1.0:Authentication:
+          $ref: '#/components/schemas/Authentication-Schema'
+        urn:sap:identity:application:schemas:extension:sci:1.0:Provisioning:
+          type: object
+        urn:sap:identity:application:schemas:extension:sci:1.0:Authorization:
+          type: object
+    Authentication-Schema:
+      type: object
+      properties:
+        ssoType:
+          type: string
+          enum:
+            - saml2
+            - openIdConnect
+          example: saml2
+        homeUrl:
+          type: string
+          format: uri
+          example: https://some.application.protected.resource.com
+        subjectNameIdentifier:
+          type: string
+          maxLength: 255
+          example: uid
+        fallbackSubjectNameIdentifier:
+          type: string
+          enum:
+            - none
+            - uid
+            - mail
+            - loginName
+            - displayName
+            - personnelNumber
+            - userUuid
+          x-enum-varnames:
+            - NONE
+            - UID
+            - MAIL
+            - LOGIN_NAME
+            - DISPLAY_NAME
+            - PERSONNEL_NUMBER
+            - USER_UUID
+          example: mail
+        subjectNameIdentifierFunction:
+          type: string
+          enum:
+            - none
+            - upperCase
+            - lowerCase
+          example: lowerCase
+        rememberMeExpirationTimeInMonths:
+          type: integer
+          enum:
+            - 1
+            - 3
+            - 6
+            - 12
+            - 24
+            - 36
+          example: 6
+        passwordPolicy:
+          type: string
+          format: uri
+          example: https://tenant.accounts.ondemand.sap.com/service/password/policy/62f3cb3f265fe70942b0e14d
+        userAccess:
+          $ref: '#/components/schemas/UserAccess'
+        companyId:
+          type: string
+          maxLength: 255
+          pattern: ^[a-zA-Z0-9_]+$
+          example: global
+        clientId:
+          type: string
+          maxLength: 36
+          example: eac15e81-6703-4c67-8719-ae5c6c865ad3
+          description: it's the same for clientId in OIDC flows
+        apiCertificates:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ApiCertificateData'
+        jwtClientAuthCredentials:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/JwtClientAuthCredential'
+          example:
+            - subject: userId
+              description: given by the administrator that configured it
+              identityProviderId: oidcCorporateIdpId
+              authorizationScopes:
+                - manageApp
+                - manageUsers
+                - oAuth
+        assertionAttributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssertionAttribute'
+          example:
+            - assertionAttributeName: first_name
+              userAttributeName: firstName
+            - assertionAttributeName: last_name
+              userAttributeName: lastName
+            - assertionAttributeName: mail
+              userAttributeName: mail
+        advancedAssertionAttributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdvancedAssertionAttribute'
+          example:
+            - attributeName: constant
+              attributeValue: here
+            - attributeName: uuid
+              attributeValue: ${global_uuid}
+        socialSignOn:
+          type: boolean
+          description: Enable authentication with social providers like Google and Twitter.
+        spnegoEnabled:
+          type: boolean
+          description: SPNEGO Authentication
+        biometricAuthenticationEnabled:
+          type: boolean
+          description: Biometric Authentication
+        verifyMail:
+          type: boolean
+          description: Require verified user email on login.
+        forceAuthentication:
+          type: boolean
+          description: Force authentication with each request. Ignores session cookies.
+        concurrentAccess:
+          type: string
+          enum:
+            - allow
+            - warn
+            - error
+          example: allow
+        trustAllCorporateIdentityProviders:
+          type: boolean
+          description: Allow IdP-initiated logon from all configured corporate identity providers.
+        allowIasUsers:
+          type: boolean
+          description: 'Allow users stored in Identity Authentication service to log on.Url: https://tenant.accounts.ondemand.com/saml2/idp/sso?sp=test&idp=https://tenant.accounts.ondemand.com'
+        defaultAuthenticatingIdpId:
+          type: string
+          maxLength: 128
+          example: baa6887c-fef8-4665-92d3-4ee12ec98390
+        conditionalAuthentication:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthenticationRule'
+          example:
+            - userType: public
+              userGroup: secretAccess
+              userEmailDomain: company.com
+              identityProviderId: 62dab43e3f44052a0c8531b1
+              ipNetworkRange: 10.10.10.10/24
+        consumedServices:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ConsumedService'
+          example:
+            - serviceInstanceId: service-instance-id
+              appId: app-id
+              clientId: client-id
+              planName: plan-name
+              inherit: true
+        providedApis:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ProvidedApi'
+          example:
+            - name: api name
+              description: Sample description
+        consumedApis:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ConsumedApi'
+          example:
+            - appId: app-id
+              apiName: read
+              name: S4
+        riskBasedAuthentication:
+          $ref: '#/components/schemas/RBAConfiguration'
+        smsVerificationConfig:
+          $ref: '#/components/schemas/SmsVerificationConfig'
+        captchaConfig:
+          $ref: '#/components/schemas/CaptchaConfig'
+        saml2Configuration:
+          $ref: '#/components/schemas/SamlConfiguration'
+        openIdConnectConfiguration:
+          $ref: '#/components/schemas/OIDCConfiguration'
+        sapManagedAttributes:
+          $ref: '#/components/schemas/SapManagedAttributes'
+          description: Only for SAP internal use.
+        idpCertificateSerialNumber:
+          type: string
+          description: It's used to specify the IDP Certificate used for signature check.
+    JwtClientAuthCredential:
+      type: object
+      required:
+        - subject
+        - identityProviderId
+      properties:
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 255
+        identityProviderId:
+          type: string
+          maxLength: 128
+        authorizationScopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorizationScope'
+    ApiCertificateData:
+      type: object
+      required:
+        - base64Certificate
+      properties:
+        dn:
+          type: string
+          example: CN=Gordon (PTM),L=milan-ids.sci-lab.cc.eu-de-1.cloud.sap,OU=8e1affb2-62a1-43cc-a687-2ba75e4b3d84,OU=Canary,OU=SAP Cloud Platform Clients,O=SAP SE,C=DE
+        description:
+          type: string
+          example: given by the administrator during creation
+          maxLength: 255
+        authorizationScopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorizationScope'
+          example:
+            - manageApp
+            - oAuth
+            - manageUsers
+        base64Certificate:
+          type: string
+          example: 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
+    AuthorizationScope:
+      type: string
+      enum:
+        - manageApp
+        - manageUsers
+        - oAuth
+      x-enum-varnames:
+        - MAANGE_APP
+        - MANAGE_USERS
+        - O_AUTH
+    AssertionAttribute:
+      type: object
+      required:
+        - assertionAttributeName
+        - userAttributeName
+      properties:
+        assertionAttributeName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        userAttributeName:
+          type: string
+          minLength: 1
+          maxLength: 255
+    SigningCertificateData:
+      type: object
+      required:
+        - base64Certificate
+        - isDefault
+      properties:
+        dn:
+          type: string
+          example: CN=Gordon (PTM),L=accounts.sap.com,OU=8e1affb2-62a1-43cc-a687-2ba75e4b3d84,OU=Canary,OU=SAP Cloud Platform Clients,O=SAP SE,C=DE
+        base64Certificate:
+          type: string
+        validFrom:
+          type: string
+          format: date-time
+        validTo:
+          type: string
+          format: date-time
+        isDefault:
+          type: boolean
+      example:
+        dn: CN=test (PTM),L=milan-ids.sci-lab.cc.eu-de-1.cloud.sap,OU=8e1affb2-62a1-43cc-a687-2ba75e4b3d84,OU=Canary,OU=SAP Cloud Platform Clients,O=SAP SE,C=DE
+        base64Certificate: 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
+        validFrom: '2020-01-24T10:58:50'
+        validTo: '2024-01-24T10:58:50'
+        isDefault: false
+    EncryptionCertificateData:
+      type: object
+      required:
+        - base64Certificate
+      properties:
+        dn:
+          type: string
+          example: CN=Gordon (PTM),L=accounts.sap.com,OU=8e1affb2-62a1-43cc-a687-2ba75e4b3d84,OU=Canary,OU=SAP Cloud Platform Clients,O=SAP SE,C=DE
+        base64Certificate:
+          type: string
+        validFrom:
+          type: string
+          format: date-time
+        validTo:
+          type: string
+          format: date-time
+      example:
+        dn: CN=test (PTM),L=milan-ids.sci-lab.cc.eu-de-1.cloud.sap,OU=8e1affb2-62a1-43cc-a687-2ba75e4b3d84,OU=Canary,OU=SAP Cloud Platform Clients,O=SAP SE,C=DE
+        base64Certificate: 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
+        validFrom: '2020-01-24T10:58:50'
+        validTo: '2024-01-24T10:58:50'
+    ApiSecretData:
+      type: object
+      properties:
+        authorizationScopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorizationScope'
+          example:
+            - manageApp
+            - oAuth
+            - manageUsers
+        description:
+          type: string
+          maxLength: 255
+        hint:
+          type: string
+        validTo:
+          type: string
+          format: date-time
+          x-constraints: '@Future'
+    BindingName:
+      type: string
+      enum:
+        - urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST
+        - urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect
+        - urn:oasis:names:tc:SAML:2.0:bindings:SOAP
+    SAML2ACSEndpoint:
+      type: object
+      required:
+        - bindingName
+        - location
+        - index
+      properties:
+        bindingName:
+          $ref: '#/components/schemas/BindingName'
+        location:
+          type: string
+          maxLength: 2048
+        index:
+          type: integer
+        isDefault:
+          type: boolean
+    SAML2SLOEndpoint:
+      type: object
+      required:
+        - bindingName
+        - location
+      properties:
+        bindingName:
+          $ref: '#/components/schemas/BindingName'
+        location:
+          type: string
+          maxLength: 2048
+        responseLocation:
+          type: string
+          maxLength: 2048
+        isDefault:
+          type: boolean
+    CaptchaConfig:
+      type: object
+      properties:
+        forgot_password:
+          type: boolean
+        login:
+          type: boolean
+        registration:
+          type: boolean
+      example:
+        forgot_password: false
+        login: true
+        registration: true
+    SmsVerificationConfig:
+      type: object
+      properties:
+        isVerificationRequired:
+          type: boolean
+        verificationRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerificationRule'
+      example:
+        isVerificationRequired: true
+        verificationRules:
+          - action: skip
+            userAttributes:
+              mail: example@mail.com
+    VerificationRule:
+      type: object
+      properties:
+        action:
+          $ref: '#/components/schemas/ActionType'
+        userAttributes:
+          type: object
+          additionalProperties:
+            type: string
+    ActionType:
+      type: string
+      enum:
+        - skip
+    SamlConfiguration:
+      type: object
+      properties:
+        metadataUrl:
+          type: string
+          format: uri
+          example: https://some.application.metadata.url.com
+        defaultNameIdFormat:
+          type: string
+          enum:
+            - urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified
+            - urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress
+            - urn:oasis:names:tc:SAML:2.0:nameid-format:persistent
+            - urn:oasis:names:tc:SAML:2.0:nameid-format:transient
+          x-enum-varnames:
+            - UNSPECIFIED
+            - EMAIL
+            - PERSISTENT
+            - TRANSIENT
+          example: urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified
+        acsEndpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/SAML2ACSEndpoint'
+          example:
+            - bindingName: urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST
+              location: https://acs.url
+              index: 0
+              isDefault: true
+        sloEndpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/SAML2SLOEndpoint'
+          example:
+            - bindingName: urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST
+              location: https://logout.url
+              responseLocation: https://logout.response.url
+              isDefault: false
+        signSLOMessages:
+          type: boolean
+        requireSignedSLOMessages:
+          type: boolean
+        requireSignedAuthnRequest:
+          type: boolean
+        signAssertions:
+          type: boolean
+        signAuthnResponses:
+          type: boolean
+        responseElementsToEncrypt:
+          type: string
+          enum:
+            - none
+            - wholeAssertion
+            - subjectNameId
+            - attributes
+            - subjectNameIdAndAttributes
+          x-enum-varnames:
+            - NONE
+            - WHOLE_ASSERTION
+            - SUBJECT_NAME_ID
+            - ATTRIBUTES
+            - SUBJECT_NAME_ID_AND_ATTRIBUTES
+          example: wholeAssertion
+        certificatesForSigning:
+          type: array
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/SigningCertificateData'
+        certificateForEncryption:
+          $ref: '#/components/schemas/EncryptionCertificateData'
+        digestAlgorithm:
+          type: string
+          enum:
+            - sha1
+            - sha256
+            - sha512
+          x-enum-varnames:
+            - SHA_1
+            - SHA_256
+            - SHA_512
+          default: sha256
+        proxyAuthnRequest:
+          $ref: '#/components/schemas/ProxyAuthnRequest'
+    OIDCConfiguration:
+      type: object
+      properties:
+        redirectUris:
+          type: array
+          items:
+            type: string
+            format: uri
+            maxItems: 20
+            pattern: ^(((?!http:|ftp:|tftp:|sftp:|file:|telnet:)[a-z\d\-\.\+]{2,}):\/\/(((([\w\-])+|(((\*\.([\w\-]{1,63}\.))?([\w\-]{1,63}\.)*)|(([\w\-]{1,63}\.)*(\*\.)?([\w\-]{1,63}\.){2,}))([a-zA-Z]{1,}))([\w\/]))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)))|((http|https):\/\/((127.0.0.1)|(\*\.)?localhost)))(:[0-9]+)?(\/(\*{1,2})?|\/(\*{1}\/)?(([^\s\*])(\/\*\/)?)*(\/\*{1,2})?)?$
+        postLogoutRedirectUris:
+          type: array
+          items:
+            type: string
+            format: uri
+            maxItems: 20
+            pattern: ^(((?!http:|ftp:|tftp:|sftp:|file:|telnet:)[a-z\d\-\.\+]{2,}):\/\/(((([\w\-])+|(((\*\.([\w\-]{1,63}\.))?([\w\-]{1,63}\.)*)|(([\w\-]{1,63}\.)*(\*\.)?([\w\-]{1,63}\.){2,}))([a-zA-Z]{1,}))([\w\/]))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)))|((http|https):\/\/((127.0.0.1)|(\*\.)?localhost)))(:[0-9]+)?(\/(\*{1,2})?|\/(\*{1}\/)?(([^\s\*])(\/\*\/)?)*(\/\*{1,2})?)?$
+        frontChannelLogoutUris:
+          type: array
+          items:
+            type: string
+            format: uri
+            maxItems: 20
+        tokenPolicy:
+          $ref: '#/components/schemas/TokenPolicy'
+        restrictedGrantTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrantType'
+        allowPublicClientFlows:
+          type: boolean
+      example:
+        redirectUris:
+          - https://redirect.url
+        postLogoutRedirectUris:
+          - https://post.logout.url
+        tokenPolicy:
+          refreshValidity: 496165
+          refreshParallel: 2
+        restrictedGrantTypes:
+          - password
+          - authorizationCode
+          - jwtBearer
+          - refreshToken
+        allowPublicClientFlows: true
+    TokenPolicy:
+      type: object
+      properties:
+        jwtValidity:
+          type: integer
+          minimum: 60
+          maximum: 3600
+        refreshValidity:
+          type: integer
+          minimum: 0
+          maximum: 648000
+        refreshParallel:
+          type: integer
+          minimum: 1
+          maximum: 10
+        refreshTokenRotationScenario:
+          type: string
+          enum:
+            - 'off'
+            - online
+            - mobile
+          x-enum-varnames:
+            - 'OFF'
+            - ONLINE
+            - MOBILE
+    GrantType:
+      type: string
+      enum:
+        - clientCredentials
+        - authorizationCode
+        - refreshToken
+        - password
+        - implicit
+        - jwtBearer
+        - authorizationCodePkceS256
+        - tokenExchange
+      x-enum-varnames:
+        - CLIENT_CREDENTIALS
+        - AUTHORIZATION_CODE
+        - REFRESH_TOKEN
+        - PASSWORD
+        - IMPLICIT
+        - JWT_BEARER
+        - AUTHORIZATION_CODE_PKCE_S256
+        - TOKEN_EXCHANGE
+    SapManagedAttributes:
+      type: object
+      description: Only for SAP internal use.
+      properties:
+        sapZoneId:
+          type: string
+        serviceInstanceId:
+          type: string
+        sourceAppId:
+          type: string
+          format: uuid
+        sourceTenantId:
+          type: string
+        appTenantId:
+          type: string
+        type:
+          type: string
+          enum:
+            - identityInstance
+            - subscription
+            - reuseInstance
+          x-enum-varnames:
+            - IDENTITY_INSTANCE
+            - SUBSCRIPTION
+            - REUSE_INSTANCE
+        planName:
+          type: string
+      example:
+        sapZoneId: 6886f245-bb5a-4713-accb-02fee2e6c4c1
+        serviceInstanceId: 8a7bc4c4-544d-43ac-8789-a348ad2a15c2
+        sourceAppId: a36a0b23-5605-4265-ace1-9fcd24f805c2
+        sourceTenantId: 8a7bc4c4-544d-43ac-8789-a348ad2a15c2
+        type: subscription
+    AdvancedAssertionAttribute:
+      type: object
+      properties:
+        attributeName:
+          type: string
+          maxLength: 512
+        attributeValue:
+          type: string
+          maxLength: 512
+    AuthenticationRule:
+      type: object
+      properties:
+        userType:
+          $ref: '#/components/schemas/UserType'
+        userGroup:
+          type: string
+          maxLength: 255
+        userEmailDomain:
+          type: string
+          maxLength: 255
+          pattern: ^$|^(((\*|([a-zA-Z0-9_\-]{1,63}))\.)(?:[a-zA-Z0-9_\-]{1,63}\.)*(?:[a-zA-Z]{2,})|((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))|(localhost))$
+        identityProviderId:
+          type: string
+          maxLength: 255
+        ipNetworkRange:
+          type: string
+          maxLength: 255
+          pattern: ^$|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConsumedService:
+      type: object
+      required:
+        - appId
+        - clientId
+        - inherit
+      properties:
+        serviceInstanceId:
+          type: string
+          maxLength: 255
+        appId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          maxLength: 255
+        planName:
+          type: string
+          maxLength: 255
+        inherit:
+          type: boolean
+    ProvidedApi:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 32
+        description:
+          type: string
+          maxLength: 124
+    ConsumedApi:
+      type: object
+      required:
+        - appId
+        - apiName
+        - name
+      properties:
+        appId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          maxLength: 255
+        apiName:
+          type: string
+          maxLength: 32
+        name:
+          type: string
+          maxLength: 36
+          pattern: ^[a-zA-Z0-9-_]+$
+    ProxyAuthnRequest:
+      type: object
+      properties:
+        authenticationContext:
+          type: string
+          enum:
+            - none
+            - forwardApplicationAuthnContext
+            - urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport
+          x-enum-varnames:
+            - NONE
+            - FORWARD_APPLICATION_AUTHN_CONTEXT
+            - PASSWORD_PROTECTED_TRANSPORT
+        issuerNameSuffix:
+          type: string
+          pattern: ^[A-Za-z0-9]*$
+          maxLength: 32
+    RBAConfiguration:
+      type: object
+      required:
+        - defaultAction
+        - rules
+      properties:
+        defaultAction:
+          type: array
+          items:
+            $ref: '#/components/schemas/Action'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RBARule'
+      example:
+        defaultAction:
+          - allow
+        rules:
+          - ipNetworkRange: 10.10.10.10/24
+            ipForwardRange: 10.10.10.10/24
+            actions:
+              - tfa
+              - webTfa
+            group: secretAccess
+            groupType: cloud
+            authMethod: cert
+            userType: public
+            corporateIdpAttribute:
+              name: division
+              value: Security
+    Action:
+      type: string
+      enum:
+        - allow
+        - tfa
+        - deny
+        - rsaTfa
+        - smsTfa
+        - webTfa
+        - emailTfa
+      x-enum-varnames:
+        - ALLOW
+        - TFA
+        - DENY
+        - RSA_TFA
+        - SMS_TFA
+        - WEB_TFA
+        - EMAIL_TFA
+    RBARule:
+      type: object
+      required:
+        - actions
+      properties:
+        ipNetworkRange:
+          type: string
+          pattern: ^$|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+        ipForwardRange:
+          type: string
+          pattern: ^$|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+        actions:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Action'
+        group:
+          type: string
+          maxLength: 255
+        groupType:
+          $ref: '#/components/schemas/GroupType'
+        authMethod:
+          $ref: '#/components/schemas/CredentialType'
+        userType:
+          $ref: '#/components/schemas/UserType'
+        corporateIdpAttribute:
+          $ref: '#/components/schemas/CorporateIdpAttribute'
+    GroupType:
+      type: string
+      enum:
+        - cloud
+        - onPremise
+      x-enum-varnames:
+        - CLOUD
+        - ON_PREMISE
+    UserType:
+      type: string
+      enum:
+        - public
+        - employee
+        - customer
+        - partner
+        - external
+        - onboardee
+    CredentialType:
+      type: string
+      enum:
+        - cert
+        - spnego
+        - uidPw
+        - token
+        - socialIdentity
+      x-enum-varnames:
+        - CERT
+        - SPNEGO
+        - UID_PW
+        - TOKEN
+        - SOCIAL_IDENTITY
+    CorporateIdpAttribute:
+      type: object
+      required:
+        - name
+        - value
+      properties:
+        name:
+          type: string
+          maxLength: 128
+        value:
+          type: string
+          maxLength: 128
+    Branding:
+      type: object
+      properties:
+        displayName:
+          type: string
+          maxLength: 255
+          example: Employee portal
+        showDisplayNameOnLogonScreen:
+          type: boolean
+        rememberMeVisible:
+          type: boolean
+        rememberMeChecked:
+          type: boolean
+        refreshParent:
+          type: boolean
+        tokenUrlEmbedCharacter:
+          type: string
+          enum:
+            - ;
+            - ?/&
+            - '#'
+          x-enum-varnames:
+            - SEMICOLON
+            - QUERY
+            - FRAGMENT
+          example: ?/&
+        emailTemplateSet:
+          type: string
+          maxLength: 255
+          example: SAP Default
+        theme:
+          $ref: '#/components/schemas/Theme'
+    Theme:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: Horizon/Quartz
+        basic:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 512
+          example:
+            button_text_color: '#FFFFFF'
+            button_color_bottom: '#007cc0'
+            button_border_color: '#007cc0'
+            button_color_top: '#007cc0'
+        advanced:
+          type: string
+          maxLength: 255
+          example: cssFileName.css
+    UserAccess:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - public
+            - private
+            - internal
+          example: private
+        userAttributesForAccess:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAttribute'
+          example:
+            - userAttributeName: firstName
+              isRequired: true
+            - userAttributeName: lastName
+              isRequired: true
+            - userAttributeName: mail
+              isRequired: true
+    UserAttribute:
+      type: object
+      required:
+        - userAttributeName
+      properties:
+        userAttributeName:
+          type: string
+          maxLength: 255
+        isRequired:
+          type: boolean
+    Meta:
+      type: object
+      properties:
+        created:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          example: P000001
+        lastModified:
+          type: string
+          format: date-time
+        modifiedBy:
+          type: string
+          example: P000100
+        modifiedOnBehalf:
+          type: string
+        location:
+          type: string
+          example: https://example.accounts.ondemand.com/Application/b92c95c0-42ea-45c0-9cbb-aa49c1020e42
+        type:
+          type: string
+          enum:
+            - bundled
+            - charged
+            - system
+          default: charged
+        version:
+          type: string
+          example: 1.0
