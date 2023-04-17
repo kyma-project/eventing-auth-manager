@@ -42,6 +42,7 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
+// TODO: Move this to cmd/eventing-auth-manager/main.go
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 

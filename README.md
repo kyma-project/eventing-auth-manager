@@ -41,6 +41,16 @@ UnDeploy the controller from the cluster:
 make undeploy
 ```
 
+## Generating the SAP Cloud Identity Services API client
+The OpenAPI specification is available in the [API Business Hub](https://api.sap.com/api/SCI_Application_Directory).
+The specification used to generate the client is stored in `internal/ias/internal/SCI_Application_Directory.yaml`. 
+
+To generate the client from the specification, run the following command:
+
+```sh
+make gen-ias-client
+```
+
 ## Contributing
 // TODO(user): Add detailed information on how you would like others to contribute to this project
 

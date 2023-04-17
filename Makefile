@@ -40,7 +40,7 @@ help: ## Display this help.
 
 .PHONY: gen-ias-client
 gen-ias-client: ## Generate IAS Client from OpenAPI spec
-	oapi-codegen --package=api -generate=client,types -o ./internal/ias/internal/api/ias.gen.go ./internal/ias/internal/api/openapi_spec.yaml
+	oapi-codegen --package=api -generate=client,types -o ./internal/ias/internal/api/ias.gen.go ./internal/ias/internal/api/SCI_Application_Directory.yaml
 
 
 .PHONY: manifests

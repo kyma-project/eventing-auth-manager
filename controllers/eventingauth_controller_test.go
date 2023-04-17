@@ -13,6 +13,7 @@ import (
 
 var _ = Describe("EventingAuth Controller", func() {
 
+	//TODO: Change tests to use table tests
 	Context("When creating EventingAuth CR", func() {
 
 		It("should create secret with IAS applications credentials", func() {

@@ -54,6 +54,8 @@ func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, ias ias.Clien
 	}
 }
 
+// TODO: Check if conditions are correctly represented
+// TODO: Implement finalizer to have correct deletion handling
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/finalizers,verbs=update
