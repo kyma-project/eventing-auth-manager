@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -31,7 +33,11 @@ import (
 	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 )
 
-const requeueAfterError = time.Minute * 1
+const (
+	requeueAfterError          = time.Minute * 1
+	applicationSecretName      = "eventing-auth-application"
+	applicationSecretNamespace = "kyma-system"
+)
 
 // eventingAuthReconciler reconciles a EventingAuth object
 type eventingAuthReconciler struct {
@@ -61,12 +67,36 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	_, err = r.IasClient.CreateApplication(ctx, fmt.Sprintf("eventing-auth-manager-%s", uuid.New()))
+	// TODO: Use correct pointing to the target cluster
+	appSecretExists, err := hasTargetClusterApplicationSecret(ctx, r.Client)
 	if err != nil {
-		logger.Error(err, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+		logger.Error(err, "Failed to retrieve secret state from target cluster", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 		return ctrl.Result{
 			RequeueAfter: requeueAfterError,
 		}, err
+	}
+
+	if !appSecretExists {
+
+		// TODO: Name of the IAS application should be taken from Kyma CR owner reference
+		iasApplication, err := r.IasClient.CreateApplication(ctx, fmt.Sprintf("eventing-auth-manager-%s", uuid.New()))
+		if err != nil {
+			logger.Error(err, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+			return ctrl.Result{
+				RequeueAfter: requeueAfterError,
+			}, err
+		}
+
+		appSecret := iasApplication.ToSecret(applicationSecretName, applicationSecretNamespace)
+
+		// TODO: Create secret on target cluster by reading the kubeconfig from the secret using the name of the Kyma CR owner reference
+		err = r.Client.Create(ctx, &appSecret)
+		if err != nil {
+			logger.Error(err, "Failed to create application secret", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+			return ctrl.Result{
+				RequeueAfter: requeueAfterError,
+			}, err
+		}
 	}
 
 	if err := updateStatus(ctx, r.Client, cr, operatorv1alpha1.StateOk); err != nil {
@@ -86,6 +116,24 @@ func fetchEventingAuth(ctx context.Context, c client.Client, name types.Namespac
 		return cr, err
 	}
 	return cr, nil
+}
+
+func hasTargetClusterApplicationSecret(ctx context.Context, c client.Client) (bool, error) {
+	var s v1.Secret
+	err := c.Get(ctx, client.ObjectKey{
+		Name:      applicationSecretName,
+		Namespace: applicationSecretNamespace,
+	}, &s)
+
+	if errors.IsNotFound(err) {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

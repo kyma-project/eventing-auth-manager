@@ -15,9 +15,9 @@ type Client interface {
 	CreateApplication(ctx context.Context, name string) (Application, error)
 }
 
-func NewIasClient(iasTenantUrl, clientId, clientSecret string) (Client, error) {
+func NewIasClient(iasTenantUrl, user, password string) (Client, error) {
 
-	basicAuthProvider, err := securityprovider.NewSecurityProviderBasicAuth(clientId, clientSecret)
+	basicAuthProvider, err := securityprovider.NewSecurityProviderBasicAuth(user, password)
 	if err != nil {
 		return nil, err
 	}
@@ -39,6 +39,8 @@ type client struct {
 	tenantUrl string
 }
 
+// TODO: Add logic to handle failed reconciliation correctly without creating new application/secret
+// TODO: Add unit tests with mocked IAS API
 // CreateApplication creates an application in IAS
 func (c client) CreateApplication(ctx context.Context, name string) (Application, error) {
 
@@ -114,7 +116,7 @@ func newIasApplication(name string) api.Application {
 func newSecretRequest() api.CreateApiSecretJSONRequestBody {
 	description := "eventing-auth-manager"
 	requestBody := api.CreateApiSecretJSONRequestBody{
-		AuthorizationScopes: &[]api.AuthorizationScope{"manageApp", "oAuth", "manageUsers"},
+		AuthorizationScopes: &[]api.AuthorizationScope{"oAuth"},
 		Description:         &description,
 		// TODO: What expiration should we set expiration? Current implementation relies on default expiration of 100 years
 	}

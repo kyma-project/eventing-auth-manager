@@ -90,7 +90,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO: Replace dummy values
+	// TODO: Replace dummy values with values from secret
 	iasClient, err := ias.NewIasClient("dummy", "dummy", "dummy")
 	if err != nil {
 		setupLog.Error(err, "unable to create ias client", "controller", "EventingAuth")

@@ -49,6 +49,7 @@ import (
 const (
 	defaultTimeout = time.Second * 5
 	namespace      = "test-namespace"
+	kymaNs         = "kyma-system"
 )
 
 var (
@@ -94,6 +95,12 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	}
 	Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
 
+	kymaNs := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: kymaNs},
+		Spec:       corev1.NamespaceSpec{},
+	}
+	Expect(k8sClient.Create(context.TODO(), kymaNs)).Should(Succeed())
+
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme.Scheme,
 		MetricsBindAddress: "0",
@@ -127,11 +134,11 @@ var _ = AfterSuite(func() {
 
 func getIasTestClient() ias.Client {
 	url := os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
-	clientId := os.Getenv("TEST_EVENTING_AUTH_IAS_CLIENT_ID")
-	clientSecret := os.Getenv("TEST_EVENTING_AUTH_IAS_CLIENT_SECRET")
+	user := os.Getenv("TEST_EVENTING_AUTH_IAS_USER")
+	pw := os.Getenv("TEST_EVENTING_AUTH_IAS_PASSWORD")
 
-	if url != "" && clientId != "" && clientSecret != "" {
-		iasClient, err := ias.NewIasClient(url, clientId, clientSecret)
+	if url != "" && user != "" && pw != "" {
+		iasClient, err := ias.NewIasClient(url, user, pw)
 		Expect(err).NotTo(HaveOccurred())
 		return iasClient
 	} else {
@@ -143,9 +150,5 @@ type iasClientStub struct {
 }
 
 func (i iasClientStub) CreateApplication(_ context.Context, name string) (ias.Application, error) {
-	return ias.Application{
-		ClientId:     fmt.Sprintf("client-id-for-%s", name),
-		ClientSecret: "test-client-secret",
-		TokenUrl:     "https://test-token-url.com",
-	}, nil
+	return ias.NewApplication(fmt.Sprintf("client-id-for-%s", name), "test-client-secret", "https://test-token-url.com"), nil
 }
