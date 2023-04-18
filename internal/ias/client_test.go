@@ -450,7 +450,7 @@ func mockNoApplicationExists(clientMock *mocks.ClientWithResponsesInterface) {
 }
 
 func mockApplicationExists(clientMock *mocks.ClientWithResponsesInterface, appId uuid.UUID) {
-	appsFilter := fmt.Sprintf("name eq Test-App-Name")
+	appsFilter := "name eq Test-App-Name"
 	clientMock.On("GetAllApplicationsWithResponse", mock.Anything, &api.GetAllApplicationsParams{Filter: &appsFilter}).
 		Return(&api.GetAllApplicationsResponse{
 			HTTPResponse: &http.Response{
