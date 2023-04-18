@@ -6,6 +6,7 @@ import (
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
+	"github.com/pkg/errors"
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
@@ -27,7 +28,6 @@ func NewIasClient(iasTenantUrl, user, password string) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return client{
 		api:       apiClient,
 		tenantUrl: iasTenantUrl,
@@ -35,66 +35,138 @@ func NewIasClient(iasTenantUrl, user, password string) (Client, error) {
 }
 
 type client struct {
-	api       *api.ClientWithResponses
+	api       api.ClientWithResponsesInterface
 	tenantUrl string
 }
 
-// TODO: Add logic to handle failed reconciliation correctly without creating new application/secret
-// TODO: Add unit tests with mocked IAS API
-// CreateApplication creates an application in IAS
+// CreateApplication creates an application in IAS. This function is not idempotent, because if an application with the specified
+// name already exists, it will be deleted and recreated.
 func (c client) CreateApplication(ctx context.Context, name string) (Application, error) {
 
-	newApplication := newIasApplication(name)
-	createAppResponse, err := c.api.CreateApplicationWithResponse(ctx, &api.CreateApplicationParams{}, newApplication)
+	existingApp, err := c.getApplicationByName(ctx, name)
 	if err != nil {
 		return Application{}, err
 	}
 
-	// TODO: Do we need handling for 429 (Too Many Requests) or other status codes?
-	if createAppResponse.StatusCode() != http.StatusCreated {
-		ctrl.Log.Error(err, "Failed to create application", "name", name, "statusCode", createAppResponse.StatusCode())
-		return Application{}, fmt.Errorf("failed to create application")
+	// To simplify the logic, if an application with this name already exists, we always delete the application and create
+	// a new one, otherwise we would have to check where the application creation failed and continue at this point.
+	if existingApp != nil {
+		res, err := c.api.DeleteApplicationWithResponse(ctx, *existingApp.Id)
+		if err != nil {
+			return Application{}, err
+		}
+		if res.StatusCode() != http.StatusOK {
+			ctrl.Log.Error(err, "Failed to delete application", "id", *existingApp.Id, "statusCode", res.StatusCode())
+			return Application{}, errors.New("failed to delete application")
+		}
 	}
 
-	appId, err := extractApplicationId(createAppResponse)
+	appId, err := c.createNewApplication(ctx, name)
 	if err != nil {
 		return Application{}, err
 	}
 	ctrl.Log.Info("Created application", "name", name, "id", appId)
 
-	createSecretResponse, err := c.api.CreateApiSecretWithResponse(ctx, appId, newSecretRequest())
+	clientSecret, err := c.createSecret(ctx, appId)
 	if err != nil {
 		return Application{}, err
 	}
 
-	if createSecretResponse.StatusCode() != http.StatusCreated {
-		ctrl.Log.Error(err, "Failed to create api secret", "id", appId, "statusCode", createSecretResponse.StatusCode())
-		return Application{}, fmt.Errorf("failed to create api secret")
-	}
-	clientSecret := *createSecretResponse.JSON201.Secret
-
-	// The client ID is generated only after an API secret is created, so we need to retrieve the application again to get the client ID.
-	applicationResponse, err := c.api.GetApplicationWithResponse(ctx, appId, &api.GetApplicationParams{})
+	clientId, err := c.getClientId(ctx, appId)
 	if err != nil {
 		return Application{}, err
 	}
-
-	if applicationResponse.StatusCode() != http.StatusOK {
-		ctrl.Log.Error(err, "Failed to create api secret", "id", appId, "statusCode", createSecretResponse.StatusCode())
-		return Application{}, fmt.Errorf("failed to create api secret")
-	}
-	clientId := *applicationResponse.JSON200.UrnSapIdentityApplicationSchemasExtensionSci10Authentication.ClientId
 
 	return NewApplication(clientId, clientSecret, c.tenantUrl), nil
 }
 
+func (c client) getApplicationByName(ctx context.Context, name string) (*api.ApplicationResponse, error) {
+	appsFilter := fmt.Sprintf("name eq %s", name)
+	res, err := c.api.GetAllApplicationsWithResponse(ctx, &api.GetAllApplicationsParams{Filter: &appsFilter})
+	if err != nil {
+		return nil, err
+	}
+
+	// This is not documented in the API, but the actual API returned 404 if no applications were found.
+	if res.StatusCode() == http.StatusNotFound {
+		return nil, nil
+	}
+
+	if res.StatusCode() != http.StatusOK {
+		ctrl.Log.Error(err, "Failed to fetch existing applications filtered by name", "name", name, "statusCode", res.StatusCode())
+		return nil, errors.New("failed to fetch existing applications")
+	}
+
+	if res.JSON200.Applications != nil {
+		switch len(*res.JSON200.Applications) {
+		// Since the handling of the 404 status is not documented, we also handle the case where no more applications are found,
+		// because we do not know what the expected behavior should be.
+		case 0:
+			return nil, nil
+		case 1:
+			return &(*res.JSON200.Applications)[0], nil
+		default:
+			return nil, fmt.Errorf("found multiple applications with the same name %s", name)
+		}
+	}
+	return nil, nil
+}
+
+func (c client) createNewApplication(ctx context.Context, name string) (uuid.UUID, error) {
+	newApplication := newIasApplication(name)
+	res, err := c.api.CreateApplicationWithResponse(ctx, &api.CreateApplicationParams{}, newApplication)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	// TODO: Do we need handling for 429 (Too Many Requests) or other status codes?
+	if res.StatusCode() != http.StatusCreated {
+		ctrl.Log.Error(err, "Failed to create application", "name", name, "statusCode", res.StatusCode())
+		return uuid.UUID{}, errors.New("failed to create application")
+	}
+
+	return extractApplicationId(res)
+}
+
+func (c client) createSecret(ctx context.Context, appId uuid.UUID) (string, error) {
+	res, err := c.api.CreateApiSecretWithResponse(ctx, appId, newSecretRequest())
+	if err != nil {
+		return "", err
+	}
+
+	if res.StatusCode() != http.StatusCreated {
+		ctrl.Log.Error(err, "Failed to create api secret", "id", appId, "statusCode", res.StatusCode())
+		return "", errors.New("failed to create api secret")
+	}
+
+	return *res.JSON201.Secret, nil
+}
+
+func (c client) getClientId(ctx context.Context, appId uuid.UUID) (string, error) {
+	// The client ID is generated only after an API secret is created, so we need to retrieve the application again to get the client ID.
+	applicationResponse, err := c.api.GetApplicationWithResponse(ctx, appId, &api.GetApplicationParams{})
+	if err != nil {
+		return "", err
+	}
+
+	if applicationResponse.StatusCode() != http.StatusOK {
+		ctrl.Log.Error(err, "Failed to retrieve client ID", "id", appId, "statusCode", applicationResponse.StatusCode())
+		return "", errors.New("failed to retrieve client ID")
+	}
+	return *applicationResponse.JSON200.UrnSapIdentityApplicationSchemasExtensionSci10Authentication.ClientId, nil
+}
+
 func extractApplicationId(createAppResponse *api.CreateApplicationResponse) (uuid.UUID, error) {
-	// The application ID is only returned in the location header
+	// The application ID is only returned as the last part in the location header
 	locationHeader := createAppResponse.HTTPResponse.Header.Get("Location")
 	s := strings.Split(locationHeader, "/")
 	appId := s[len(s)-1]
 
-	return uuid.Parse(appId)
+	parsedAppId, err := uuid.Parse(appId)
+	if err != nil {
+		return parsedAppId, errors.Wrap(err, "failed to retrieve application ID from header")
+	}
+	return parsedAppId, nil
 }
 
 func newIasApplication(name string) api.Application {
@@ -114,11 +186,10 @@ func newIasApplication(name string) api.Application {
 }
 
 func newSecretRequest() api.CreateApiSecretJSONRequestBody {
-	description := "eventing-auth-manager"
+	d := "eventing-auth-manager"
 	requestBody := api.CreateApiSecretJSONRequestBody{
 		AuthorizationScopes: &[]api.AuthorizationScope{"oAuth"},
-		Description:         &description,
-		// TODO: What expiration should we set expiration? Current implementation relies on default expiration of 100 years
+		Description:         &d,
 	}
 	return requestBody
 }

@@ -39,8 +39,9 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: gen-ias-client
-gen-ias-client: ## Generate IAS Client from OpenAPI spec
+gen-ias-client: ## Generate IAS client and client mocks from OpenAPI spec
 	oapi-codegen --package=api -generate=client,types -o ./internal/ias/internal/api/ias.gen.go ./internal/ias/internal/api/SCI_Application_Directory.yaml
+	mockery --name=ClientWithResponsesInterface --dir=./internal/ias/internal/api --output=./internal/ias/internal/mocks --outpkg=mocks --case=underscore
 
 
 .PHONY: manifests
