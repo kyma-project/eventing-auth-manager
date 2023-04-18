@@ -245,7 +245,7 @@ func Test_CreateApplication(t *testing.T) {
 				return &clientMock
 			},
 			expectedApp:   Application{},
-			expectedError: fmt.Errorf("failed to delete application"),
+			expectedError: fmt.Errorf("failed to delete existing application before creation"),
 		},
 		{
 			name: "should return error when application is not created",
