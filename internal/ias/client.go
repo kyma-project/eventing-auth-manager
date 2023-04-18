@@ -14,6 +14,7 @@ import (
 
 type Client interface {
 	CreateApplication(ctx context.Context, name string) (Application, error)
+	DeleteApplication(ctx context.Context, name string) error
 }
 
 func NewIasClient(iasTenantUrl, user, password string) (Client, error) {
@@ -56,8 +57,8 @@ func (c client) CreateApplication(ctx context.Context, name string) (Application
 			return Application{}, err
 		}
 		if res.StatusCode() != http.StatusOK {
-			ctrl.Log.Error(err, "Failed to delete application", "id", *existingApp.Id, "statusCode", res.StatusCode())
-			return Application{}, errors.New("failed to delete application")
+			ctrl.Log.Error(err, "Failed to delete existing application", "id", *existingApp.Id, "statusCode", res.StatusCode())
+			return Application{}, errors.New("failed to delete existing application before creation")
 		}
 	}
 
@@ -78,6 +79,19 @@ func (c client) CreateApplication(ctx context.Context, name string) (Application
 	}
 
 	return NewApplication(clientId, clientSecret, c.tenantUrl), nil
+}
+
+// DeleteApplication deletes an application in IAS. If the application does not exist, this function does nothing.
+func (c client) DeleteApplication(ctx context.Context, name string) error {
+	existingApp, err := c.getApplicationByName(ctx, name)
+	if err != nil {
+		return err
+	}
+	if existingApp == nil {
+		return nil
+	}
+
+	return c.deleteApplication(ctx, *existingApp.Id)
 }
 
 func (c client) getApplicationByName(ctx context.Context, name string) (*api.ApplicationResponse, error) {
@@ -154,6 +168,20 @@ func (c client) getClientId(ctx context.Context, appId uuid.UUID) (string, error
 		return "", errors.New("failed to retrieve client ID")
 	}
 	return *applicationResponse.JSON200.UrnSapIdentityApplicationSchemasExtensionSci10Authentication.ClientId, nil
+}
+
+func (c client) deleteApplication(ctx context.Context, id uuid.UUID) error {
+	res, err := c.api.DeleteApplicationWithResponse(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode() != http.StatusOK {
+		ctrl.Log.Error(err, "Failed to delete application", "id", id, "statusCode", res.StatusCode())
+		return errors.New("failed to delete application")
+	}
+
+	return nil
 }
 
 func extractApplicationId(createAppResponse *api.CreateApplicationResponse) (uuid.UUID, error) {

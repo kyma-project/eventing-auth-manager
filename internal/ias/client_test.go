@@ -354,6 +354,89 @@ func Test_CreateApplication(t *testing.T) {
 	}
 }
 
+func Test_DeleteApplication(t *testing.T) {
+	tests := []struct {
+		name          string
+		givenApiMock  func() *mocks.ClientWithResponsesInterface
+		expectedError error
+	}{
+		{
+			name: "should delete application",
+			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+				clientMock := mocks.ClientWithResponsesInterface{}
+
+				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+				mockApplicationExists(&clientMock, appId)
+
+				clientMock.On("DeleteApplicationWithResponse", mock.Anything, appId).
+					Return(&api.DeleteApplicationResponse{
+						HTTPResponse: &http.Response{
+							StatusCode: http.StatusOK,
+						},
+					}, nil)
+
+				return &clientMock
+			},
+			expectedError: nil,
+		},
+		{
+			name: "should return error when application is not deleted",
+			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+				clientMock := mocks.ClientWithResponsesInterface{}
+
+				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+				mockApplicationExists(&clientMock, appId)
+
+				clientMock.On("DeleteApplicationWithResponse", mock.Anything, appId).
+					Return(&api.DeleteApplicationResponse{
+						HTTPResponse: &http.Response{
+							StatusCode: http.StatusInternalServerError,
+						},
+					}, nil)
+
+				return &clientMock
+			},
+			expectedError: fmt.Errorf("failed to delete application"),
+		},
+		{
+			name: "should not return an error when application doesn't exist",
+			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+				clientMock := mocks.ClientWithResponsesInterface{}
+
+				mockNoApplicationExists(&clientMock)
+
+				return &clientMock
+			},
+			expectedError: nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// given
+			apiMock := test.givenApiMock()
+
+			client := client{
+				api:       apiMock,
+				tenantUrl: "https://test.com",
+			}
+
+			// when
+			err := client.DeleteApplication(context.TODO(), "Test-App-Name")
+
+			// then
+			if test.expectedError != nil {
+				require.Error(t, err)
+				require.Equal(t, test.expectedError.Error(), err.Error())
+			} else {
+				require.NoError(t, err)
+			}
+
+			apiMock.AssertExpectations(t)
+		})
+	}
+}
+
 func mockNoApplicationExists(clientMock *mocks.ClientWithResponsesInterface) {
 	clientMock.On("GetAllApplicationsWithResponse", mock.Anything, mock.Anything).
 		Return(&api.GetAllApplicationsResponse{
