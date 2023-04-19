@@ -91,7 +91,10 @@ func main() {
 	}
 
 	// TODO: Replace dummy values with values from secret
-	iasClient, err := ias.NewIasClient("dummy", "dummy", "dummy")
+	url := os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
+	user := os.Getenv("TEST_EVENTING_AUTH_IAS_USER")
+	pw := os.Getenv("TEST_EVENTING_AUTH_IAS_PASSWORD")
+	iasClient, err := ias.NewIasClient(url, user, pw)
 	if err != nil {
 		setupLog.Error(err, "unable to create ias client", "controller", "EventingAuth")
 		os.Exit(1)
