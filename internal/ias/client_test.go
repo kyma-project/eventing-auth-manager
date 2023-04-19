@@ -62,8 +62,7 @@ func Test_CreateApplication(t *testing.T) {
 					}, nil)
 				return &clientMock
 			},
-			wantApp:   NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
-			wantError: nil,
+			wantApp: NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
 		},
 		{
 			name: "should create new application when fetching existing applications returns status 404",
@@ -111,8 +110,7 @@ func Test_CreateApplication(t *testing.T) {
 					}, nil)
 				return &clientMock
 			},
-			wantApp:   NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
-			wantError: nil,
+			wantApp: NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
 		},
 		{
 			name: "should recreate application when application already exists",
@@ -157,8 +155,7 @@ func Test_CreateApplication(t *testing.T) {
 					}, nil)
 				return &clientMock
 			},
-			wantApp:   NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
-			wantError: nil,
+			wantApp: NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
 		},
 		{
 			name: "should return an error when multiple applications exist for the given name",
@@ -339,7 +336,8 @@ func Test_CreateApplication(t *testing.T) {
 			require.Equal(t, tt.wantApp, app)
 
 			if tt.wantError != nil {
-				require.Error(t, tt.wantError, err)
+				require.Error(t, tt.wantError)
+				require.EqualError(t, tt.wantError, err.Error())
 			} else {
 				require.NoError(t, err)
 			}
@@ -377,7 +375,6 @@ func Test_DeleteApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			wantError: nil,
 		},
 		{
 			name: "should return error when application is not deleted",
@@ -407,7 +404,6 @@ func Test_DeleteApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			wantError: nil,
 		},
 	}
 
@@ -426,7 +422,8 @@ func Test_DeleteApplication(t *testing.T) {
 
 			// then
 			if tt.wantError != nil {
-				require.Error(t, tt.wantError, err)
+				require.Error(t, tt.wantError)
+				require.EqualError(t, tt.wantError, err.Error())
 			} else {
 				require.NoError(t, err)
 			}
