@@ -145,6 +145,7 @@ func (r *eventingAuthReconciler) addFinalizer(ctx context.Context, cr *operatorv
 func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, cr *operatorv1alpha1.EventingAuth) error {
 	// The object is being deleted
 	if controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
+		// TODO: Replace the client with the client pointing to the target cluster
 		// delete k8s secret
 		if err := deleteSecret(ctx, r.Client); err != nil {
 			return fmt.Errorf("failed to delete secret: %v", err)
