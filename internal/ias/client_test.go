@@ -2,6 +2,7 @@ package ias
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
@@ -14,11 +15,11 @@ import (
 
 func Test_CreateApplication(t *testing.T) {
 	tests := []struct {
-		name          string
-		givenApiMock  func() *mocks.ClientWithResponsesInterface
-		assertCalls   func(*testing.T, *mocks.ClientWithResponsesInterface)
-		expectedApp   Application
-		expectedError error
+		name         string
+		givenApiMock func() *mocks.ClientWithResponsesInterface
+		assertCalls  func(*testing.T, *mocks.ClientWithResponsesInterface)
+		wantApp      Application
+		wantError    error
 	}{
 		{
 			name: "should create new application when fetching existing applications returns status 200 and no applications",
@@ -61,8 +62,8 @@ func Test_CreateApplication(t *testing.T) {
 					}, nil)
 				return &clientMock
 			},
-			expectedApp:   NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
-			expectedError: nil,
+			wantApp:   NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
+			wantError: nil,
 		},
 		{
 			name: "should create new application when fetching existing applications returns status 404",
@@ -110,8 +111,8 @@ func Test_CreateApplication(t *testing.T) {
 					}, nil)
 				return &clientMock
 			},
-			expectedApp:   NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
-			expectedError: nil,
+			wantApp:   NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
+			wantError: nil,
 		},
 		{
 			name: "should recreate application when application already exists",
@@ -156,8 +157,8 @@ func Test_CreateApplication(t *testing.T) {
 					}, nil)
 				return &clientMock
 			},
-			expectedApp:   NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
-			expectedError: nil,
+			wantApp:   NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
+			wantError: nil,
 		},
 		{
 			name: "should return an error when multiple applications exist for the given name",
@@ -185,8 +186,8 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			expectedApp:   Application{},
-			expectedError: fmt.Errorf("found multiple applications with the same name Test-App-Name"),
+			wantApp:   Application{},
+			wantError: errors.New("found multiple applications with the same name Test-App-Name"),
 		},
 		{
 			name: "should return error when application ID can't be retrieved from location header",
@@ -207,8 +208,8 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			expectedApp:   Application{},
-			expectedError: fmt.Errorf("failed to retrieve application ID from header: invalid UUID length: 23"),
+			wantApp:   Application{},
+			wantError: errors.New("failed to retrieve application ID from header: invalid UUID length: 23"),
 		},
 		{
 			name: "should return error when fetching existing application failed",
@@ -224,8 +225,8 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			expectedApp:   Application{},
-			expectedError: fmt.Errorf("failed to fetch existing applications"),
+			wantApp:   Application{},
+			wantError: errors.New("failed to fetch existing applications"),
 		},
 		{
 			name: "should return error when application exists and deletion failed",
@@ -244,8 +245,8 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			expectedApp:   Application{},
-			expectedError: fmt.Errorf("failed to delete existing application before creation"),
+			wantApp:   Application{},
+			wantError: errors.New("failed to delete existing application before creation"),
 		},
 		{
 			name: "should return error when application is not created",
@@ -263,8 +264,8 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			expectedApp:   Application{},
-			expectedError: fmt.Errorf("failed to create application"),
+			wantApp:   Application{},
+			wantError: errors.New("failed to create application"),
 		},
 		{
 			name: "should return error when secret is not created",
@@ -285,8 +286,8 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			expectedApp:   Application{},
-			expectedError: fmt.Errorf("failed to create api secret"),
+			wantApp:   Application{},
+			wantError: errors.New("failed to create api secret"),
 		},
 		{
 			name: "should return error when client id wasn't fetched",
@@ -317,14 +318,14 @@ func Test_CreateApplication(t *testing.T) {
 					}, nil)
 				return &clientMock
 			},
-			expectedApp:   Application{},
-			expectedError: fmt.Errorf("failed to retrieve client ID"),
+			wantApp:   Application{},
+			wantError: errors.New("failed to retrieve client ID"),
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			// given
-			apiMock := test.givenApiMock()
+			apiMock := tt.givenApiMock()
 
 			client := client{
 				api:       apiMock,
@@ -335,17 +336,16 @@ func Test_CreateApplication(t *testing.T) {
 			app, err := client.CreateApplication(context.TODO(), "Test-App-Name")
 
 			// then
-			require.Equal(t, test.expectedApp, app)
+			require.Equal(t, tt.wantApp, app)
 
-			if test.expectedError != nil {
-				require.Error(t, err)
-				require.Equal(t, test.expectedError.Error(), err.Error())
+			if tt.wantError != nil {
+				require.Error(t, tt.wantError, err)
 			} else {
 				require.NoError(t, err)
 			}
 
-			if test.assertCalls != nil {
-				test.assertCalls(t, apiMock)
+			if tt.assertCalls != nil {
+				tt.assertCalls(t, apiMock)
 			} else {
 				apiMock.AssertExpectations(t)
 			}
@@ -356,9 +356,9 @@ func Test_CreateApplication(t *testing.T) {
 
 func Test_DeleteApplication(t *testing.T) {
 	tests := []struct {
-		name          string
-		givenApiMock  func() *mocks.ClientWithResponsesInterface
-		expectedError error
+		name         string
+		givenApiMock func() *mocks.ClientWithResponsesInterface
+		wantError    error
 	}{
 		{
 			name: "should delete application",
@@ -377,7 +377,7 @@ func Test_DeleteApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			expectedError: nil,
+			wantError: nil,
 		},
 		{
 			name: "should return error when application is not deleted",
@@ -396,7 +396,7 @@ func Test_DeleteApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			expectedError: fmt.Errorf("failed to delete application"),
+			wantError: errors.New("failed to delete application"),
 		},
 		{
 			name: "should not return an error when application doesn't exist",
@@ -407,14 +407,14 @@ func Test_DeleteApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			expectedError: nil,
+			wantError: nil,
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			// given
-			apiMock := test.givenApiMock()
+			apiMock := tt.givenApiMock()
 
 			client := client{
 				api:       apiMock,
@@ -425,9 +425,8 @@ func Test_DeleteApplication(t *testing.T) {
 			err := client.DeleteApplication(context.TODO(), "Test-App-Name")
 
 			// then
-			if test.expectedError != nil {
-				require.Error(t, err)
-				require.Equal(t, test.expectedError.Error(), err.Error())
+			if tt.wantError != nil {
+				require.Error(t, tt.wantError, err)
 			} else {
 				require.NoError(t, err)
 			}
