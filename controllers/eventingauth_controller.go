@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -67,7 +66,6 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	cr, err := fetchEventingAuth(ctx, r.Client, req.NamespacedName)
 	if err != nil {
-		logger.Error(err, "failed to fetch EventingAuth")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -100,7 +98,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if !appSecretExists {
 
 		// TODO: Name of the IAS application should be taken from Kyma CR owner reference
-		iasApplication, err := r.IasClient.CreateApplication(ctx, fmt.Sprintf("eventing-auth-manager-%s", uuid.New()))
+		iasApplication, err := r.IasClient.CreateApplication(ctx, cr.Name)
 		if err != nil {
 			logger.Error(err, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 			return ctrl.Result{
