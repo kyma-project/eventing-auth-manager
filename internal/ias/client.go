@@ -78,7 +78,7 @@ func (c client) CreateApplication(ctx context.Context, name string) (Application
 		return Application{}, err
 	}
 
-	return NewApplication(clientId, clientSecret, c.tenantUrl), nil
+	return NewApplication(*clientId, *clientSecret, c.tenantUrl), nil
 }
 
 // DeleteApplication deletes an application in IAS. If the application does not exist, this function does nothing.
@@ -142,38 +142,43 @@ func (c client) createNewApplication(ctx context.Context, name string) (uuid.UUI
 	return extractApplicationId(res)
 }
 
-func (c client) createSecret(ctx context.Context, appId uuid.UUID) (string, error) {
+func (c client) createSecret(ctx context.Context, appId uuid.UUID) (*string, error) {
 	res, err := c.api.CreateApiSecretWithResponse(ctx, appId, newSecretRequest())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if res.StatusCode() != http.StatusCreated {
 		ctrl.Log.Error(err, "Failed to create api secret", "id", appId, "statusCode", res.StatusCode())
-		return "", errors.New("failed to create api secret")
+		return nil, errors.New("failed to create api secret")
 	}
 
-	return *res.JSON201.Secret, nil
+	return res.JSON201.Secret, nil
 }
 
-func (c client) getClientId(ctx context.Context, appId uuid.UUID) (string, error) {
+func (c client) getClientId(ctx context.Context, appId uuid.UUID) (*string, error) {
 	// The client ID is generated only after an API secret is created, so we need to retrieve the application again to get the client ID.
 	applicationResponse, err := c.api.GetApplicationWithResponse(ctx, appId, &api.GetApplicationParams{})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if applicationResponse.StatusCode() != http.StatusOK {
 		ctrl.Log.Error(err, "Failed to retrieve client ID", "id", appId, "statusCode", applicationResponse.StatusCode())
-		return "", errors.New("failed to retrieve client ID")
+		return nil, errors.New("failed to retrieve client ID")
 	}
-	return *applicationResponse.JSON200.UrnSapIdentityApplicationSchemasExtensionSci10Authentication.ClientId, nil
+	return applicationResponse.JSON200.UrnSapIdentityApplicationSchemasExtensionSci10Authentication.ClientId, nil
 }
 
 func (c client) deleteApplication(ctx context.Context, id uuid.UUID) error {
 	res, err := c.api.DeleteApplicationWithResponse(ctx, id)
 	if err != nil {
 		return err
+	}
+
+	// This is not documented in the API, but the actual API returned 404 if no application is found for the given ID .
+	if res.StatusCode() == http.StatusNotFound {
+		return nil
 	}
 
 	if res.StatusCode() != http.StatusOK {

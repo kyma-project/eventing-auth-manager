@@ -241,6 +241,18 @@ func Test_DeleteApplication(t *testing.T) {
 				return &clientMock
 			},
 		},
+		{
+			name: "should not return an error when app was found, but was already deleted",
+			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+				clientMock := mocks.ClientWithResponsesInterface{}
+
+				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appId)
+				mockDeleteApplicationWithResponseStatusNotFound(&clientMock)
+
+				return &clientMock
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -404,6 +416,15 @@ func mockDeleteApplicationWithResponseStatusInternalServerError(clientMock *mock
 		Return(&api.DeleteApplicationResponse{
 			HTTPResponse: &http.Response{
 				StatusCode: http.StatusInternalServerError,
+			},
+		}, nil)
+}
+
+func mockDeleteApplicationWithResponseStatusNotFound(clientMock *mocks.ClientWithResponsesInterface) {
+	clientMock.On("DeleteApplicationWithResponse", mock.Anything, mock.Anything).
+		Return(&api.DeleteApplicationResponse{
+			HTTPResponse: &http.Response{
+				StatusCode: http.StatusNotFound,
 			},
 		}, nil)
 }
