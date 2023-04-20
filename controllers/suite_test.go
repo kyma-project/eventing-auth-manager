@@ -22,8 +22,10 @@ import (
 	"fmt"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/utils/pointer"
 	"os"
 	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -63,6 +65,7 @@ var (
 )
 
 var testEnv *envtest.Environment
+var targetClusterTestEnv *envtest.Environment
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -81,12 +84,27 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	}
 
 	var err error
+	// Start Target Cluster
+	targetClusterK8sClient, err = initTargetClusterConfig()
+	Expect(err).NotTo(HaveOccurred())
+
+	kymaNs := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "kyma-system"},
+		Spec:       corev1.NamespaceSpec{},
+	}
+
+	err = targetClusterK8sClient.Get(context.TODO(), client.ObjectKeyFromObject(kymaNs), &corev1.Namespace{})
+	if err != nil {
+		Expect(errors.IsNotFound(err)).To(BeTrue())
+		err := targetClusterK8sClient.Create(context.TODO(), kymaNs)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	// Start the test cluster
 	// cfg is defined in this file globally.
 	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
-
-	initTargetClusterConfig()
 
 	Expect(operatorv1alpha1.AddToScheme(scheme.Scheme)).Should(Succeed())
 
@@ -99,12 +117,6 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 		Spec:       corev1.NamespaceSpec{},
 	}
 	Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
-
-	kymaNs := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: "kyma-system"},
-		Spec:       corev1.NamespaceSpec{},
-	}
-	Expect(k8sClient.Create(context.TODO(), kymaNs)).Should(Succeed())
 
 	kcpNs := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: "kcp-system"},
@@ -132,16 +144,19 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 var _ = AfterSuite(func() {
 	cancel()
 	By("Tearing down the test environment")
-	err := testEnv.Stop()
+	stopTestEnv(testEnv)
+	stopTestEnv(targetClusterTestEnv)
+})
+
+func stopTestEnv(env *envtest.Environment) {
+	err := env.Stop()
 
 	// Suggested workaround for timeout issue https://github.com/kubernetes-sigs/controller-runtime/issues/1571#issuecomment-1005575071
 	if err != nil {
-		time.Sleep(4 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
-	err = testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
-
-})
+}
 
 func getIasTestClient() ias.Client {
 	url := os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
@@ -168,19 +183,45 @@ func (i iasClientStub) DeleteApplication(_ context.Context, _ string) error {
 	return nil
 }
 
-func initTargetClusterConfig() {
+func initTargetClusterConfig() (client.Client, error) {
 	targetK8sCfgPath := os.Getenv("TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH")
+
+	var err error
+	var clientConfig *rest.Config
+
 	if targetK8sCfgPath == "" {
-		panic("TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH env var is not set")
+		targetClusterTestEnv = &envtest.Environment{}
+
+		clientConfig, err = targetClusterTestEnv.Start()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(clientConfig).NotTo(BeNil())
+
+		adminUser, err := targetClusterTestEnv.ControlPlane.AddUser(envtest.User{
+			Name:   "envtest-admin",
+			Groups: []string{"system:masters"},
+		}, nil)
+		Expect(err).NotTo(HaveOccurred())
+
+		kubeconfig, err := adminUser.KubeConfig()
+		Expect(err).NotTo(HaveOccurred())
+		targetClusterK8sCfg = base64.StdEncoding.EncodeToString(kubeconfig)
+	} else {
+		kubeconfig, err := os.ReadFile(targetK8sCfgPath)
+		Expect(err).NotTo(HaveOccurred())
+		targetClusterK8sCfg = base64.StdEncoding.EncodeToString(kubeconfig)
+
+		config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		targetClusterTestEnv = &envtest.Environment{
+			Config:             config,
+			UseExistingCluster: pointer.Bool(true),
+		}
+
+		clientConfig, err = targetClusterTestEnv.Start()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(clientConfig).NotTo(BeNil())
 	}
 
-	data, err := os.ReadFile(targetK8sCfgPath)
-	Expect(err).NotTo(HaveOccurred())
-	targetClusterK8sCfg = base64.StdEncoding.EncodeToString(data)
-
-	config, err := clientcmd.RESTConfigFromKubeConfig(data)
-	Expect(err).NotTo(HaveOccurred())
-
-	targetClusterK8sClient, err = client.New(config, client.Options{})
-	Expect(err).NotTo(HaveOccurred())
+	return client.New(clientConfig, client.Options{})
 }
