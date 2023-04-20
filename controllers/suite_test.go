@@ -18,10 +18,12 @@ package controllers_test
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -49,14 +51,15 @@ import (
 const (
 	defaultTimeout = time.Second * 5
 	namespace      = "test-namespace"
-	kymaNs         = "kyma-system"
 )
 
 var (
-	cfg       *rest.Config
-	k8sClient client.Client
-	ctx       context.Context
-	cancel    context.CancelFunc
+	cfg                    *rest.Config
+	k8sClient              client.Client
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	targetClusterK8sCfg    string
+	targetClusterK8sClient client.Client
 )
 
 var testEnv *envtest.Environment
@@ -83,6 +86,8 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
+	initTargetClusterConfig()
+
 	Expect(operatorv1alpha1.AddToScheme(scheme.Scheme)).Should(Succeed())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
@@ -96,10 +101,16 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
 
 	kymaNs := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: kymaNs},
+		ObjectMeta: metav1.ObjectMeta{Name: "kyma-system"},
 		Spec:       corev1.NamespaceSpec{},
 	}
 	Expect(k8sClient.Create(context.TODO(), kymaNs)).Should(Succeed())
+
+	kcpNs := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "kcp-system"},
+		Spec:       corev1.NamespaceSpec{},
+	}
+	Expect(k8sClient.Create(context.TODO(), kcpNs)).Should(Succeed())
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme.Scheme,
@@ -155,4 +166,21 @@ func (i iasClientStub) CreateApplication(_ context.Context, name string) (ias.Ap
 
 func (i iasClientStub) DeleteApplication(_ context.Context, _ string) error {
 	return nil
+}
+
+func initTargetClusterConfig() {
+	targetK8sCfgPath := os.Getenv("TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH")
+	if targetK8sCfgPath == "" {
+		panic("TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH env var is not set")
+	}
+
+	data, err := os.ReadFile(targetK8sCfgPath)
+	Expect(err).NotTo(HaveOccurred())
+	targetClusterK8sCfg = base64.StdEncoding.EncodeToString(data)
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(data)
+	Expect(err).NotTo(HaveOccurred())
+
+	targetClusterK8sClient, err = client.New(config, client.Options{})
+	Expect(err).NotTo(HaveOccurred())
 }

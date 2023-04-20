@@ -56,7 +56,6 @@ func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, ias ias.Clien
 }
 
 // TODO: Check if conditions are correctly represented
-// TODO: Implement finalizer to have correct deletion handling
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/finalizers,verbs=update
@@ -69,6 +68,14 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	targetK8sClient, err := getTargetClusterClient(r.Client, cr.Name)
+	if err != nil {
+		logger.Error(err, "Failed to retrieve client of target cluster", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+		return ctrl.Result{
+			RequeueAfter: requeueAfterError,
+		}, err
+	}
+
 	// check DeletionTimestamp to determine if object is under deletion
 	if cr.ObjectMeta.DeletionTimestamp.IsZero() {
 		if err = r.addFinalizer(ctx, &cr); err != nil {
@@ -77,7 +84,8 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}, err
 		}
 	} else {
-		if err = r.handleDeletion(ctx, &cr); err != nil {
+		logger.Info("Handling deletion", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+		if err = r.handleDeletion(ctx, targetK8sClient, &cr); err != nil {
 			return ctrl.Result{
 				RequeueAfter: requeueAfterError,
 			}, err
@@ -86,8 +94,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
-	// TODO: Use correct pointing to the target cluster
-	appSecretExists, err := hasTargetClusterApplicationSecret(ctx, r.Client)
+	appSecretExists, err := hasTargetClusterApplicationSecret(ctx, targetK8sClient)
 	if err != nil {
 		logger.Error(err, "Failed to retrieve secret state from target cluster", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 		return ctrl.Result{
@@ -96,6 +103,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	if !appSecretExists {
+		logger.Info("Creating IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 		iasApplication, createAppErr := r.IasClient.CreateApplication(ctx, cr.Name)
 		if createAppErr != nil {
 			logger.Error(createAppErr, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
@@ -122,8 +130,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// TODO: keep the IAS secret in memory to check for existence, otherwise, new IAS secret is recreated multiple times for error in case K8s secret creation fails.
 		appSecret := iasApplication.ToSecret(applicationSecretName, applicationSecretNamespace)
 
-		// TODO: Create secret on target cluster by reading the kubeconfig from the secret using the name of the Kyma CR owner reference
-		createSecretErr := r.Client.Create(ctx, &appSecret)
+		createSecretErr := targetK8sClient.Create(ctx, &appSecret)
 		if createSecretErr != nil {
 			logger.Error(createSecretErr, "Failed to create application secret", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, createSecretErr); err != nil {
@@ -136,6 +143,8 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}, createAppErr
 		}
 
+		logger.Info("Created IAS application secret", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+
 		cr.Status.AuthSecret = &operatorv1alpha1.AuthSecret{
 			Cluster:        "", // TODO: use proper cluster reference when implemented
 			NamespacedName: appSecret.Namespace + "/" + appSecret.Name,
@@ -147,12 +156,14 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	}
 
+	logger.Info("Reconciliation done", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 	return ctrl.Result{}, nil
 }
 
 // Adds the finalizer if none exists
 func (r *eventingAuthReconciler) addFinalizer(ctx context.Context, cr *operatorv1alpha1.EventingAuth) error {
 	if !controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
+		ctrl.Log.Info("Adding finalizer", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 		controllerutil.AddFinalizer(cr, eventingAuthFinalizerName)
 		if err := r.Update(ctx, cr); err != nil {
 			return fmt.Errorf("failed to add finalizer: %v", err)
@@ -162,18 +173,21 @@ func (r *eventingAuthReconciler) addFinalizer(ctx context.Context, cr *operatorv
 }
 
 // Deletes the secret and IAS app. Finally, removes the finalizer.
-func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, cr *operatorv1alpha1.EventingAuth) error {
+func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, targetClusterClient client.Client, cr *operatorv1alpha1.EventingAuth) error {
 	// The object is being deleted
 	if controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
-		// TODO: Replace the client with the client pointing to the target cluster
 		// delete k8s secret
-		if err := deleteSecret(ctx, r.Client); err != nil {
+		if err := deleteSecret(ctx, targetClusterClient); err != nil {
 			return fmt.Errorf("failed to delete secret: %v", err)
 		}
+		ctrl.Log.Info("Deleted IAS application secret on target cluster", "eventingAuth", cr.Name, "namespace", cr.Namespace)
+
 		// delete IAS application clean-up
 		if err := r.IasClient.DeleteApplication(ctx, cr.Name); err != nil {
 			return fmt.Errorf("failed to delete IAS Application: %v", err)
 		}
+		ctrl.Log.Info("Deleted IAS Application", "name", cr.Name)
+
 		// remove our finalizer from the list and update it.
 		controllerutil.RemoveFinalizer(cr, eventingAuthFinalizerName)
 		if err := r.Update(ctx, cr); err != nil {
