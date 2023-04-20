@@ -62,10 +62,9 @@ var (
 	cancel                 context.CancelFunc
 	targetClusterK8sCfg    string
 	targetClusterK8sClient client.Client
+	testEnv                *envtest.Environment
+	targetClusterTestEnv   *envtest.Environment
 )
-
-var testEnv *envtest.Environment
-var targetClusterTestEnv *envtest.Environment
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -84,15 +83,13 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	}
 
 	var err error
+
 	// Start Target Cluster
 	targetClusterK8sClient, err = initTargetClusterConfig()
 	Expect(err).NotTo(HaveOccurred())
 
-	kymaNs := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: "kyma-system"},
-		Spec:       corev1.NamespaceSpec{},
-	}
-
+	// In case we are using an existing cluster the Kyma-system namespace might already exist, so we need to guard against that.
+	kymaNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kyma-system"}}
 	err = targetClusterK8sClient.Get(context.TODO(), client.ObjectKeyFromObject(kymaNs), &corev1.Namespace{})
 	if err != nil {
 		Expect(errors.IsNotFound(err)).To(BeTrue())
@@ -101,7 +98,6 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	}
 
 	// Start the test cluster
-	// cfg is defined in this file globally.
 	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
@@ -196,6 +192,7 @@ func initTargetClusterConfig() (client.Client, error) {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(clientConfig).NotTo(BeNil())
 
+		// We create a new user since this is the easiest way to get the kubeconfig in the right format to store it in the secret.
 		adminUser, err := targetClusterTestEnv.ControlPlane.AddUser(envtest.User{
 			Name:   "envtest-admin",
 			Groups: []string{"system:masters"},
