@@ -21,6 +21,7 @@ import (
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -35,6 +36,11 @@ import (
 
 	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
+)
+
+const (
+	requeueAfterError = time.Minute * 1
+	requeueAfter      = time.Hour * 10
 )
 
 var (
@@ -100,7 +106,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), iasClient)
+	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), iasClient, requeueAfterError, requeueAfter)
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EventingAuth")

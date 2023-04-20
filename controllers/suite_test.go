@@ -126,7 +126,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), getIasTestClient())
+	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), getIasTestClient(), time.Second*1, time.Second*2)
 
 	Expect(reconciler.SetupWithManager(mgr)).Should(Succeed())
 

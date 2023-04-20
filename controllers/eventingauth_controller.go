@@ -34,7 +34,6 @@ import (
 )
 
 const (
-	requeueAfterError          = time.Minute * 1
 	applicationSecretName      = "eventing-auth-application"
 	applicationSecretNamespace = "kyma-system"
 	eventingAuthFinalizerName  = "eventingauth.operator.kyma-project.io/finalizer"
@@ -43,15 +42,19 @@ const (
 // eventingAuthReconciler reconciles a EventingAuth object
 type eventingAuthReconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	IasClient ias.Client
+	Scheme               *runtime.Scheme
+	IasClient            ias.Client
+	errorRequeuePeriod   time.Duration
+	defaultRequeuePeriod time.Duration
 }
 
-func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, ias ias.Client) ManagedReconciler {
+func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, ias ias.Client, errorRequeuePeriod time.Duration, defaultRequeuePeriod time.Duration) ManagedReconciler {
 	return &eventingAuthReconciler{
-		Client:    c,
-		Scheme:    s,
-		IasClient: ias,
+		Client:               c,
+		Scheme:               s,
+		IasClient:            ias,
+		errorRequeuePeriod:   errorRequeuePeriod,
+		defaultRequeuePeriod: defaultRequeuePeriod,
 	}
 }
 
@@ -72,7 +75,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err != nil {
 		logger.Error(err, "Failed to retrieve client of target cluster", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 		return ctrl.Result{
-			RequeueAfter: requeueAfterError,
+			RequeueAfter: r.errorRequeuePeriod,
 		}, err
 	}
 
@@ -80,14 +83,14 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if cr.ObjectMeta.DeletionTimestamp.IsZero() {
 		if err = r.addFinalizer(ctx, &cr); err != nil {
 			return ctrl.Result{
-				RequeueAfter: requeueAfterError,
+				RequeueAfter: r.errorRequeuePeriod,
 			}, err
 		}
 	} else {
 		logger.Info("Handling deletion", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 		if err = r.handleDeletion(ctx, targetK8sClient, &cr); err != nil {
 			return ctrl.Result{
-				RequeueAfter: requeueAfterError,
+				RequeueAfter: r.errorRequeuePeriod,
 			}, err
 		}
 		// Stop reconciliation as the item is being deleted
@@ -98,7 +101,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err != nil {
 		logger.Error(err, "Failed to retrieve secret state from target cluster", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 		return ctrl.Result{
-			RequeueAfter: requeueAfterError,
+			RequeueAfter: r.errorRequeuePeriod,
 		}, err
 	}
 
@@ -109,11 +112,11 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			logger.Error(createAppErr, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
 				return ctrl.Result{
-					RequeueAfter: requeueAfterError,
+					RequeueAfter: r.errorRequeuePeriod,
 				}, err
 			}
 			return ctrl.Result{
-				RequeueAfter: requeueAfterError,
+				RequeueAfter: r.errorRequeuePeriod,
 			}, createAppErr
 		}
 
@@ -123,7 +126,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, nil); err != nil {
 			return ctrl.Result{
-				RequeueAfter: requeueAfterError,
+				RequeueAfter: r.errorRequeuePeriod,
 			}, err
 		}
 
@@ -135,11 +138,11 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			logger.Error(createSecretErr, "Failed to create application secret", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, createSecretErr); err != nil {
 				return ctrl.Result{
-					RequeueAfter: requeueAfterError,
+					RequeueAfter: r.errorRequeuePeriod,
 				}, err
 			}
 			return ctrl.Result{
-				RequeueAfter: requeueAfterError,
+				RequeueAfter: r.errorRequeuePeriod,
 			}, createAppErr
 		}
 
@@ -151,7 +154,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, nil); err != nil {
 			return ctrl.Result{
-				RequeueAfter: requeueAfterError,
+				RequeueAfter: r.errorRequeuePeriod,
 			}, err
 		}
 	}
