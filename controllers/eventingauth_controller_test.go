@@ -20,15 +20,18 @@ var _ = Describe("EventingAuth Controller", Serial, func() {
 
 	BeforeEach(func() {
 		// We need to clean up the secret before each test, because a failing test could leave the secret in the cluster and this can lead to cascading failures.
-		secret := corev1.Secret{}
-		err := targetClusterK8sClient.Get(context.TODO(), appSecretObjectKey, &secret)
-		if err != nil {
-			Expect(errors.IsNotFound(err)).To(BeTrue())
-		} else {
-			Expect(targetClusterK8sClient.Delete(context.TODO(), &secret)).Should(Succeed())
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      appSecretObjectKey.Name,
+				Namespace: appSecretObjectKey.Namespace,
+			},
 		}
 
+		if err := targetClusterK8sClient.Delete(context.TODO(), &secret); err != nil {
+			Expect(errors.IsNotFound(err)).To(BeTrue())
+		}
 	})
+
 	//TODO: Change tests to use table tests
 	Context("When creating EventingAuth CR", func() {
 
@@ -122,7 +125,7 @@ func deleteKubeconfigSecret(s *corev1.Secret) {
 }
 
 func generateCrName() string {
-	return fmt.Sprintf(uuid.New().String())
+	return uuid.New().String()
 }
 
 func verifyEventingAuthState(cr *v1alpha1.EventingAuth, state v1alpha1.State) {

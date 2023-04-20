@@ -19,7 +19,7 @@ func getTargetClusterClient(k8sClient client.Client, targetClusterId string) (cl
 	}
 
 	encoded := secret.Data["config"]
-	if encoded == nil || len(encoded) == 0 {
+	if len(encoded) == 0 {
 		return nil, fmt.Errorf("failed to find target cluster kubeconfig in secret %s", kubeconfigSecretName)
 	}
 
