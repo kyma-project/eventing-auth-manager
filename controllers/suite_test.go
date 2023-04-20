@@ -150,7 +150,7 @@ type iasClientStub struct {
 }
 
 func (i iasClientStub) CreateApplication(_ context.Context, name string) (ias.Application, error) {
-	return ias.NewApplication(fmt.Sprintf("client-id-for-%s", name), "test-client-secret", "https://test-token-url.com"), nil
+	return ias.NewApplication(fmt.Sprintf("id-for-%s", name), fmt.Sprintf("client-id-for-%s", name), "test-client-secret", "https://test-token-url.com"), nil
 }
 
 func (i iasClientStub) DeleteApplication(_ context.Context, _ string) error {

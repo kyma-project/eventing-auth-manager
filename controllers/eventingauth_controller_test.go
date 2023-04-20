@@ -27,7 +27,7 @@ var _ = Describe("EventingAuth Controller", func() {
 			By("Creating EventingAuth CR")
 			Expect(k8sClient.Create(context.TODO(), &cr)).Should(Succeed())
 
-			verifyEventingAuthState("test", v1alpha1.StateOk)
+			verifyEventingAuthState("test", v1alpha1.StateReady)
 
 			By("Verifying that IAS application secret exists")
 			secret := corev1.Secret{}

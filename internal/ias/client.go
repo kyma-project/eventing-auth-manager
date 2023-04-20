@@ -78,7 +78,7 @@ func (c client) CreateApplication(ctx context.Context, name string) (Application
 		return Application{}, err
 	}
 
-	return NewApplication(*clientId, *clientSecret, c.tenantUrl), nil
+	return NewApplication(appId.String(), *clientId, *clientSecret, c.tenantUrl), nil
 }
 
 // DeleteApplication deletes an application in IAS. If the application does not exist, this function does nothing.

@@ -112,15 +112,36 @@ spec:
                   - type
                   type: object
                 type: array
+              iasApplication:
+                description: Application contains information about a created IAS
+                  application
+                properties:
+                  name:
+                    type: string
+                  uuid:
+                    type: string
+                required:
+                - name
+                - uuid
+                type: object
+              secret:
+                description: AuthSecret contains information about created K8s secret
+                properties:
+                  cluster:
+                    type: string
+                  namespacedName:
+                    type: string
+                required:
+                - cluster
+                - namespacedName
+                type: object
               state:
                 description: State signifies current state of CustomObject. Value
-                  can be one of ("Ok", "Error").
+                  can be one of ("Ready", "NotReady").
                 enum:
-                - Ok
-                - Error
+                - Ready
+                - NotReady
                 type: string
-            required:
-            - state
             type: object
         type: object
     served: true
