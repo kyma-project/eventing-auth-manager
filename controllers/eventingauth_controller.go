@@ -160,7 +160,9 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	logger.Info("Reconciliation done", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
-	return ctrl.Result{}, nil
+	return ctrl.Result{
+		RequeueAfter: r.defaultRequeuePeriod,
+	}, nil
 }
 
 // Adds the finalizer if none exists

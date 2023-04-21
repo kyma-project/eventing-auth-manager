@@ -22,9 +22,9 @@ var _ = Describe("EventingAuth Controller", Serial, func() {
 
 	BeforeEach(func() {
 		deleteEventingAuths()
-		deleteKubeconfigSecrets()
 		// We also need to clean up the app secret before each test, because a failing test could leave the secret in the cluster and this can lead to cascading failures.
 		deleteApplicationSecretOnTargetCluster()
+		deleteKubeconfigSecrets()
 	})
 
 	//TODO: Change tests to use table tests
