@@ -189,8 +189,6 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, cr *operato
 
 // updateEventingAuthStatus updates the subscription's status changes to k8s.
 func (r *eventingAuthReconciler) updateEventingAuthStatus(ctx context.Context, cr operatorv1alpha1.EventingAuth) error {
-	cr.Status = operatorv1alpha1.DetermineEventingAuthState(cr.Status)
-
 	namespacedName := &types.NamespacedName{
 		Name:      cr.Name,
 		Namespace: cr.Namespace,
@@ -206,7 +204,7 @@ func (r *eventingAuthReconciler) updateEventingAuthStatus(ctx context.Context, c
 	desiredEventingAuth := actualEventingAuth.DeepCopy()
 	desiredEventingAuth.Status = cr.Status
 
-	// sync eventingauth status with k8s
+	// sync EventingAuth status with k8s
 	if err := r.updateStatus(ctx, actualEventingAuth, desiredEventingAuth); err != nil {
 		return fmt.Errorf("failed to update EventingAuth status: %v", err)
 	}

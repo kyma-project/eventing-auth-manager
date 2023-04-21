@@ -21,6 +21,11 @@ const (
 	ConditionReasonSecretCreationFailed      string = "SecretCreationFailed"
 )
 
+const (
+	ConditionMessageApplicationCreated string = "IAS application is successfully created."
+	ConditionMessageSecretCreated      string = "Eventing webhook authentication secret is successfully created."
+)
+
 func UpdateConditionAndState(eventingAuth *EventingAuth, conditionType ConditionType, err error) EventingAuthStatus {
 	switch conditionType {
 	case ConditionApplicationReady:
@@ -32,8 +37,11 @@ func UpdateConditionAndState(eventingAuth *EventingAuth, conditionType Condition
 			eventingAuth.Status.Conditions = MakeSecretReadyCondition(eventingAuth, err)
 		}
 	}
+
 	if err != nil {
 		eventingAuth.Status.State = StateNotReady
+	} else {
+		eventingAuth.Status.State = determineEventingAuthState(eventingAuth.Status)
 	}
 	return eventingAuth.Status
 }
@@ -47,7 +55,7 @@ func MakeApplicationReadyCondition(eventingAuth *EventingAuth, err error) []meta
 	if err == nil {
 		applicationReadyCondition.Status = metav1.ConditionTrue
 		applicationReadyCondition.Reason = ConditionReasonApplicationCreated
-		applicationReadyCondition.Message = "IAS application is successfully created."
+		applicationReadyCondition.Message = ConditionMessageApplicationCreated
 	} else {
 		applicationReadyCondition.Message = err.Error()
 		applicationReadyCondition.Reason = ConditionReasonApplicationCreationFailed
@@ -77,7 +85,7 @@ func MakeSecretReadyCondition(eventingAuth *EventingAuth, err error) []metav1.Co
 	if err == nil {
 		secretReadyCondition.Status = metav1.ConditionTrue
 		secretReadyCondition.Reason = ConditionReasonSecretCreated
-		secretReadyCondition.Message = "Eventing authentication secret is successfully created."
+		secretReadyCondition.Message = ConditionMessageSecretCreated
 	} else {
 		secretReadyCondition.Message = err.Error()
 		secretReadyCondition.Reason = ConditionReasonSecretCreationFailed
@@ -146,8 +154,8 @@ func IsEventingAuthStatusEqual(oldStatus, newStatus EventingAuthStatus) bool {
 		ConditionsEqual(oldStatus.Conditions, newStatus.Conditions)
 }
 
-// DetermineEventingAuthState sets 'Ready' to status.State if IAS app and secret are created, otherwise 'NoReady'.
-func DetermineEventingAuthState(status EventingAuthStatus) EventingAuthStatus {
+// determineEventingAuthState returns 'Ready' if both IAS app and secret are created, otherwise 'NoReady'.
+func determineEventingAuthState(status EventingAuthStatus) State {
 	var applicationReady, secretReady bool
 	for _, cond := range status.Conditions {
 		if cond.Type == string(ConditionApplicationReady) {
@@ -158,9 +166,7 @@ func DetermineEventingAuthState(status EventingAuthStatus) EventingAuthStatus {
 		}
 	}
 	if applicationReady && secretReady {
-		status.State = StateReady
-	} else {
-		status.State = StateNotReady
+		return StateReady
 	}
-	return status
+	return StateNotReady
 }
