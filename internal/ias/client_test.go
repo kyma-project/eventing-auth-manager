@@ -183,7 +183,7 @@ func Test_CreateApplication(t *testing.T) {
 			require.Equal(t, tt.wantApp, app)
 
 			if tt.wantError != nil {
-				require.Error(t, tt.wantError)
+				require.Error(t, err)
 				require.EqualError(t, tt.wantError, err.Error())
 			} else {
 				require.NoError(t, err)
@@ -269,7 +269,7 @@ func Test_DeleteApplication(t *testing.T) {
 
 			// then
 			if tt.wantError != nil {
-				require.Error(t, tt.wantError)
+				require.Error(t, err)
 				require.EqualError(t, tt.wantError, err.Error())
 			} else {
 				require.NoError(t, err)

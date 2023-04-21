@@ -96,26 +96,24 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	if !appSecretExists {
-		iasApplication, err := r.IasClient.CreateApplication(ctx, cr.Name)
-		if err != nil {
-			logger.Error(err, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
-			operatorv1alpha1.UpdateConditionAndState(&cr, operatorv1alpha1.ConditionApplicationReady, err)
-			if err := r.updateEventingAuthStatus(ctx, cr); err != nil {
+		iasApplication, createAppErr := r.IasClient.CreateApplication(ctx, cr.Name)
+		if createAppErr != nil {
+			logger.Error(createAppErr, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
 				return ctrl.Result{
 					RequeueAfter: requeueAfterError,
 				}, err
 			}
 			return ctrl.Result{
 				RequeueAfter: requeueAfterError,
-			}, err
+			}, createAppErr
 		}
 
-		operatorv1alpha1.UpdateConditionAndState(&cr, operatorv1alpha1.ConditionApplicationReady, nil)
 		cr.Status.Application = &operatorv1alpha1.IASApplication{
 			Name: cr.Name,
 			UUID: iasApplication.GetId(),
 		}
-		if err := r.updateEventingAuthStatus(ctx, cr); err != nil {
+		if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, nil); err != nil {
 			return ctrl.Result{
 				RequeueAfter: requeueAfterError,
 			}, err
@@ -125,26 +123,24 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		appSecret := iasApplication.ToSecret(applicationSecretName, applicationSecretNamespace)
 
 		// TODO: Create secret on target cluster by reading the kubeconfig from the secret using the name of the Kyma CR owner reference
-		err = r.Client.Create(ctx, &appSecret)
-		if err != nil {
-			logger.Error(err, "Failed to create application secret", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
-			operatorv1alpha1.UpdateConditionAndState(&cr, operatorv1alpha1.ConditionSecretReady, err)
-			if err := r.updateEventingAuthStatus(ctx, cr); err != nil {
+		createSecretErr := r.Client.Create(ctx, &appSecret)
+		if createSecretErr != nil {
+			logger.Error(createSecretErr, "Failed to create application secret", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, createSecretErr); err != nil {
 				return ctrl.Result{
 					RequeueAfter: requeueAfterError,
 				}, err
 			}
 			return ctrl.Result{
 				RequeueAfter: requeueAfterError,
-			}, err
+			}, createAppErr
 		}
 
-		operatorv1alpha1.UpdateConditionAndState(&cr, operatorv1alpha1.ConditionSecretReady, nil)
 		cr.Status.AuthSecret = &operatorv1alpha1.AuthSecret{
-			Cluster:        "",
+			Cluster:        "", // TODO: use proper cluster reference when implemented
 			NamespacedName: appSecret.Namespace + "/" + appSecret.Name,
 		}
-		if err := r.updateEventingAuthStatus(ctx, cr); err != nil {
+		if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, nil); err != nil {
 			return ctrl.Result{
 				RequeueAfter: requeueAfterError,
 			}, err
@@ -188,7 +184,12 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, cr *operato
 }
 
 // updateEventingAuthStatus updates the subscription's status changes to k8s.
-func (r *eventingAuthReconciler) updateEventingAuthStatus(ctx context.Context, cr operatorv1alpha1.EventingAuth) error {
+func (r *eventingAuthReconciler) updateEventingAuthStatus(ctx context.Context, cr *operatorv1alpha1.EventingAuth, conditionType operatorv1alpha1.ConditionType, errToCheck error) error {
+	_, err := operatorv1alpha1.UpdateConditionAndState(cr, conditionType, errToCheck)
+	if err != nil {
+		return err
+	}
+
 	namespacedName := &types.NamespacedName{
 		Name:      cr.Name,
 		Namespace: cr.Namespace,
@@ -205,7 +206,7 @@ func (r *eventingAuthReconciler) updateEventingAuthStatus(ctx context.Context, c
 	desiredEventingAuth.Status = cr.Status
 
 	// sync EventingAuth status with k8s
-	if err := r.updateStatus(ctx, actualEventingAuth, desiredEventingAuth); err != nil {
+	if err = r.updateStatus(ctx, actualEventingAuth, desiredEventingAuth); err != nil {
 		return fmt.Errorf("failed to update EventingAuth status: %v", err)
 	}
 

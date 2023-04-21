@@ -246,7 +246,7 @@ func Test_MakeSecretReadyCondition(t *testing.T) {
 			},
 		},
 		{
-			name: "Should update not ready secret condition to ready condition",
+			name: "Should update ready secret condition to not ready when error occurs",
 			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []metav1.Condition{
 				metav1.Condition{
 					Type:    string(ConditionApplicationReady),
@@ -289,12 +289,14 @@ func Test_MakeSecretReadyCondition(t *testing.T) {
 }
 
 func Test_UpdateConditionAndState(t *testing.T) {
+	const invalidConditionType = "InvalidConditionType"
 	tests := []struct {
 		name              string
 		givenEventingAuth *EventingAuth
 		conditionType     ConditionType
 		givenErr          error
 		wantStatus        EventingAuthStatus
+		wantError         error
 	}{
 		{
 			name: "Should update state to NotReady as error occurs",
@@ -399,15 +401,36 @@ func Test_UpdateConditionAndState(t *testing.T) {
 				State: StateNotReady,
 			},
 		},
+		{
+			name: "Should fail if invalid condition type is provided",
+			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{
+				Conditions: []metav1.Condition{
+					metav1.Condition{
+						Type:    string(ConditionApplicationReady),
+						Status:  metav1.ConditionFalse,
+						Reason:  ConditionReasonApplicationCreated,
+						Message: "IAS application creation failed.",
+					},
+				},
+				State: StateNotReady,
+			}),
+			conditionType: invalidConditionType,
+			wantError:     fmt.Errorf("unsupported condition type: %s", invalidConditionType),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actualStatus := UpdateConditionAndState(tt.givenEventingAuth, tt.conditionType, tt.givenErr)
+			actualStatus, err := UpdateConditionAndState(tt.givenEventingAuth, tt.conditionType, tt.givenErr)
 			// then
-			require.True(t, ConditionsEqual(tt.wantStatus.Conditions, actualStatus.Conditions))
-			require.True(t, ConditionsEqual(tt.givenEventingAuth.Status.Conditions, actualStatus.Conditions))
-			require.Equal(t, tt.wantStatus.State, actualStatus.State)
+			if tt.wantError != nil {
+				require.Error(t, err)
+				require.EqualError(t, tt.wantError, err.Error())
+			} else {
+				require.True(t, ConditionsEqual(tt.wantStatus.Conditions, actualStatus.Conditions))
+				require.True(t, ConditionsEqual(tt.givenEventingAuth.Status.Conditions, actualStatus.Conditions))
+				require.Equal(t, tt.wantStatus.State, actualStatus.State)
+			}
 		})
 	}
 }

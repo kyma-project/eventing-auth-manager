@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
 )
@@ -26,7 +27,7 @@ const (
 	ConditionMessageSecretCreated      string = "Eventing webhook authentication secret is successfully created."
 )
 
-func UpdateConditionAndState(eventingAuth *EventingAuth, conditionType ConditionType, err error) EventingAuthStatus {
+func UpdateConditionAndState(eventingAuth *EventingAuth, conditionType ConditionType, err error) (EventingAuthStatus, error) {
 	switch conditionType {
 	case ConditionApplicationReady:
 		{
@@ -36,6 +37,8 @@ func UpdateConditionAndState(eventingAuth *EventingAuth, conditionType Condition
 		{
 			eventingAuth.Status.Conditions = MakeSecretReadyCondition(eventingAuth, err)
 		}
+	default:
+		return eventingAuth.Status, fmt.Errorf("unsupported condition type: %s", conditionType)
 	}
 
 	if err != nil {
@@ -43,7 +46,7 @@ func UpdateConditionAndState(eventingAuth *EventingAuth, conditionType Condition
 	} else {
 		eventingAuth.Status.State = determineEventingAuthState(eventingAuth.Status)
 	}
-	return eventingAuth.Status
+	return eventingAuth.Status, nil
 }
 
 // MakeApplicationReadyCondition updates the ConditionApplicationActive condition based on the given error value.
@@ -135,11 +138,7 @@ func ConditionEquals(existing, expected metav1.Condition) bool {
 	isReasonEqual := existing.Reason == expected.Reason
 	isMessageEqual := existing.Message == expected.Message
 
-	if !isStatusEqual || !isReasonEqual || !isMessageEqual || !isTypeEqual {
-		return false
-	}
-
-	return true
+	return isStatusEqual && isReasonEqual && isMessageEqual && isTypeEqual
 }
 
 func IsEventingAuthStatusEqual(oldStatus, newStatus EventingAuthStatus) bool {
