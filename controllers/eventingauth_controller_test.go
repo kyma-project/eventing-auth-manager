@@ -19,30 +19,18 @@ var appSecretObjectKey = ctrlClient.ObjectKey{Name: "eventing-auth-application",
 var _ = Describe("EventingAuth Controller", Serial, func() {
 
 	BeforeEach(func() {
-		// We need to clean up the secret before each test, because a failing test could leave the secret in the cluster and this can lead to cascading failures.
-		secret := corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      appSecretObjectKey.Name,
-				Namespace: appSecretObjectKey.Namespace,
-			},
-		}
-
-		if err := targetClusterK8sClient.Delete(context.TODO(), &secret); err != nil {
-			Expect(errors.IsNotFound(err)).To(BeTrue())
-		}
+		deleteEventingAuths()
+		deleteKubeconfigSecrets()
+		// We also need to clean up the app secret before each test, because a failing test could leave the secret in the cluster and this can lead to cascading failures.
+		deleteApplicationSecretOnTargetCluster()
 	})
 
 	//TODO: Change tests to use table tests
 	Context("When creating EventingAuth CR", func() {
 
 		It("should create secret with IAS applications credentials", func() {
-			cr := createEventingAuth()
-			s := createKubeconfigSecret(cr)
-			defer func() {
-				teardownEventingAuth(cr)
-				deleteKubeconfigSecret(s)
-			}()
-			verifyEventingAuthState(cr, v1alpha1.StateOk)
+			cr := createEventingAuthAndKubeconfigSecret()
+			verifyEventingAuthState(cr, v1alpha1.StateReady)
 			verifySecretExistsOnTargetCluster()
 		})
 	})
@@ -50,27 +38,17 @@ var _ = Describe("EventingAuth Controller", Serial, func() {
 	Context("When deleting EventingAuth CR", func() {
 
 		It("should delete secret with IAS applications credentials", func() {
-			cr := createEventingAuth()
-			s := createKubeconfigSecret(cr)
-			defer func() {
-				teardownEventingAuth(cr)
-				deleteKubeconfigSecret(s)
-			}()
-			verifyEventingAuthState(cr, v1alpha1.StateOk)
-			verifySecretExistsOnTargetCluster()
+			cr := createEventingAuthAndKubeconfigSecret()
+			verifyEventingAuthState(cr, v1alpha1.StateReady)
+			s := verifySecretExistsOnTargetCluster()
 			deleteEventingAuth(cr)
 			verifySecretDoesNotExistOnTargetCluster(s)
 		})
 	})
 
 	It("should create new secret on target cluster on time-based reconciliation when secret was deleted manually", func() {
-		cr := createEventingAuth()
-		s := createKubeconfigSecret(cr)
-		defer func() {
-			teardownEventingAuth(cr)
-			deleteKubeconfigSecret(s)
-		}()
-		verifyEventingAuthState(cr, v1alpha1.StateOk)
+		cr := createEventingAuthAndKubeconfigSecret()
+		verifyEventingAuthState(cr, v1alpha1.StateReady)
 		secret := verifySecretExistsOnTargetCluster()
 		deleteSecretOnTargetCluster(secret)
 		verifySecretDoesNotExistOnTargetCluster(secret)
@@ -78,15 +56,22 @@ var _ = Describe("EventingAuth Controller", Serial, func() {
 	})
 })
 
+func createEventingAuthAndKubeconfigSecret() *v1alpha1.EventingAuth {
+	crName := generateCrName()
+	createKubeconfigSecret(crName)
+	cr := createEventingAuth(crName)
+	return cr
+}
+
 func deleteSecretOnTargetCluster(secret *corev1.Secret) {
 	By("Deleting secret on target cluster")
 	Expect(targetClusterK8sClient.Delete(context.TODO(), secret)).Should(Succeed())
 }
 
-func createEventingAuth() *v1alpha1.EventingAuth {
+func createEventingAuth(name string) *v1alpha1.EventingAuth {
 	e := v1alpha1.EventingAuth{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      generateCrName(),
+			Name:      name,
 			Namespace: namespace,
 		},
 	}
@@ -115,15 +100,6 @@ func verifySecretExistsOnTargetCluster() *corev1.Secret {
 	return &s
 }
 
-func deleteKubeconfigSecret(s *corev1.Secret) {
-	By(fmt.Sprintf("Deleting secret %s as part of teardown", s.Name))
-	Expect(k8sClient.Delete(context.TODO(), s)).Should(Succeed())
-	Eventually(func(g Gomega) {
-		err := k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(s), &corev1.Secret{})
-		g.Expect(errors.IsNotFound(err)).To(BeTrue())
-	}, defaultTimeout).Should(Succeed())
-}
-
 func generateCrName() string {
 	return uuid.New().String()
 }
@@ -147,18 +123,46 @@ func deleteEventingAuth(e *v1alpha1.EventingAuth) {
 	}, defaultTimeout).Should(Succeed())
 }
 
-func teardownEventingAuth(e *v1alpha1.EventingAuth) {
-	By(fmt.Sprintf("Deleting EventingAuth %s as part of teardown", e.Name))
-	if err := k8sClient.Delete(context.TODO(), e); err != nil && !errors.IsNotFound(err) {
-		Expect(err).Should(Succeed())
+func deleteEventingAuths() {
+	eaList := v1alpha1.EventingAuthList{}
+	Expect(k8sClient.List(context.TODO(), &eaList, ctrlClient.InNamespace(namespace))).Should(Succeed())
+
+	for _, ea := range eaList.Items {
+		if err := k8sClient.Delete(context.TODO(), &ea); err != nil && !errors.IsNotFound(err) {
+			Expect(err).Should(Succeed())
+		}
 	}
 }
 
-func createKubeconfigSecret(e *v1alpha1.EventingAuth) *corev1.Secret {
+func deleteKubeconfigSecrets() {
+	sList := corev1.SecretList{}
+	Expect(k8sClient.List(context.TODO(), &sList, ctrlClient.InNamespace("kcp-system"))).Should(Succeed())
+
+	for _, s := range sList.Items {
+		if err := k8sClient.Delete(context.TODO(), &s); err != nil && !errors.IsNotFound(err) {
+			Expect(err).Should(Succeed())
+		}
+	}
+}
+
+func deleteApplicationSecretOnTargetCluster() {
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      appSecretObjectKey.Name,
+			Namespace: appSecretObjectKey.Namespace,
+		},
+	}
+
+	if err := targetClusterK8sClient.Delete(context.TODO(), &secret); err != nil {
+		Expect(errors.IsNotFound(err)).To(BeTrue())
+	}
+}
+
+func createKubeconfigSecret(crName string) *corev1.Secret {
 	By("Creating secret with kubeconfig of target cluster")
 	kubeconfigSecret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("kubeconfig-%s", e.Name),
+			Name:      fmt.Sprintf("kubeconfig-%s", crName),
 			Namespace: "kcp-system",
 		},
 		Data: map[string][]byte{
