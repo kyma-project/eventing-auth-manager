@@ -7,6 +7,8 @@ import (
 	"github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,7 +32,7 @@ var _ = Describe("EventingAuth Controller", Serial, func() {
 
 		It("should create secret with IAS applications credentials", func() {
 			cr := createEventingAuthAndKubeconfigSecret()
-			verifyEventingAuthState(cr, v1alpha1.StateReady)
+			verifyEventingAuthStatus(cr, v1alpha1.StateReady)
 			verifySecretExistsOnTargetCluster()
 		})
 	})
@@ -39,7 +41,7 @@ var _ = Describe("EventingAuth Controller", Serial, func() {
 
 		It("should delete secret with IAS applications credentials", func() {
 			cr := createEventingAuthAndKubeconfigSecret()
-			verifyEventingAuthState(cr, v1alpha1.StateReady)
+			verifyEventingAuthStatus(cr, v1alpha1.StateReady)
 			s := verifySecretExistsOnTargetCluster()
 			deleteEventingAuth(cr)
 			verifySecretDoesNotExistOnTargetCluster(s)
@@ -48,7 +50,7 @@ var _ = Describe("EventingAuth Controller", Serial, func() {
 
 	It("should create new secret on target cluster on time-based reconciliation when secret was deleted manually", func() {
 		cr := createEventingAuthAndKubeconfigSecret()
-		verifyEventingAuthState(cr, v1alpha1.StateReady)
+		verifyEventingAuthStatus(cr, v1alpha1.StateReady)
 		secret := verifySecretExistsOnTargetCluster()
 		deleteSecretOnTargetCluster(secret)
 		verifySecretDoesNotExistOnTargetCluster(secret)
@@ -104,16 +106,37 @@ func generateCrName() string {
 	return uuid.New().String()
 }
 
-func verifyEventingAuthState(cr *v1alpha1.EventingAuth, state v1alpha1.State) {
+func verifyEventingAuthStatus(cr *v1alpha1.EventingAuth, state v1alpha1.State) {
 	By(fmt.Sprintf("Verifying that EventingAuth %s has status %s", cr.Name, state))
 	Eventually(func(g Gomega) {
 		e := v1alpha1.EventingAuth{}
 		g.Expect(k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(cr), &e)).Should(Succeed())
 		g.Expect(e.Status.State).NotTo(BeNil())
 		g.Expect(e.Status.State).To(Equal(state))
+
+		g.Expect(e.Status.Conditions).To(ContainElements(
+			conditionMatcher(
+				string(v1alpha1.ConditionApplicationReady),
+				metav1.ConditionTrue,
+				v1alpha1.ConditionReasonApplicationCreated,
+				v1alpha1.ConditionMessageApplicationCreated),
+			conditionMatcher(
+				string(v1alpha1.ConditionSecretReady),
+				metav1.ConditionTrue,
+				v1alpha1.ConditionReasonSecretCreated,
+				v1alpha1.ConditionMessageSecretCreated),
+		))
 	}, defaultTimeout).Should(Succeed())
 }
 
+func conditionMatcher(t string, s metav1.ConditionStatus, r, m string) types.GomegaMatcher {
+	return MatchFields(IgnoreExtras, Fields{
+		"Type":    Equal(t),
+		"Status":  Equal(s),
+		"Reason":  Equal(r),
+		"Message": Equal(m),
+	})
+}
 func deleteEventingAuth(e *v1alpha1.EventingAuth) {
 	By(fmt.Sprintf("Deleting EventingAuth %s", e.Name))
 	Expect(k8sClient.Delete(context.TODO(), e)).Should(Succeed())
