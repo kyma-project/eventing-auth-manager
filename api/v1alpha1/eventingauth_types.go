@@ -22,10 +22,10 @@ import (
 
 type State string
 
-// Valid IstioCR States.
+// Valid EventingAuth States.
 const (
-	StateOk    State = "Ok"
-	StateError State = "Error"
+	StateReady    State = "Ready"
+	StateNotReady State = "NotReady"
 )
 
 // EventingAuthSpec defines the desired state of EventingAuth
@@ -40,12 +40,28 @@ type EventingAuthSpec struct {
 // EventingAuthStatus defines the observed state of EventingAuth
 type EventingAuthStatus struct {
 	// State signifies current state of CustomObject. Value
-	// can be one of ("Ok", "Error").
+	// can be one of ("Ready", "NotReady").
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=Ok;Error
-	State State `json:"state"`
+	// +kubebuilder:validation:Enum=Ready;NotReady
+	State State `json:"state,omitempty"`
+
+	// Application contains information about a created IAS application
+	Application *IASApplication `json:"iasApplication,omitempty"`
+	// AuthSecret contains information about created K8s secret
+	AuthSecret *AuthSecret `json:"secret,omitempty"`
+
 	//  Conditions associated with EventingAuthStatus.
-	Conditions *[]metav1.Condition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+type IASApplication struct {
+	Name string `json:"name"`
+	UUID string `json:"uuid"`
+}
+
+type AuthSecret struct {
+	NamespacedName string `json:"namespacedName"`
+	Cluster        string `json:"cluster"`
 }
 
 //+kubebuilder:object:root=true

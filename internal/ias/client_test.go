@@ -14,6 +14,7 @@ import (
 )
 
 func Test_CreateApplication(t *testing.T) {
+	appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
 	tests := []struct {
 		name         string
 		givenApiMock func() *mocks.ClientWithResponsesInterface
@@ -25,7 +26,6 @@ func Test_CreateApplication(t *testing.T) {
 			name: "should create new application when fetching existing applications returns status 200 and no applications",
 			givenApiMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
-				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
 
 				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
 				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
@@ -34,7 +34,7 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			wantApp: NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
+			wantApp: NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com"),
 		},
 		{
 			name: "should create new application when fetching existing applications returns status 404",
@@ -49,7 +49,7 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			wantApp: NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
+			wantApp: NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com"),
 		},
 		{
 			name: "should recreate application when application already exists",
@@ -67,14 +67,13 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			wantApp: NewApplication("clientIdMock", "clientSecretMock", "https://test.com"),
+			wantApp: NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com"),
 		},
 		{
 			name: "should return an error when multiple applications exist for the given name",
 			givenApiMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
-				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
 				appId2 := uuid.MustParse("41de6fec-e0fc-47d7-b35c-3b19c4927e4f")
 				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appId, appId2)
 
@@ -184,7 +183,7 @@ func Test_CreateApplication(t *testing.T) {
 			require.Equal(t, tt.wantApp, app)
 
 			if tt.wantError != nil {
-				require.Error(t, tt.wantError)
+				require.Error(t, err)
 				require.EqualError(t, tt.wantError, err.Error())
 			} else {
 				require.NoError(t, err)
@@ -270,7 +269,7 @@ func Test_DeleteApplication(t *testing.T) {
 
 			// then
 			if tt.wantError != nil {
-				require.Error(t, tt.wantError)
+				require.Error(t, err)
 				require.EqualError(t, tt.wantError, err.Error())
 			} else {
 				require.NoError(t, err)

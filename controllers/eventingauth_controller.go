@@ -96,33 +96,55 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	if !appSecretExists {
+		iasApplication, createAppErr := r.IasClient.CreateApplication(ctx, cr.Name)
+		if createAppErr != nil {
+			logger.Error(createAppErr, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
+				return ctrl.Result{
+					RequeueAfter: requeueAfterError,
+				}, err
+			}
+			return ctrl.Result{
+				RequeueAfter: requeueAfterError,
+			}, createAppErr
+		}
 
-		// TODO: Name of the IAS application should be taken from Kyma CR owner reference
-		iasApplication, err := r.IasClient.CreateApplication(ctx, cr.Name)
-		if err != nil {
-			logger.Error(err, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+		cr.Status.Application = &operatorv1alpha1.IASApplication{
+			Name: cr.Name,
+			UUID: iasApplication.GetId(),
+		}
+		if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, nil); err != nil {
 			return ctrl.Result{
 				RequeueAfter: requeueAfterError,
 			}, err
 		}
 
+		// TODO: keep the IAS secret in memory to check for existence, otherwise, new IAS secret is recreated multiple times for error in case K8s secret creation fails.
 		appSecret := iasApplication.ToSecret(applicationSecretName, applicationSecretNamespace)
 
 		// TODO: Create secret on target cluster by reading the kubeconfig from the secret using the name of the Kyma CR owner reference
-		err = r.Client.Create(ctx, &appSecret)
-		if err != nil {
-			logger.Error(err, "Failed to create application secret", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+		createSecretErr := r.Client.Create(ctx, &appSecret)
+		if createSecretErr != nil {
+			logger.Error(createSecretErr, "Failed to create application secret", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, createSecretErr); err != nil {
+				return ctrl.Result{
+					RequeueAfter: requeueAfterError,
+				}, err
+			}
+			return ctrl.Result{
+				RequeueAfter: requeueAfterError,
+			}, createAppErr
+		}
+
+		cr.Status.AuthSecret = &operatorv1alpha1.AuthSecret{
+			Cluster:        "", // TODO: use proper cluster reference when implemented
+			NamespacedName: appSecret.Namespace + "/" + appSecret.Name,
+		}
+		if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, nil); err != nil {
 			return ctrl.Result{
 				RequeueAfter: requeueAfterError,
 			}, err
 		}
-	}
-
-	if err := updateStatus(ctx, r.Client, cr, operatorv1alpha1.StateOk); err != nil {
-		logger.Error(err, "Failed to update status of EventingAuth", "name", cr.Name, "namespace", cr.Namespace)
-		return ctrl.Result{
-			RequeueAfter: requeueAfterError,
-		}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -159,6 +181,44 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, cr *operato
 		}
 	}
 	return nil
+}
+
+// updateEventingAuthStatus updates the subscription's status changes to k8s.
+func (r *eventingAuthReconciler) updateEventingAuthStatus(ctx context.Context, cr *operatorv1alpha1.EventingAuth, conditionType operatorv1alpha1.ConditionType, errToCheck error) error {
+	_, err := operatorv1alpha1.UpdateConditionAndState(cr, conditionType, errToCheck)
+	if err != nil {
+		return err
+	}
+
+	namespacedName := &types.NamespacedName{
+		Name:      cr.Name,
+		Namespace: cr.Namespace,
+	}
+
+	// fetch the latest EventingAuth object, to avoid k8s conflict errors
+	actualEventingAuth := &operatorv1alpha1.EventingAuth{}
+	if err := r.Client.Get(ctx, *namespacedName, actualEventingAuth); err != nil {
+		return err
+	}
+
+	// copy new changes to the latest object
+	desiredEventingAuth := actualEventingAuth.DeepCopy()
+	desiredEventingAuth.Status = cr.Status
+
+	// sync EventingAuth status with k8s
+	if err = r.updateStatus(ctx, actualEventingAuth, desiredEventingAuth); err != nil {
+		return fmt.Errorf("failed to update EventingAuth status: %v", err)
+	}
+
+	return nil
+}
+
+func (r *eventingAuthReconciler) updateStatus(ctx context.Context, oldEventingAuth, newEventingAuth *operatorv1alpha1.EventingAuth) error {
+	// compare the status taking into consideration lastTransitionTime in conditions
+	if operatorv1alpha1.IsEventingAuthStatusEqual(oldEventingAuth.Status, newEventingAuth.Status) {
+		return nil
+	}
+	return r.Client.Status().Update(ctx, newEventingAuth)
 }
 
 func fetchEventingAuth(ctx context.Context, c client.Client, name types.NamespacedName) (operatorv1alpha1.EventingAuth, error) {
