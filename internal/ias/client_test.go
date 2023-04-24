@@ -7,8 +7,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/mocks"
+	oidcmocks "github.com/kyma-project/eventing-auth-manager/internal/ias/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/pointer"
 	"net/http"
 	"testing"
 )
@@ -16,11 +18,13 @@ import (
 func Test_CreateApplication(t *testing.T) {
 	appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
 	tests := []struct {
-		name         string
-		givenApiMock func() *mocks.ClientWithResponsesInterface
-		assertCalls  func(*testing.T, *mocks.ClientWithResponsesInterface)
-		wantApp      Application
-		wantError    error
+		name               string
+		givenApiMock       func() *mocks.ClientWithResponsesInterface
+		oidcClientMock     *oidcmocks.OidcConfigurationClient
+		clientTokenUrlMock *string
+		assertCalls        func(*testing.T, *mocks.ClientWithResponsesInterface)
+		wantApp            Application
+		wantError          error
 	}{
 		{
 			name: "should create new application when fetching existing applications returns status 200 and no applications",
@@ -34,7 +38,8 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			wantApp: NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com"),
+			oidcClientMock: mockGetTokenUrl(pointer.String("https://test.com/token")),
+			wantApp:        NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com/token"),
 		},
 		{
 			name: "should create new application when fetching existing applications returns status 404",
@@ -49,7 +54,8 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			wantApp: NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com"),
+			oidcClientMock: mockGetTokenUrl(pointer.String("https://test.com/token")),
+			wantApp:        NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com/token"),
 		},
 		{
 			name: "should recreate application when application already exists",
@@ -67,7 +73,8 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			wantApp: NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com"),
+			oidcClientMock: mockGetTokenUrl(pointer.String("https://test.com/token")),
+			wantApp:        NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com/token"),
 		},
 		{
 			name: "should return an error when multiple applications exist for the given name",
@@ -165,15 +172,64 @@ func Test_CreateApplication(t *testing.T) {
 			wantApp:   Application{},
 			wantError: errors.New("failed to retrieve client ID"),
 		},
+		{
+			name: "should return an error when token URL wasn't fetched",
+			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+				clientMock := mocks.ClientWithResponsesInterface{}
+
+				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
+				mockCreateApiSecretWithResponseStatusCreated(&clientMock, appId, "clientSecretMock")
+				mockGetApplicationWithResponseStatusOK(&clientMock, appId, "clientIdMock")
+
+				return &clientMock
+			},
+			oidcClientMock: mockGetTokenUrl(nil),
+			wantApp:        Application{},
+			wantError:      errors.New("failed to fetch token url"),
+		},
+		{
+			name: "should create new application without fetching token URL when it is already cached in the client",
+			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+				clientMock := mocks.ClientWithResponsesInterface{}
+
+				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
+				mockCreateApiSecretWithResponseStatusCreated(&clientMock, appId, "clientSecretMock")
+				mockGetApplicationWithResponseStatusOK(&clientMock, appId, "clientIdMock")
+
+				return &clientMock
+			},
+			clientTokenUrlMock: pointer.String("https://from-cache.com/token"),
+			wantApp:            NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://from-cache.com/token"),
+		},
+		{
+			name: "should return an error when token URL wasn't fetched",
+			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+				clientMock := mocks.ClientWithResponsesInterface{}
+
+				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
+				mockCreateApiSecretWithResponseStatusCreated(&clientMock, appId, "clientSecretMock")
+				mockGetApplicationWithResponseStatusOK(&clientMock, appId, "clientIdMock")
+
+				return &clientMock
+			},
+			oidcClientMock: mockGetTokenUrl(nil),
+			wantApp:        Application{},
+			wantError:      errors.New("failed to fetch token url"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// given
 			apiMock := tt.givenApiMock()
+			oidcMock := tt.oidcClientMock
 
 			client := client{
-				api:       apiMock,
-				tenantUrl: "https://test.com",
+				api:        apiMock,
+				oidcClient: oidcMock,
+				tokenUrl:   tt.clientTokenUrlMock,
 			}
 
 			// when
@@ -193,6 +249,10 @@ func Test_CreateApplication(t *testing.T) {
 				tt.assertCalls(t, apiMock)
 			} else {
 				apiMock.AssertExpectations(t)
+			}
+
+			if oidcMock != nil {
+				oidcMock.AssertExpectations(t)
 			}
 
 		})
@@ -260,8 +320,7 @@ func Test_DeleteApplication(t *testing.T) {
 			apiMock := tt.givenApiMock()
 
 			client := client{
-				api:       apiMock,
-				tenantUrl: "https://test.com",
+				api: apiMock,
 			}
 
 			// when
@@ -426,4 +485,12 @@ func mockDeleteApplicationWithResponseStatusNotFound(clientMock *mocks.ClientWit
 				StatusCode: http.StatusNotFound,
 			},
 		}, nil)
+}
+
+func mockGetTokenUrl(tokenUrl *string) *oidcmocks.OidcConfigurationClient {
+	clientMock := oidcmocks.OidcConfigurationClient{}
+	clientMock.On("GetTokenUrl", mock.Anything).
+		Return(tokenUrl, nil)
+
+	return &clientMock
 }

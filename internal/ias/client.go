@@ -24,25 +24,29 @@ func NewIasClient(iasTenantUrl, user, password string) (Client, error) {
 		return nil, err
 	}
 
-	applicationsEndpointUrl := fmt.Sprintf("%s/%s", iasTenantUrl, "Applications/v1/")
+	applicationsEndpointUrl := fmt.Sprintf("%s/Applications/v1/", iasTenantUrl)
 	apiClient, err := api.NewClientWithResponses(applicationsEndpointUrl, api.WithRequestEditorFn(basicAuthProvider.Intercept))
 	if err != nil {
 		return nil, err
 	}
-	return client{
-		api:       apiClient,
-		tenantUrl: iasTenantUrl,
+
+	return &client{
+		api:        apiClient,
+		oidcClient: newOidcClient(iasTenantUrl),
 	}, nil
 }
 
 type client struct {
-	api       api.ClientWithResponsesInterface
-	tenantUrl string
+	api        api.ClientWithResponsesInterface
+	oidcClient OidcConfigurationClient
+	// The token URL of the IAS client. Since this URL should only change when the tenant changes and this will lead to the initialization of
+	// a new client, we can cache the URL to avoid an additional request at each application creation.
+	tokenUrl *string
 }
 
 // CreateApplication creates an application in IAS. This function is not idempotent, because if an application with the specified
 // name already exists, it will be deleted and recreated.
-func (c client) CreateApplication(ctx context.Context, name string) (Application, error) {
+func (c *client) CreateApplication(ctx context.Context, name string) (Application, error) {
 
 	existingApp, err := c.getApplicationByName(ctx, name)
 	if err != nil {
@@ -78,12 +82,33 @@ func (c client) CreateApplication(ctx context.Context, name string) (Application
 		return Application{}, err
 	}
 
-	// TODO: Instead of providing tenant URL and making assumption about token URL, we should fetch the token URL from the well-known endpoint.
-	return NewApplication(appId.String(), *clientId, *clientSecret, c.tenantUrl), nil
+	// Since the token endpoint is not part of the application response, we have to fetch it from the OIDC configuration.
+	tokenEndpoint, err := c.GetTokenUrl(ctx)
+	if err != nil {
+		return Application{}, err
+	}
+
+	return NewApplication(appId.String(), *clientId, *clientSecret, *tokenEndpoint), nil
+}
+
+func (c *client) GetTokenUrl(ctx context.Context) (*string, error) {
+	if c.tokenUrl == nil {
+		tokenEndpoint, err := c.oidcClient.GetTokenUrl(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if tokenEndpoint == nil {
+			return nil, errors.New("failed to fetch token url")
+		}
+
+		c.tokenUrl = tokenEndpoint
+	}
+
+	return c.tokenUrl, nil
 }
 
 // DeleteApplication deletes an application in IAS. If the application does not exist, this function does nothing.
-func (c client) DeleteApplication(ctx context.Context, name string) error {
+func (c *client) DeleteApplication(ctx context.Context, name string) error {
 	existingApp, err := c.getApplicationByName(ctx, name)
 	if err != nil {
 		return err
@@ -95,7 +120,7 @@ func (c client) DeleteApplication(ctx context.Context, name string) error {
 	return c.deleteApplication(ctx, *existingApp.Id)
 }
 
-func (c client) getApplicationByName(ctx context.Context, name string) (*api.ApplicationResponse, error) {
+func (c *client) getApplicationByName(ctx context.Context, name string) (*api.ApplicationResponse, error) {
 	appsFilter := fmt.Sprintf("name eq %s", name)
 	res, err := c.api.GetAllApplicationsWithResponse(ctx, &api.GetAllApplicationsParams{Filter: &appsFilter})
 	if err != nil {
@@ -127,7 +152,7 @@ func (c client) getApplicationByName(ctx context.Context, name string) (*api.App
 	return nil, nil
 }
 
-func (c client) createNewApplication(ctx context.Context, name string) (uuid.UUID, error) {
+func (c *client) createNewApplication(ctx context.Context, name string) (uuid.UUID, error) {
 	newApplication := newIasApplication(name)
 	res, err := c.api.CreateApplicationWithResponse(ctx, &api.CreateApplicationParams{}, newApplication)
 	if err != nil {
@@ -143,7 +168,7 @@ func (c client) createNewApplication(ctx context.Context, name string) (uuid.UUI
 	return extractApplicationId(res)
 }
 
-func (c client) createSecret(ctx context.Context, appId uuid.UUID) (*string, error) {
+func (c *client) createSecret(ctx context.Context, appId uuid.UUID) (*string, error) {
 	res, err := c.api.CreateApiSecretWithResponse(ctx, appId, newSecretRequest())
 	if err != nil {
 		return nil, err
@@ -157,7 +182,7 @@ func (c client) createSecret(ctx context.Context, appId uuid.UUID) (*string, err
 	return res.JSON201.Secret, nil
 }
 
-func (c client) getClientId(ctx context.Context, appId uuid.UUID) (*string, error) {
+func (c *client) getClientId(ctx context.Context, appId uuid.UUID) (*string, error) {
 	// The client ID is generated only after an API secret is created, so we need to retrieve the application again to get the client ID.
 	applicationResponse, err := c.api.GetApplicationWithResponse(ctx, appId, &api.GetApplicationParams{})
 	if err != nil {
@@ -171,7 +196,7 @@ func (c client) getClientId(ctx context.Context, appId uuid.UUID) (*string, erro
 	return applicationResponse.JSON200.UrnSapIdentityApplicationSchemasExtensionSci10Authentication.ClientId, nil
 }
 
-func (c client) deleteApplication(ctx context.Context, id uuid.UUID) error {
+func (c *client) deleteApplication(ctx context.Context, id uuid.UUID) error {
 	res, err := c.api.DeleteApplicationWithResponse(ctx, id)
 	if err != nil {
 		return err
