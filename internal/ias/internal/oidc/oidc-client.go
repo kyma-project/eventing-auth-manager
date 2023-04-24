@@ -1,4 +1,4 @@
-package ias
+package oidc
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-//go:generate mockery --name=OidcConfigurationClient --outpkg=mocks --case=underscore
-type OidcConfigurationClient interface {
+//go:generate mockery --name=Client --outpkg=mocks --case=underscore
+type Client interface {
 	GetTokenUrl(ctx context.Context) (*string, error)
 }
 
@@ -18,21 +18,21 @@ type wellKnown struct {
 	TokenEndpoint *string `json:"token_endpoint,omitempty"`
 }
 
-type oidcClient struct {
+type client struct {
 	baseUrl    string
 	httpClient *http.Client
 }
 
-func newOidcClient(tenantUrl string) oidcClient {
-	return oidcClient{
+func NewOidcClient(tenantUrl string) Client {
+	return client{
 		baseUrl: tenantUrl,
 		httpClient: &http.Client{
-			Timeout: time.Second * 2,
+			Timeout: time.Second * 5,
 		},
 	}
 }
 
-func (c oidcClient) GetTokenUrl(ctx context.Context) (*string, error) {
+func (c client) GetTokenUrl(ctx context.Context) (*string, error) {
 	w, err := c.getWellKnown(ctx)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func (c oidcClient) GetTokenUrl(ctx context.Context) (*string, error) {
 	return w.TokenEndpoint, nil
 }
 
-func (c oidcClient) getWellKnown(ctx context.Context) (wellKnown, error) {
+func (c client) getWellKnown(ctx context.Context) (wellKnown, error) {
 	url := fmt.Sprintf("%s/.well-known/openid-configuration", c.baseUrl)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -61,7 +61,7 @@ func (c oidcClient) getWellKnown(ctx context.Context) (wellKnown, error) {
 	return w, nil
 }
 
-func (c oidcClient) do(req *http.Request) ([]byte, error) {
+func (c client) do(req *http.Request) ([]byte, error) {
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err

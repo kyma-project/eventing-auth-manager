@@ -1,4 +1,4 @@
-package ias
+package oidc
 
 import (
 	"bytes"
@@ -57,7 +57,7 @@ func Test_oidcClient_do(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// given
-			c := oidcClient{
+			c := client{
 				httpClient: tt.fields.httpClient,
 			}
 
@@ -112,7 +112,7 @@ func Test_oidcClient_getTokenUrl(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// given
-			c := oidcClient{
+			c := client{
 				baseUrl:    tt.fields.baseUrl,
 				httpClient: tt.fields.httpClient,
 			}
@@ -173,7 +173,7 @@ func Test_oidcClient_getWellKnown(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// given
-			c := oidcClient{
+			c := client{
 				baseUrl:    tt.fields.baseUrl,
 				httpClient: tt.fields.httpClient,
 			}

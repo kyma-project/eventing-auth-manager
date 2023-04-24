@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/mocks"
-	oidcmocks "github.com/kyma-project/eventing-auth-manager/internal/ias/mocks"
+	oidcmocks "github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
@@ -20,7 +20,7 @@ func Test_CreateApplication(t *testing.T) {
 	tests := []struct {
 		name               string
 		givenApiMock       func() *mocks.ClientWithResponsesInterface
-		oidcClientMock     *oidcmocks.OidcConfigurationClient
+		oidcClientMock     *oidcmocks.Client
 		clientTokenUrlMock *string
 		assertCalls        func(*testing.T, *mocks.ClientWithResponsesInterface)
 		wantApp            Application
@@ -487,8 +487,8 @@ func mockDeleteApplicationWithResponseStatusNotFound(clientMock *mocks.ClientWit
 		}, nil)
 }
 
-func mockGetTokenUrl(tokenUrl *string) *oidcmocks.OidcConfigurationClient {
-	clientMock := oidcmocks.OidcConfigurationClient{}
+func mockGetTokenUrl(tokenUrl *string) *oidcmocks.Client {
+	clientMock := oidcmocks.Client{}
 	clientMock.On("GetTokenUrl", mock.Anything).
 		Return(tokenUrl, nil)
 

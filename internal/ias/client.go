@@ -6,6 +6,7 @@ import (
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc"
 	"github.com/pkg/errors"
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -32,13 +33,13 @@ func NewIasClient(iasTenantUrl, user, password string) (Client, error) {
 
 	return &client{
 		api:        apiClient,
-		oidcClient: newOidcClient(iasTenantUrl),
+		oidcClient: oidc.NewOidcClient(iasTenantUrl),
 	}, nil
 }
 
 type client struct {
 	api        api.ClientWithResponsesInterface
-	oidcClient OidcConfigurationClient
+	oidcClient oidc.Client
 	// The token URL of the IAS client. Since this URL should only change when the tenant changes and this will lead to the initialization of
 	// a new client, we can cache the URL to avoid an additional request at each application creation.
 	tokenUrl *string
