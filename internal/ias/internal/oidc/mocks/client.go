@@ -21,8 +21,8 @@ func (_m *Client) EXPECT() *Client_Expecter {
 	return &Client_Expecter{mock: &_m.Mock}
 }
 
-// GetTokenUrl provides a mock function with given fields: ctx
-func (_m *Client) GetTokenUrl(ctx context.Context) (*string, error) {
+// GetTokenEndpoint provides a mock function with given fields: ctx
+func (_m *Client) GetTokenEndpoint(ctx context.Context) (*string, error) {
 	ret := _m.Called(ctx)
 
 	var r0 *string
@@ -47,30 +47,30 @@ func (_m *Client) GetTokenUrl(ctx context.Context) (*string, error) {
 	return r0, r1
 }
 
-// Client_GetTokenUrl_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTokenUrl'
-type Client_GetTokenUrl_Call struct {
+// Client_GetTokenEndpoint_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTokenEndpoint'
+type Client_GetTokenEndpoint_Call struct {
 	*mock.Call
 }
 
-// GetTokenUrl is a helper method to define mock.On call
+// GetTokenEndpoint is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *Client_Expecter) GetTokenUrl(ctx interface{}) *Client_GetTokenUrl_Call {
-	return &Client_GetTokenUrl_Call{Call: _e.mock.On("GetTokenUrl", ctx)}
+func (_e *Client_Expecter) GetTokenEndpoint(ctx interface{}) *Client_GetTokenEndpoint_Call {
+	return &Client_GetTokenEndpoint_Call{Call: _e.mock.On("GetTokenEndpoint", ctx)}
 }
 
-func (_c *Client_GetTokenUrl_Call) Run(run func(ctx context.Context)) *Client_GetTokenUrl_Call {
+func (_c *Client_GetTokenEndpoint_Call) Run(run func(ctx context.Context)) *Client_GetTokenEndpoint_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context))
 	})
 	return _c
 }
 
-func (_c *Client_GetTokenUrl_Call) Return(_a0 *string, _a1 error) *Client_GetTokenUrl_Call {
+func (_c *Client_GetTokenEndpoint_Call) Return(_a0 *string, _a1 error) *Client_GetTokenEndpoint_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *Client_GetTokenUrl_Call) RunAndReturn(run func(context.Context) (*string, error)) *Client_GetTokenUrl_Call {
+func (_c *Client_GetTokenEndpoint_Call) RunAndReturn(run func(context.Context) (*string, error)) *Client_GetTokenEndpoint_Call {
 	_c.Call.Return(run)
 	return _c
 }

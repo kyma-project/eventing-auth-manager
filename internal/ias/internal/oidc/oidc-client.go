@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 )
 
 //go:generate mockery --name=Client --outpkg=mocks --case=underscore
 type Client interface {
-	GetTokenUrl(ctx context.Context) (*string, error)
+	GetTokenEndpoint(ctx context.Context) (*string, error)
 }
 
 type wellKnown struct {
@@ -19,20 +18,20 @@ type wellKnown struct {
 }
 
 type client struct {
-	baseUrl    string
+	domainUrl  string
 	httpClient *http.Client
 }
 
-func NewOidcClient(tenantUrl string) Client {
+// NewOidcClient returns a new OIDC client. The domain URL is used to get the OIDC configuration for a specific tenant, e.g. 'https://some-tenant.accounts400.ondemand.com'.
+func NewOidcClient(h *http.Client, domainUrl string) Client {
 	return client{
-		baseUrl: tenantUrl,
-		httpClient: &http.Client{
-			Timeout: time.Second * 5,
-		},
+		domainUrl:  domainUrl,
+		httpClient: h,
 	}
 }
 
-func (c client) GetTokenUrl(ctx context.Context) (*string, error) {
+// GetTokenEndpoint returns the OIDC token endpoint for a specific tenant.
+func (c client) GetTokenEndpoint(ctx context.Context) (*string, error) {
 	w, err := c.getWellKnown(ctx)
 	if err != nil {
 		return nil, err
@@ -42,7 +41,7 @@ func (c client) GetTokenUrl(ctx context.Context) (*string, error) {
 }
 
 func (c client) getWellKnown(ctx context.Context) (wellKnown, error) {
-	url := fmt.Sprintf("%s/.well-known/openid-configuration", c.baseUrl)
+	url := fmt.Sprintf("%s/.well-known/openid-configuration", c.domainUrl)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return wellKnown{}, err

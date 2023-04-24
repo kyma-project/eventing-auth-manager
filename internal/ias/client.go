@@ -11,6 +11,7 @@ import (
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
+	"time"
 )
 
 type Client interface {
@@ -31,9 +32,13 @@ func NewIasClient(iasTenantUrl, user, password string) (Client, error) {
 		return nil, err
 	}
 
+	oidcHttpClient := &http.Client{
+		Timeout: time.Second * 5,
+	}
+
 	return &client{
 		api:        apiClient,
-		oidcClient: oidc.NewOidcClient(iasTenantUrl),
+		oidcClient: oidc.NewOidcClient(oidcHttpClient, iasTenantUrl),
 	}, nil
 }
 
@@ -83,18 +88,18 @@ func (c *client) CreateApplication(ctx context.Context, name string) (Applicatio
 		return Application{}, err
 	}
 
-	// Since the token endpoint is not part of the application response, we have to fetch it from the OIDC configuration.
-	tokenEndpoint, err := c.GetTokenUrl(ctx)
+	// Since the token url is not part of the application response, we have to fetch it from the OIDC configuration.
+	tokenUrl, err := c.GetTokenUrl(ctx)
 	if err != nil {
 		return Application{}, err
 	}
 
-	return NewApplication(appId.String(), *clientId, *clientSecret, *tokenEndpoint), nil
+	return NewApplication(appId.String(), *clientId, *clientSecret, *tokenUrl), nil
 }
 
 func (c *client) GetTokenUrl(ctx context.Context) (*string, error) {
 	if c.tokenUrl == nil {
-		tokenEndpoint, err := c.oidcClient.GetTokenUrl(ctx)
+		tokenEndpoint, err := c.oidcClient.GetTokenEndpoint(ctx)
 		if err != nil {
 			return nil, err
 		}

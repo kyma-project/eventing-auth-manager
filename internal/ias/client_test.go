@@ -489,7 +489,7 @@ func mockDeleteApplicationWithResponseStatusNotFound(clientMock *mocks.ClientWit
 
 func mockGetTokenUrl(tokenUrl *string) *oidcmocks.Client {
 	clientMock := oidcmocks.Client{}
-	clientMock.On("GetTokenUrl", mock.Anything).
+	clientMock.On("GetTokenEndpoint", mock.Anything).
 		Return(tokenUrl, nil)
 
 	return &clientMock
