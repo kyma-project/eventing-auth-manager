@@ -66,14 +66,14 @@ func Test_oidcClient_getTokenUrl(t *testing.T) {
 			wantErr: errors.New("unexpected status code 500"),
 		},
 		{
-			name: "should return empty body when response body is nil",
+			name: "should return error when response body is nil",
 			fields: fields{
 				httpClient: mockHttpClientResponseOk(nil),
 			},
 			wantErr: errors.New("unexpected end of JSON input"),
 		},
 		{
-			name: "should return nil when response body is no json",
+			name: "should return error when response body is no json",
 			fields: fields{
 				httpClient: mockHttpClientResponseOk([]byte("invalid json")),
 			},
