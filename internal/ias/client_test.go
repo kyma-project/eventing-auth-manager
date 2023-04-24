@@ -38,7 +38,7 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockGetTokenUrl(pointer.String("https://test.com/token")),
+			oidcClientMock: mockGetTokenUrl(t, pointer.String("https://test.com/token")),
 			wantApp:        NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com/token"),
 		},
 		{
@@ -54,7 +54,7 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockGetTokenUrl(pointer.String("https://test.com/token")),
+			oidcClientMock: mockGetTokenUrl(t, pointer.String("https://test.com/token")),
 			wantApp:        NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com/token"),
 		},
 		{
@@ -73,7 +73,7 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockGetTokenUrl(pointer.String("https://test.com/token")),
+			oidcClientMock: mockGetTokenUrl(t, pointer.String("https://test.com/token")),
 			wantApp:        NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com/token"),
 		},
 		{
@@ -184,7 +184,7 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockGetTokenUrl(nil),
+			oidcClientMock: mockGetTokenUrl(t, nil),
 			wantApp:        Application{},
 			wantError:      errors.New("failed to fetch token url"),
 		},
@@ -215,7 +215,7 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockGetTokenUrl(nil),
+			oidcClientMock: mockGetTokenUrl(t, nil),
 			wantApp:        Application{},
 			wantError:      errors.New("failed to fetch token url"),
 		},
@@ -487,10 +487,10 @@ func mockDeleteApplicationWithResponseStatusNotFound(clientMock *mocks.ClientWit
 		}, nil)
 }
 
-func mockGetTokenUrl(tokenUrl *string) *oidcmocks.Client {
-	clientMock := oidcmocks.Client{}
+func mockGetTokenUrl(t *testing.T, tokenUrl *string) *oidcmocks.Client {
+	clientMock := oidcmocks.NewClient(t)
 	clientMock.On("GetTokenEndpoint", mock.Anything).
 		Return(tokenUrl, nil)
 
-	return &clientMock
+	return clientMock
 }
