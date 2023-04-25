@@ -121,6 +121,12 @@ func verifySecretExistsOnTargetCluster() *corev1.Secret {
 	s := corev1.Secret{}
 	Eventually(func(g Gomega) {
 		g.Expect(targetClusterK8sClient.Get(context.TODO(), appSecretObjectKey, &s)).Should(Succeed())
+		g.Expect(s.Data).To(HaveKey("client_id"))
+		g.Expect(s.Data["client_id"]).ToNot(BeEmpty())
+		g.Expect(s.Data).To(HaveKey("client_secret"))
+		g.Expect(s.Data["client_secret"]).ToNot(BeEmpty())
+		g.Expect(s.Data).To(HaveKey("token_url"))
+		g.Expect(s.Data["token_url"]).To(ContainSubstring("/token"))
 	}, defaultTimeout).Should(Succeed())
 
 	return &s

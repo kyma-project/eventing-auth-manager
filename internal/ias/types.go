@@ -1,7 +1,6 @@
 package ias
 
 import (
-	"fmt"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -13,12 +12,12 @@ type Application struct {
 	tokenUrl     string
 }
 
-func NewApplication(id, clientId, clientSecret, tenantUrl string) Application {
+func NewApplication(id, clientId, clientSecret, tokenUrl string) Application {
 	return Application{
 		id:           id,
 		clientId:     clientId,
 		clientSecret: clientSecret,
-		tokenUrl:     fmt.Sprintf("%s/oauth2/token?grant_type=client_credentials&client_id=%s", tenantUrl, clientId),
+		tokenUrl:     tokenUrl,
 	}
 }
 
