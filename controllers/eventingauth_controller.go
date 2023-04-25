@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -43,16 +44,16 @@ const (
 type eventingAuthReconciler struct {
 	client.Client
 	Scheme               *runtime.Scheme
-	IasClient            ias.Client
 	errorRequeuePeriod   time.Duration
 	defaultRequeuePeriod time.Duration
+	iasClient            ias.Client
+	iasCredentials       ias.Credentials
 }
 
-func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, ias ias.Client, errorRequeuePeriod time.Duration, defaultRequeuePeriod time.Duration) ManagedReconciler {
+func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod time.Duration, defaultRequeuePeriod time.Duration) ManagedReconciler {
 	return &eventingAuthReconciler{
 		Client:               c,
 		Scheme:               s,
-		IasClient:            ias,
 		errorRequeuePeriod:   errorRequeuePeriod,
 		defaultRequeuePeriod: defaultRequeuePeriod,
 	}
@@ -79,6 +80,13 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}, err
 	}
 
+	// sync IAS client credentials
+	iasClient, err := r.getIasClient()
+	if err != nil {
+		return ctrl.Result{
+			RequeueAfter: r.errorRequeuePeriod,
+		}, err
+	}
 	// check DeletionTimestamp to determine if object is under deletion
 	if cr.ObjectMeta.DeletionTimestamp.IsZero() {
 		if err = r.addFinalizer(ctx, &cr); err != nil {
@@ -88,7 +96,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	} else {
 		logger.Info("Handling deletion", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
-		if err = r.handleDeletion(ctx, targetK8sClient, &cr); err != nil {
+		if err = r.handleDeletion(ctx, iasClient, targetK8sClient, &cr); err != nil {
 			return ctrl.Result{
 				RequeueAfter: r.errorRequeuePeriod,
 			}, err
@@ -107,7 +115,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	if !appSecretExists {
 		logger.Info("Creating IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
-		iasApplication, createAppErr := r.IasClient.CreateApplication(ctx, cr.Name)
+		iasApplication, createAppErr := iasClient.CreateApplication(ctx, cr.Name)
 		if createAppErr != nil {
 			logger.Error(createAppErr, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
@@ -165,6 +173,26 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}, nil
 }
 
+func (r *eventingAuthReconciler) getIasClient() (ias.Client, error) {
+	newIasCredentials, err := ias.ReadCredentials("default", "ias-creds", r.Client)
+	if err != nil {
+		return nil, err
+	}
+	// return from cache unless credentials are changed
+	if reflect.DeepEqual(newIasCredentials, r.iasCredentials) {
+		return r.iasClient, nil
+	}
+	// update ias client if credentials are changed
+	r.iasCredentials = *newIasCredentials
+	iasClient, err := ias.NewIasClient(newIasCredentials.URL, newIasCredentials.Username, newIasCredentials.Password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to createa a new IAS client: %v", err)
+	}
+	// caching ias client
+	r.iasClient = iasClient
+	return iasClient, nil
+}
+
 // Adds the finalizer if none exists
 func (r *eventingAuthReconciler) addFinalizer(ctx context.Context, cr *operatorv1alpha1.EventingAuth) error {
 	if !controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
@@ -178,7 +206,7 @@ func (r *eventingAuthReconciler) addFinalizer(ctx context.Context, cr *operatorv
 }
 
 // Deletes the secret and IAS app. Finally, removes the finalizer.
-func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, targetClusterClient client.Client, cr *operatorv1alpha1.EventingAuth) error {
+func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient ias.Client, targetClusterClient client.Client, cr *operatorv1alpha1.EventingAuth) error {
 	// The object is being deleted
 	if controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
 		// delete k8s secret
@@ -188,7 +216,7 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, targetClust
 		ctrl.Log.Info("Deleted IAS application secret on target cluster", "eventingAuth", cr.Name, "namespace", cr.Namespace)
 
 		// delete IAS application clean-up
-		if err := r.IasClient.DeleteApplication(ctx, cr.Name); err != nil {
+		if err := iasClient.DeleteApplication(ctx, cr.Name); err != nil {
 			return fmt.Errorf("failed to delete IAS Application: %v", err)
 		}
 		ctrl.Log.Info("Deleted IAS Application", "name", cr.Name)

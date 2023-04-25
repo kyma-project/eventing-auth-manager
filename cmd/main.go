@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"os"
 	"time"
 
@@ -96,17 +95,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO: Replace dummy values with values from secret
-	url := os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
-	user := os.Getenv("TEST_EVENTING_AUTH_IAS_USER")
-	pw := os.Getenv("TEST_EVENTING_AUTH_IAS_PASSWORD")
-	iasClient, err := ias.NewIasClient(url, user, pw)
-	if err != nil {
-		setupLog.Error(err, "unable to create ias client", "controller", "EventingAuth")
-		os.Exit(1)
-	}
-
-	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), iasClient, requeueAfterError, requeueAfter)
+	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), requeueAfterError, requeueAfter)
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EventingAuth")
