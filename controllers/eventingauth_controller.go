@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	applicationSecretName               = "eventing-auth-application"
+	applicationSecretName               = "eventing-webhook-auth"
 	applicationSecretNamespace          = "kyma-system"
 	eventingAuthFinalizerName           = "eventingauth.operator.kyma-project.io/finalizer"
 	IasCredsSecretNamespace      string = "IAS_CREDS_SECRET_NAMESPACE"
