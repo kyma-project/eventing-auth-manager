@@ -1,8 +1,37 @@
-# eventing-auth-manager
-// TODO(user): Add simple overview of use/purpose
+# Eventing Auth Manager
+The eventing-auth-manager is a central component that is deployed on the [Kyma control-plane](https://github.com/kyma-project/control-plane). The component manages applications in the 
+SAP Cloud Identity Services - Identity Authentication (IAS) by creating and deleting them based on creation or deletion of a managed Kyma Runtime.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+The eventing-auth-manager manages the credentials for IAS applications used by webhooks in the `eventing` component.  
+When a new managed Kyma Runtime is provisioned the component creates a new [OIDC](https://openid.net/connect/) IAS application for this runtime and stores the credentials in a secret on the new runtime.
+![eventingauthmanagersetup](https://user-images.githubusercontent.com/292906/230387760-8392eee5-f304-46fe-bed5-1e6b456677b5.png)
+
+A Kyma CR is created for each runtime. The eventing-auth-manager watches the creation and deletion of Kyma CRs. When a Kyma CR is created, the controller creates an EventingAuth CR. 
+The reconciliation of the EventingAuth CR will create an application in the IAS and the secret with the credentials on the runtime.
+When the Kyma CR is deleted, the controller deletes the application in the IAS, the secret on the runtime, and the EventingAuth CR.
+
+![controller-flow](./doc/controller-flow.svg)
+
+
+### EventingAuth CR
+TODO: Add description of EventingAuth CR
+
+### Reference between resources
+The Kyma CR, which creation is the trigger for the creation of the EventingAuth CR, uses the runtime ID of the managed Kyma runtime as name. This name is used as the name for the
+name for the EventingAuth CR and the IAS application. In this way, the eventing-auth CR and the IAS application can be assigned to the specific managed runtime.
+
+### Design decisions
+
+#### Handling of 429
+TODO: Add description of handling of 429
+
+#### Caching of well-known token endpoint
+TODO: Add description of caching of well-known token endpoint
+
+#### Referencing IAS applications by name
+TODO: Add description of referencing IAS applications by name
+
 
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
@@ -87,20 +116,3 @@ make manifests
 **NOTE:** Run `make --help` for more information on all potential `make` targets
 
 More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
-
-## License
-
-Copyright 2023.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
