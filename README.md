@@ -15,7 +15,35 @@ When the Kyma CR is deleted, the controller deletes the application in the IAS, 
 
 
 ### EventingAuth CR
-TODO: Add description of EventingAuth CR
+
+For details, see the [specification file](./api/v1alpha1/eventingauth_types.go).
+
+<!-- EventingAuth v1alpha1 operator.kyma-project.io -->
+| Parameter         | Description                                                                                                                               |
+| ---------------------------------------- |-------------------------------------------------------------------------------------------------------------------------------------------|
+| **status.conditions** | Conditions associated with EventingAuthStatus. There are conditions for creation of IAS application and the secret of the managed runtime |
+| **status.iasApplication** | Application contains information about a created IAS application                                                                          |
+| **status.iasApplication.name** | Name of the application in IAS                                                                                                            |
+| **status.iasApplication.uuid** | Application ID in IAS                                                                                                                     |
+| **status.secret** | AuthSecret contains information about created K8s secret                                                                                  |
+| **status.secret.cluster** | Runtime ID of the cluster where the secret is created                                                                                     |
+| **status.secret.namespacedName** | NamespacedName of the secret on the managed runtime                                                                                       |
+| **status.state** | State signifies current state of CustomObject. Value can be one of ("Ready", "NotReady").                                                 |
+
+### eventing-webhook-auth secret
+The secret created on the managed runtime is looks like the following:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: eventing-webhook-auth
+  namespace: kyma-system
+type: Opaque
+data:
+  client_id: "850d10a4-6e0b-4958-8232-066962ed3b46"
+  client_secret: "h?VTJMDxj0Trn8t=yE55gW_dsJgXR[df3IQ"
+  token_url: "https://<tenant>.accounts400.ondemand.com/oauth2/token"
+```
 
 ### Reference between resources
 The Kyma CR, which creation is the trigger for the creation of the EventingAuth CR, uses the runtime ID of the managed Kyma runtime as name. This name is used as the name for the

@@ -34,11 +34,6 @@ spec:
             type: object
           spec:
             description: EventingAuthSpec defines the desired state of EventingAuth
-            properties:
-              foo:
-                description: Foo is an example field of EventingAuth. Edit eventingauth_types.go
-                  to remove/update
-                type: string
             type: object
           status:
             description: EventingAuthStatus defines the observed state of EventingAuth
@@ -117,8 +112,10 @@ spec:
                   application
                 properties:
                   name:
+                    description: Name of the application in IAS
                     type: string
                   uuid:
+                    description: Application ID in IAS
                     type: string
                 required:
                 - name
@@ -128,8 +125,10 @@ spec:
                 description: AuthSecret contains information about created K8s secret
                 properties:
                   cluster:
+                    description: Runtime ID of the cluster where the secret is created
                     type: string
                   namespacedName:
+                    description: NamespacedName of the secret on the managed runtime
                     type: string
                 required:
                 - cluster

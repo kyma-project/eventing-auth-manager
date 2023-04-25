@@ -32,9 +32,6 @@ const (
 type EventingAuthSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of EventingAuth. Edit eventingauth_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
 }
 
 // EventingAuthStatus defines the observed state of EventingAuth
@@ -55,13 +52,17 @@ type EventingAuthStatus struct {
 }
 
 type IASApplication struct {
+	// Name of the application in IAS
 	Name string `json:"name"`
+	// Application ID in IAS
 	UUID string `json:"uuid"`
 }
 
 type AuthSecret struct {
+	// NamespacedName of the secret on the managed runtime
 	NamespacedName string `json:"namespacedName"`
-	Cluster        string `json:"cluster"`
+	// Runtime ID of the cluster where the secret is created
+	Cluster string `json:"cluster"`
 }
 
 //+kubebuilder:object:root=true
