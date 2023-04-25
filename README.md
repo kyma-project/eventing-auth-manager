@@ -46,7 +46,7 @@ data:
 ```
 
 ### Reference between resources
-The Kyma CR, which creation is the trigger for the creation of the EventingAuth CR, uses the runtime ID of the managed Kyma runtime as name. This name is used as the name for the
+The Kyma CR, which creation is the trigger for the creation of the EventingAuth CR, uses the unqiue runtime ID of the managed Kyma runtime as name. This name is used as the name for the
 name for the EventingAuth CR and the IAS application. In this way, the eventing-auth CR and the IAS application can be assigned to the specific managed runtime.
 
 ### Design decisions
@@ -60,14 +60,21 @@ There is also mention of a specific rate limit for SCIM endpoints, but we do not
 
 #### Caching of well-known token endpoint
 We read the known configuration of the IAS tenant that is used to create the applications to obtain the token endpoint. This token endpoint is then stored in the secret 
-on the managed runtime along with the Client ID and the Client Secret.
+on the managed runtime along with the Client ID and the Client Secret.  
 The assumption is, that the token endpoint of the IAS tenant does not change without any notice of a breaking change.
 To reduce the number of requests when creating an application secret and thus increase the stability of the reconciliation, it was decided to cache the 
 token endpoint on the first retrieval. The cached token endpoint is not invalidated and is available during the runtime of the operator.
 
 #### Referencing IAS applications by name
-TODO: Add description of referencing IAS applications by name
+The IAS application is created with a name that matches the name of the EventingAuth CR. This name is the unique runtime ID of the cluster for which the IAS application is created.
+Since we do not want to store the IAS application ID in the managed runtime secret, we can read the IAS application only by its name.  
+During the creation of the application, existing applications with the same name are read. If an application with the same name exists, it is deleted, as we assume this is due to a failed reconciliation.
+If more than one application with the same name already exists, the reconciliation fails. The same behaviour occurs when reconciling the deletion of the EventingAuth CR.
 
+It was decided not to delete any of the existing applications in this case, as it is an unexpected condition that may have been caused by manual actions, and we may want to keep the applications to find the cause of the issue.
+
+
+#### Handling of failed IAS application creation
 
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
