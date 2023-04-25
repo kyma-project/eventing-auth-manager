@@ -16,7 +16,8 @@ SAP Cloud Identity Services - Identity Authentication (IAS) by creating and dele
 ## Description
 The eventing-auth-manager manages the credentials for IAS applications used by webhooks in the `eventing` component.  
 When a new managed Kyma Runtime is provisioned the component creates a new [OIDC](https://openid.net/connect/) IAS application for this runtime and stores the credentials in a secret on the new runtime.
-![eventingauthmanagersetup](https://user-images.githubusercontent.com/292906/230387760-8392eee5-f304-46fe-bed5-1e6b456677b5.png)
+
+![eventing-auth-manager-overview](./doc/overview.svg)
 
 A Kyma CR is created for each runtime. The eventing-auth-manager watches the creation and deletion of Kyma CRs. When a Kyma CR is created, the controller creates an EventingAuth CR. 
 The reconciliation of the EventingAuth CR will create an application in the IAS and the secret with the credentials on the runtime.
