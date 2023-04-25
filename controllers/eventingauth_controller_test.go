@@ -28,16 +28,24 @@ var _ = Describe("EventingAuth Controller", Serial, func() {
 	})
 
 	//TODO: Change tests to use table tests
-	Context("When creating EventingAuth CR", func() {
+	Context("Creating EventingAuth CR", func() {
 
 		It("should create secret with IAS applications credentials", func() {
 			cr := createEventingAuthAndKubeconfigSecret()
 			verifyEventingAuthStatus(cr, v1alpha1.StateReady)
 			verifySecretExistsOnTargetCluster()
 		})
+
+		It("should have CR status NotReady when IAS app creation fails", func() {
+			// TODO: Implement test
+		})
+
+		It("should have CR status NotReady when secret creation on target cluster fails", func() {
+			// TODO: Implement test
+		})
 	})
 
-	Context("When deleting EventingAuth CR", func() {
+	Context("Deleting EventingAuth CR", func() {
 
 		It("should delete secret with IAS applications credentials", func() {
 			cr := createEventingAuthAndKubeconfigSecret()
@@ -48,14 +56,30 @@ var _ = Describe("EventingAuth Controller", Serial, func() {
 		})
 	})
 
-	It("should create new secret on target cluster on time-based reconciliation when secret was deleted manually", func() {
-		cr := createEventingAuthAndKubeconfigSecret()
-		verifyEventingAuthStatus(cr, v1alpha1.StateReady)
-		secret := verifySecretExistsOnTargetCluster()
-		deleteSecretOnTargetCluster(secret)
-		verifySecretDoesNotExistOnTargetCluster(secret)
-		verifySecretExistsOnTargetCluster()
+	Context("Time-based EventingAuth CR reconciliation", func() {
+
+		It("should create new secret on target cluster on next reconciliation when secret was deleted manually", func() {
+			cr := createEventingAuthAndKubeconfigSecret()
+			verifyEventingAuthStatus(cr, v1alpha1.StateReady)
+			secret := verifySecretExistsOnTargetCluster()
+			deleteSecretOnTargetCluster(secret)
+			verifySecretDoesNotExistOnTargetCluster(secret)
+			verifySecretExistsOnTargetCluster()
+		})
+
 	})
+
+	Context("Error during reconciliation", func() {
+
+		It("should retry and create application when first attempt of application creation failed", func() {
+			// TODO: Implement test
+		})
+
+		It("should retry and create secret when first attempt of secret creation failed", func() {
+			// TODO: Implement test
+		})
+	})
+
 })
 
 func createEventingAuthAndKubeconfigSecret() *v1alpha1.EventingAuth {
