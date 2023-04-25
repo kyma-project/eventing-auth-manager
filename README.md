@@ -2,6 +2,17 @@
 The eventing-auth-manager is a central component that is deployed on the [Kyma control-plane](https://github.com/kyma-project/control-plane). The component manages applications in the 
 SAP Cloud Identity Services - Identity Authentication (IAS) by creating and deleting them based on creation or deletion of a managed Kyma Runtime.
 
+### Table of contents
+* [Description](#description)
+* [EventingAuth CR](#eventingauth-cr)
+* [eventing-webhook-auth secret](#eventing-webhook-auth-secret)
+* [Name reference between resources](#name-reference-between-resources)
+* [Design decisions](#design-decisions)
+* [Generating the SAP Cloud Identity Services API client](#generating-the-sap-cloud-identity-services-api-client)
+* [Getting Started](#getting-started)
+* [Contributing](#contributing)
+
+
 ## Description
 The eventing-auth-manager manages the credentials for IAS applications used by webhooks in the `eventing` component.  
 When a new managed Kyma Runtime is provisioned the component creates a new [OIDC](https://openid.net/connect/) IAS application for this runtime and stores the credentials in a secret on the new runtime.
@@ -14,7 +25,7 @@ When the Kyma CR is deleted, the controller deletes the application in the IAS, 
 ![controller-flow](./doc/controller-flow.svg)
 
 
-### EventingAuth CR
+## EventingAuth CR
 
 For details, see the [specification file](./api/v1alpha1/eventingauth_types.go).
 
@@ -30,7 +41,7 @@ For details, see the [specification file](./api/v1alpha1/eventingauth_types.go).
 | **status.secret.namespacedName** | NamespacedName of the secret on the managed runtime                                                                                       |
 | **status.state** | State signifies current state of CustomObject. Value can be one of ("Ready", "NotReady").                                                 |
 
-### eventing-webhook-auth secret
+## eventing-webhook-auth secret
 The secret created on the managed runtime is looks like the following:
 ```yaml
 apiVersion: v1
@@ -45,27 +56,27 @@ data:
   token_url: "https://<tenant>.accounts400.ondemand.com/oauth2/token"
 ```
 
-### Reference between resources
+## Name reference between resources
 The Kyma CR, which creation is the trigger for the creation of the EventingAuth CR, uses the unqiue runtime ID of the managed Kyma runtime as name. This name is used as the name for the
 name for the EventingAuth CR and the IAS application. In this way, the eventing-auth CR and the IAS application can be assigned to the specific managed runtime.
 
-### Design decisions
+## Design decisions
 
-#### Handling of Rate Limiting calling IAS API
+### Handling of Rate Limiting calling IAS API
 We didn't implement any rate limit handling, because the [Rate Limiting documentation of IAS](https://help.sap.com/docs/IDENTITY_AUTHENTICATION/6d6d63354d1242d185ab4830fc04feb1/e22ee47abf614565bcb29bb4ddbbf209.html) mentions the following: 
 > To ensure safe and stable environment, all requests have a limit of 50 concurrent requests per second. The requests are associated with the originating IP address, and not with the user making the requests.
 
 Currently, we do not expect to exceed this rate limit since a reconciliation can perform a maximum of 5 sequential requests.  
 There is also mention of a specific rate limit for SCIM endpoints, but we do not use these endpoints.
 
-#### Caching of well-known token endpoint
+### Caching of well-known token endpoint
 We read the known configuration of the IAS tenant that is used to create the applications to obtain the token endpoint. This token endpoint is then stored in the secret 
 on the managed runtime along with the client ID and the client secret.  
 The assumption is, that the token endpoint of the IAS tenant does not change without any notice of a breaking change.
 To reduce the number of requests when creating an application client secret and thus increase the stability of the reconciliation, it was decided to cache the 
 token endpoint on the first retrieval. The cached token endpoint is not invalidated and is available during the runtime of the operator.
 
-#### Referencing IAS applications by name
+### Referencing IAS applications by name
 The IAS application is created with a name that matches the name of the EventingAuth CR. This name is the unique runtime ID of the cluster for which the IAS application is created.
 Since we do not want to store the IAS application ID in the secret stored on the managed runtime , we can read the IAS application only by its name.  
 During the creation of the application, existing applications with the same name are read. If an application with the same name exists, it is deleted, as we assume this is due to a failed reconciliation.
@@ -73,7 +84,7 @@ If more than one application with the same name already exists, the reconciliati
 
 It was decided not to delete any of the existing applications in this case, as it is an unexpected condition that may have been caused by manual actions, and we may want to keep the applications to find the cause of the issue.
 
-#### Handling of failed IAS application creation
+### Handling of failed IAS application creation
 If the creation of the IAS application fails, the reconciliation will be retried. If an application has already been created, it is deleted before creation is attempted again.
 To avoid having multiple applications with the same name, the application is created again only if the deletion is successful.
 During the application creation process, there are several steps that can fail. First, the application is created, then the client secret is created, and finally the client ID of the client secret is read.    
@@ -131,7 +142,6 @@ make undeploy
 ```
 
 ## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
 
 ### How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
