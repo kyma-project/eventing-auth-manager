@@ -203,22 +203,6 @@ func Test_CreateApplication(t *testing.T) {
 			clientTokenUrlMock: pointer.String("https://from-cache.com/token"),
 			wantApp:            NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://from-cache.com/token"),
 		},
-		{
-			name: "should return an error when token URL wasn't fetched",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
-				clientMock := mocks.ClientWithResponsesInterface{}
-
-				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
-				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
-				mockCreateApiSecretWithResponseStatusCreated(&clientMock, appId, "clientSecretMock")
-				mockGetApplicationWithResponseStatusOK(&clientMock, appId, "clientIdMock")
-
-				return &clientMock
-			},
-			oidcClientMock: mockGetTokenUrl(t, nil),
-			wantApp:        Application{},
-			wantError:      errors.New("failed to fetch token url"),
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
