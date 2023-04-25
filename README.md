@@ -59,7 +59,11 @@ Currently, we do not expect to exceed this rate limit since a reconciliation can
 There is also mention of a specific rate limit for SCIM endpoints, but we do not use these endpoints.
 
 #### Caching of well-known token endpoint
-TODO: Add description of caching of well-known token endpoint
+We read the known configuration of the IAS tenant that is used to create the applications to obtain the token endpoint. This token endpoint is then stored in the secret 
+on the managed runtime along with the Client ID and the Client Secret.
+The assumption is, that the token endpoint of the IAS tenant does not change without any notice of a breaking change.
+To reduce the number of requests when creating an application secret and thus increase the stability of the reconciliation, it was decided to cache the 
+token endpoint on the first retrieval. The cached token endpoint is not invalidated and is available during the runtime of the operator.
 
 #### Referencing IAS applications by name
 TODO: Add description of referencing IAS applications by name
