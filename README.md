@@ -73,8 +73,25 @@ If more than one application with the same name already exists, the reconciliati
 
 It was decided not to delete any of the existing applications in this case, as it is an unexpected condition that may have been caused by manual actions, and we may want to keep the applications to find the cause of the issue.
 
-
 #### Handling of failed IAS application creation
+If the creation of the IAS application fails, the reconciliation will be retried. If an application has already been created, it is deleted before creation is attempted again.
+To avoid having multiple applications with the same name, the application is created again only if the deletion is successful.
+During the application creation process, there are several steps that can fail. First, the application is created, then the client secret is created, and finally the client ID of the client secret is read.    
+It was decided to always delete the application if any of these steps fail, as this makes the whole process more understandable and easier to maintain.  
+The reason for this is that the existing application can only be reused if the reconciliation failed before the client secret was successfully created, as we have no way to retrieve the client secret the next time the reconciliation is performed.  
+There is still the option of not always deleting the application by caching the created client secrets in the operator, but caching the client secrets might not be a good idea for security reasons either.
+
+## Generating the SAP Cloud Identity Services API client
+The OpenAPI specification is available in the [API Business Hub](https://api.sap.com/api/SCI_Application_Directory).
+The specification used to generate the client is stored in `internal/ias/internal/SCI_Application_Directory.yaml`.
+
+To generate the client and client mocks from the specification, run the following command:
+
+> NOTE: To generate the mocks you need to have [mockery](https://vektra.github.io/mockery/) installed.
+
+```sh
+make gen-ias-client
+```
 
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
@@ -111,18 +128,6 @@ UnDeploy the controller from the cluster:
 
 ```sh
 make undeploy
-```
-
-## Generating the SAP Cloud Identity Services API client
-The OpenAPI specification is available in the [API Business Hub](https://api.sap.com/api/SCI_Application_Directory).
-The specification used to generate the client is stored in `internal/ias/internal/SCI_Application_Directory.yaml`.
-
-To generate the client and client mocks from the specification, run the following command:
-
-> NOTE: To generate the mocks you need to have [mockery](https://vektra.github.io/mockery/) installed.
-
-```sh
-make gen-ias-client
 ```
 
 ## Contributing
