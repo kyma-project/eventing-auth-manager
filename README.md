@@ -60,14 +60,14 @@ There is also mention of a specific rate limit for SCIM endpoints, but we do not
 
 #### Caching of well-known token endpoint
 We read the known configuration of the IAS tenant that is used to create the applications to obtain the token endpoint. This token endpoint is then stored in the secret 
-on the managed runtime along with the Client ID and the Client Secret.  
+on the managed runtime along with the client ID and the client secret.  
 The assumption is, that the token endpoint of the IAS tenant does not change without any notice of a breaking change.
-To reduce the number of requests when creating an application secret and thus increase the stability of the reconciliation, it was decided to cache the 
+To reduce the number of requests when creating an application client secret and thus increase the stability of the reconciliation, it was decided to cache the 
 token endpoint on the first retrieval. The cached token endpoint is not invalidated and is available during the runtime of the operator.
 
 #### Referencing IAS applications by name
 The IAS application is created with a name that matches the name of the EventingAuth CR. This name is the unique runtime ID of the cluster for which the IAS application is created.
-Since we do not want to store the IAS application ID in the managed runtime secret, we can read the IAS application only by its name.  
+Since we do not want to store the IAS application ID in the secret stored on the managed runtime , we can read the IAS application only by its name.  
 During the creation of the application, existing applications with the same name are read. If an application with the same name exists, it is deleted, as we assume this is due to a failed reconciliation.
 If more than one application with the same name already exists, the reconciliation fails. The same behaviour occurs when reconciling the deletion of the EventingAuth CR.
 
@@ -83,7 +83,7 @@ There is still the option of not always deleting the application by caching the 
 
 ## Generating the SAP Cloud Identity Services API client
 The OpenAPI specification is available in the [API Business Hub](https://api.sap.com/api/SCI_Application_Directory).
-The specification used to generate the client is stored in `internal/ias/internal/SCI_Application_Directory.yaml`.
+The specification used to generate the client is stored in `internal/ias/internal/api/SCI_Application_Directory.yaml`.
 
 To generate the client and client mocks from the specification, run the following command:
 
