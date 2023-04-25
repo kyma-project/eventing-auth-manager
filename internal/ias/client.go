@@ -78,6 +78,7 @@ func (c client) CreateApplication(ctx context.Context, name string) (Application
 		return Application{}, err
 	}
 
+	// TODO: Instead of providing tenant URL and making assumption about token URL, we should fetch the token URL from the well-known endpoint.
 	return NewApplication(appId.String(), *clientId, *clientSecret, c.tenantUrl), nil
 }
 

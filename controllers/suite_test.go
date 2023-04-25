@@ -18,10 +18,14 @@ package controllers_test
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/utils/pointer"
 	"os"
 	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -49,17 +53,18 @@ import (
 const (
 	defaultTimeout = time.Second * 5
 	namespace      = "test-namespace"
-	kymaNs         = "kyma-system"
 )
 
 var (
-	cfg       *rest.Config
-	k8sClient client.Client
-	ctx       context.Context
-	cancel    context.CancelFunc
+	cfg                    *rest.Config
+	k8sClient              client.Client
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	targetClusterK8sCfg    string
+	targetClusterK8sClient client.Client
+	testEnv                *envtest.Environment
+	targetClusterTestEnv   *envtest.Environment
 )
-
-var testEnv *envtest.Environment
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -78,7 +83,21 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	}
 
 	var err error
-	// cfg is defined in this file globally.
+
+	// Start Target Cluster
+	targetClusterK8sClient, err = initTargetClusterConfig()
+	Expect(err).NotTo(HaveOccurred())
+
+	// In case we are using an existing cluster the Kyma-system namespace might already exist, so we need to guard against that.
+	kymaNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kyma-system"}}
+	err = targetClusterK8sClient.Get(context.TODO(), client.ObjectKeyFromObject(kymaNs), &corev1.Namespace{})
+	if err != nil {
+		Expect(errors.IsNotFound(err)).To(BeTrue())
+		err := targetClusterK8sClient.Create(context.TODO(), kymaNs)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	// Start the test cluster
 	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
@@ -95,11 +114,11 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	}
 	Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
 
-	kymaNs := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: kymaNs},
+	kcpNs := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "kcp-system"},
 		Spec:       corev1.NamespaceSpec{},
 	}
-	Expect(k8sClient.Create(context.TODO(), kymaNs)).Should(Succeed())
+	Expect(k8sClient.Create(context.TODO(), kcpNs)).Should(Succeed())
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme.Scheme,
@@ -107,7 +126,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), getIasTestClient())
+	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), getIasTestClient(), time.Second*1, time.Second*3)
 
 	Expect(reconciler.SetupWithManager(mgr)).Should(Succeed())
 
@@ -121,16 +140,19 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 var _ = AfterSuite(func() {
 	cancel()
 	By("Tearing down the test environment")
-	err := testEnv.Stop()
+	stopTestEnv(testEnv)
+	stopTestEnv(targetClusterTestEnv)
+})
+
+func stopTestEnv(env *envtest.Environment) {
+	err := env.Stop()
 
 	// Suggested workaround for timeout issue https://github.com/kubernetes-sigs/controller-runtime/issues/1571#issuecomment-1005575071
 	if err != nil {
-		time.Sleep(4 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
-	err = testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
-
-})
+}
 
 func getIasTestClient() ias.Client {
 	url := os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
@@ -155,4 +177,48 @@ func (i iasClientStub) CreateApplication(_ context.Context, name string) (ias.Ap
 
 func (i iasClientStub) DeleteApplication(_ context.Context, _ string) error {
 	return nil
+}
+
+func initTargetClusterConfig() (client.Client, error) {
+	targetK8sCfgPath := os.Getenv("TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH")
+
+	var err error
+	var clientConfig *rest.Config
+
+	if targetK8sCfgPath == "" {
+		targetClusterTestEnv = &envtest.Environment{}
+
+		clientConfig, err = targetClusterTestEnv.Start()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(clientConfig).NotTo(BeNil())
+
+		// We create a new user since this is the easiest way to get the kubeconfig in the right format to store it in the secret.
+		adminUser, err := targetClusterTestEnv.ControlPlane.AddUser(envtest.User{
+			Name:   "envtest-admin",
+			Groups: []string{"system:masters"},
+		}, nil)
+		Expect(err).NotTo(HaveOccurred())
+
+		kubeconfig, err := adminUser.KubeConfig()
+		Expect(err).NotTo(HaveOccurred())
+		targetClusterK8sCfg = base64.StdEncoding.EncodeToString(kubeconfig)
+	} else {
+		kubeconfig, err := os.ReadFile(targetK8sCfgPath)
+		Expect(err).NotTo(HaveOccurred())
+		targetClusterK8sCfg = base64.StdEncoding.EncodeToString(kubeconfig)
+
+		config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		targetClusterTestEnv = &envtest.Environment{
+			Config:             config,
+			UseExistingCluster: pointer.Bool(true),
+		}
+
+		clientConfig, err = targetClusterTestEnv.Start()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(clientConfig).NotTo(BeNil())
+	}
+
+	return client.New(clientConfig, client.Options{})
 }
