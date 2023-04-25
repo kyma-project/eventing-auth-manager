@@ -51,8 +51,12 @@ name for the EventingAuth CR and the IAS application. In this way, the eventing-
 
 ### Design decisions
 
-#### Handling of 429
-TODO: Add description of handling of 429
+#### Handling of Rate Limiting calling IAS API
+We didn't implement any rate limit handling, because the [Rate Limiting documentation of IAS](https://help.sap.com/docs/IDENTITY_AUTHENTICATION/6d6d63354d1242d185ab4830fc04feb1/e22ee47abf614565bcb29bb4ddbbf209.html) mentions the following: 
+> To ensure safe and stable environment, all requests have a limit of 50 concurrent requests per second. The requests are associated with the originating IP address, and not with the user making the requests.
+
+Currently, we do not expect to exceed this rate limit since a reconciliation can perform a maximum of 5 sequential requests.  
+There is also mention of a specific rate limit for SCIM endpoints, but we do not use these endpoints.
 
 #### Caching of well-known token endpoint
 TODO: Add description of caching of well-known token endpoint
