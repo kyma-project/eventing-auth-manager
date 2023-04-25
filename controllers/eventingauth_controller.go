@@ -18,12 +18,14 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"os"
 	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,9 +37,11 @@ import (
 )
 
 const (
-	applicationSecretName      = "eventing-auth-application"
-	applicationSecretNamespace = "kyma-system"
-	eventingAuthFinalizerName  = "eventingauth.operator.kyma-project.io/finalizer"
+	applicationSecretName             = "eventing-auth-application"
+	applicationSecretNamespace        = "kyma-system"
+	eventingAuthFinalizerName         = "eventingauth.operator.kyma-project.io/finalizer"
+	IasCredsSecretNamespace    string = "IAS_CREDS_SECRET_NAMESPACE"
+	IasCredsSecretName         string = "IAS_CREDS_SECRET_NAME"
 )
 
 // eventingAuthReconciler reconciles a EventingAuth object
@@ -174,7 +178,11 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 func (r *eventingAuthReconciler) getIasClient() (ias.Client, error) {
-	newIasCredentials, err := ias.ReadCredentials("default", "ias-creds", r.Client)
+	namespace, name, err := getIasSecretNamespaceAndNameConfigs()
+	if err != nil {
+		return nil, err
+	}
+	newIasCredentials, err := ias.ReadCredentials(*namespace, *name, r.Client)
 	if err != nil {
 		return nil, err
 	}
@@ -191,6 +199,23 @@ func (r *eventingAuthReconciler) getIasClient() (ias.Client, error) {
 	// caching ias client
 	r.iasClient = iasClient
 	return iasClient, nil
+}
+
+func getIasSecretNamespaceAndNameConfigs() (*string, *string, error) {
+	var namespaceErr, nameErr error
+	namespace := os.Getenv(IasCredsSecretNamespace)
+	if len(namespace) == 0 {
+		namespaceErr = fmt.Errorf("%s is not set", namespace)
+	}
+	name := os.Getenv(IasCredsSecretName)
+	if len(name) == 0 {
+		nameErr = fmt.Errorf("%s is not set", name)
+	}
+	err := errors.Join(namespaceErr, nameErr)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &namespace, &name, err
 }
 
 // Adds the finalizer if none exists
@@ -284,7 +309,7 @@ func hasTargetClusterApplicationSecret(ctx context.Context, c client.Client) (bo
 		Namespace: applicationSecretNamespace,
 	}, &s)
 
-	if errors.IsNotFound(err) {
+	if apiErrors.IsNotFound(err) {
 		return false, nil
 	}
 
