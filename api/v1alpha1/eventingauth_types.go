@@ -59,10 +59,10 @@ type IASApplication struct {
 }
 
 type AuthSecret struct {
-	// NamespacedName of the secret on the managed runtime
+	// NamespacedName of the secret on the managed runtime cluster
 	NamespacedName string `json:"namespacedName"`
 	// Runtime ID of the cluster where the secret is created
-	Cluster string `json:"cluster"`
+	ClusterId string `json:"clusterId"`
 }
 
 //+kubebuilder:object:root=true

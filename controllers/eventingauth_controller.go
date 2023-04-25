@@ -161,8 +161,8 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		logger.Info("Created IAS application secret", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 
 		cr.Status.AuthSecret = &operatorv1alpha1.AuthSecret{
-			Cluster:        "", // TODO: use proper cluster reference when implemented
-			NamespacedName: appSecret.Namespace + "/" + appSecret.Name,
+			ClusterId:      cr.Name,
+			NamespacedName: fmt.Sprintf("%s/%s", appSecret.Namespace, appSecret.Name),
 		}
 		if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, nil); err != nil {
 			return ctrl.Result{

@@ -124,14 +124,15 @@ spec:
               secret:
                 description: AuthSecret contains information about created K8s secret
                 properties:
-                  cluster:
+                  clusterId:
                     description: Runtime ID of the cluster where the secret is created
                     type: string
                   namespacedName:
                     description: NamespacedName of the secret on the managed runtime
+                      cluster
                     type: string
                 required:
-                - cluster
+                - clusterId
                 - namespacedName
                 type: object
               state:

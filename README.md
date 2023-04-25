@@ -30,16 +30,16 @@ When the Kyma CR is deleted, the controller deletes the application in the IAS, 
 For details, see the [specification file](./api/v1alpha1/eventingauth_types.go).
 
 <!-- EventingAuth v1alpha1 operator.kyma-project.io -->
-| Parameter         | Description                                                                                                                               |
-| ---------------------------------------- |-------------------------------------------------------------------------------------------------------------------------------------------|
-| **status.conditions** | Conditions associated with EventingAuthStatus. There are conditions for creation of IAS application and the secret of the managed runtime |
-| **status.iasApplication** | Application contains information about a created IAS application                                                                          |
-| **status.iasApplication.name** | Name of the application in IAS                                                                                                            |
-| **status.iasApplication.uuid** | Application ID in IAS                                                                                                                     |
-| **status.secret** | AuthSecret contains information about created K8s secret                                                                                  |
-| **status.secret.cluster** | Runtime ID of the cluster where the secret is created                                                                                     |
+| Parameter                        | Description                                                                                                                               |
+|----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| **status.conditions**            | Conditions associated with EventingAuthStatus. There are conditions for creation of IAS application and the secret of the managed runtime |
+| **status.iasApplication**        | Application contains information about a created IAS application                                                                          |
+| **status.iasApplication.name**   | Name of the application in IAS                                                                                                            |
+| **status.iasApplication.uuid**   | Application ID in IAS                                                                                                                     |
+| **status.secret**                | AuthSecret contains information about created K8s secret                                                                                  |
+| **status.secret.clusterId**      | Runtime ID of the cluster where the secret is created                                                                                     |
 | **status.secret.namespacedName** | NamespacedName of the secret on the managed runtime                                                                                       |
-| **status.state** | State signifies current state of CustomObject. Value can be one of ("Ready", "NotReady").                                                 |
+| **status.state**                 | State signifies current state of CustomObject. Value can be one of ("Ready", "NotReady").                                                 |
 
 ## eventing-webhook-auth secret
 The secret created on the managed runtime is looks like the following:
