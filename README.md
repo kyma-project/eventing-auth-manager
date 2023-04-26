@@ -19,9 +19,9 @@ When a new managed Kyma Runtime is provisioned the component creates a new [OIDC
 
 ![eventing-auth-manager-overview](./doc/overview.svg)
 
-A Kyma CR is created for each runtime. The eventing-auth-manager watches the creation and deletion of Kyma CRs. When a Kyma CR is created, the controller creates an EventingAuth CR. 
-The reconciliation of the EventingAuth CR will create an application in the IAS and the secret with the credentials on the runtime.
-When the Kyma CR is deleted, the controller deletes the application in the IAS, the secret on the runtime, and the EventingAuth CR.
+A Kyma CR is created for each runtime. The Eventing Auth Manager watches the creation and deletion of Kyma CRs. On the creation of a Kyma CR, the Eventing Auth Manager creates an EventingAuth CR. 
+The reconciliation of the EventingAuth CR will create an application in IAS using the [Application Directory REST API](https://api.sap.com/api/SCI_Application_Directory/) and the secret with the credentials on the managed runtime.
+When the Kyma CR is deleted, the controller deletes the EventingAuth CR. On the deletion of the EventingAuth CR the Eventing Auth Manager deletes the application in IAS and the secret on the runtime.
 
 ![controller-flow](./doc/controller-flow.svg)
 
