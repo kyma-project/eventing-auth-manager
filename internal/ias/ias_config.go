@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	iasUrlVarName      string = "IAS_URL"
-	iasUsernameVarName string = "IAS_USERNAME"
-	iasPasswordVarName string = "IAS_PASSWORD"
+	IasUrlEnvVarName      string = "IAS_URL"
+	IasUsernameEnvVarName string = "IAS_USERNAME"
+	IasPasswordEnvVarName string = "IAS_PASSWORD"
 )
 
 func NewCredentials(url, username, password string) *Credentials {
@@ -39,7 +39,7 @@ func ReadCredentials(namespace, name string, k8sClient ctlrClient.Client) (*Cred
 		Name:      name,
 	}
 	iasSecret := &corev1.Secret{}
-	err := k8sClient.Get(context.TODO(), namespacedName, iasSecret)
+	err := k8sClient.Get(context.Background(), namespacedName, iasSecret)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			credentials, err := readFromEnvVars()
@@ -70,18 +70,18 @@ func ReadCredentials(namespace, name string, k8sClient ctlrClient.Client) (*Cred
 
 func readFromEnvVars() (*Credentials, error) {
 	// TODO: log like reading ias credentials from environment variables
-	url := os.Getenv(iasUrlVarName)
+	url := os.Getenv(IasUrlEnvVarName)
 	var iasUrlErr, iasUserErr, iasPassErr error
 	if len(url) == 0 {
-		iasUrlErr = fmt.Errorf("%s is not set", iasUrlVarName)
+		iasUrlErr = fmt.Errorf("%s is not set", IasUrlEnvVarName)
 	}
-	username := os.Getenv(iasUsernameVarName)
+	username := os.Getenv(IasUsernameEnvVarName)
 	if len(url) == 0 {
-		iasUserErr = fmt.Errorf("%s is not set", iasUsernameVarName)
+		iasUserErr = fmt.Errorf("%s is not set", IasUsernameEnvVarName)
 	}
-	password := os.Getenv(iasPasswordVarName)
+	password := os.Getenv(IasPasswordEnvVarName)
 	if len(url) == 0 {
-		iasPassErr = fmt.Errorf("%s is not set", iasPasswordVarName)
+		iasPassErr = fmt.Errorf("%s is not set", IasPasswordEnvVarName)
 	}
 	err := errors.Join(iasUrlErr, iasUserErr, iasPassErr)
 	if err != nil {
