@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	v1 "k8s.io/api/core/v1"
@@ -37,11 +36,13 @@ import (
 )
 
 const (
-	applicationSecretName             = "eventing-auth-application"
-	applicationSecretNamespace        = "kyma-system"
-	eventingAuthFinalizerName         = "eventingauth.operator.kyma-project.io/finalizer"
-	IasCredsSecretNamespace    string = "IAS_CREDS_SECRET_NAMESPACE"
-	IasCredsSecretName         string = "IAS_CREDS_SECRET_NAME"
+	applicationSecretName               = "eventing-auth-application"
+	applicationSecretNamespace          = "kyma-system"
+	eventingAuthFinalizerName           = "eventingauth.operator.kyma-project.io/finalizer"
+	IasCredsSecretNamespace      string = "IAS_CREDS_SECRET_NAMESPACE"
+	IasCredsSecretName           string = "IAS_CREDS_SECRET_NAME"
+	defaultIasCredsNamespaceName string = "kcp-system"
+	defaultIasCredsSecretName    string = "eventing-auth-ias-creds"
 )
 
 // eventingAuthReconciler reconciles a EventingAuth object
@@ -178,10 +179,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 func (r *eventingAuthReconciler) getIasClient() (ias.Client, error) {
-	namespace, name, err := getIasSecretNamespaceAndNameConfigs()
-	if err != nil {
-		return nil, err
-	}
+	namespace, name := getIasSecretNamespaceAndNameConfigs()
 	newIasCredentials, err := ias.ReadCredentials(*namespace, *name, r.Client)
 	if err != nil {
 		return nil, err
@@ -201,21 +199,16 @@ func (r *eventingAuthReconciler) getIasClient() (ias.Client, error) {
 	return iasClient, nil
 }
 
-func getIasSecretNamespaceAndNameConfigs() (*string, *string, error) {
-	var namespaceErr, nameErr error
+func getIasSecretNamespaceAndNameConfigs() (*string, *string) {
 	namespace := os.Getenv(IasCredsSecretNamespace)
 	if len(namespace) == 0 {
-		namespaceErr = fmt.Errorf("%s is not set", namespace)
+		namespace = defaultIasCredsNamespaceName
 	}
 	name := os.Getenv(IasCredsSecretName)
 	if len(name) == 0 {
-		nameErr = fmt.Errorf("%s is not set", name)
+		name = defaultIasCredsSecretName
 	}
-	err := errors.Join(namespaceErr, nameErr)
-	if err != nil {
-		return nil, nil, err
-	}
-	return &namespace, &name, err
+	return &namespace, &name
 }
 
 // Adds the finalizer if none exists
