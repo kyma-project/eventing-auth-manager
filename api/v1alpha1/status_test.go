@@ -491,7 +491,7 @@ func createEventingAuthStatus(appReadyStatus, secretReadyStatus metav1.Condition
 		},
 		AuthSecret: &AuthSecret{
 			NamespacedName: secretNSName,
-			Cluster:        "mock-cluster-reference",
+			ClusterId:      "mock-cluster-reference",
 		},
 		State: state,
 	}
