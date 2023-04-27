@@ -75,7 +75,7 @@ We read the known configuration of the IAS tenant that is used to create the app
 on the managed runtime along with the client ID and the client secret.  
 The assumption is, that the token endpoint of the IAS tenant does not change without any notice of a breaking change.
 To reduce the number of requests when creating an application client secret and thus increase the stability of the reconciliation, it was decided to cache the 
-token endpoint on the first retrieval. The cached token endpoint is not invalidated and is available during the runtime of the operator.
+token endpoint on the first retrieval. The cached token endpoint is not invalidated during operator runtime, but is updated when the IAS credentials or tenant URL are changed.
 
 ### Referencing IAS applications by name
 The IAS application is created with a name that matches the name of the EventingAuth CR. This name is the unique runtime ID of the cluster for which the IAS application is created.
