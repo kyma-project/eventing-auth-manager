@@ -39,8 +39,8 @@ const (
 	applicationSecretName               = "eventing-webhook-auth"
 	applicationSecretNamespace          = "kyma-system"
 	eventingAuthFinalizerName           = "eventingauth.operator.kyma-project.io/finalizer"
-	IasCredsSecretNamespace      string = "IAS_CREDS_SECRET_NAMESPACE"
-	IasCredsSecretName           string = "IAS_CREDS_SECRET_NAME"
+	iasCredsSecretNamespace      string = "IAS_CREDS_SECRET_NAMESPACE"
+	iasCredsSecretName           string = "IAS_CREDS_SECRET_NAME"
 	defaultIasCredsNamespaceName string = "kcp-system"
 	defaultIasCredsSecretName    string = "eventing-auth-ias-creds"
 )
@@ -197,11 +197,11 @@ func (r *eventingAuthReconciler) getIasClient() (ias.Client, error) {
 }
 
 func getIasSecretNamespaceAndNameConfigs() (string, string) {
-	namespace := os.Getenv(IasCredsSecretNamespace)
+	namespace := os.Getenv(iasCredsSecretNamespace)
 	if len(namespace) == 0 {
 		namespace = defaultIasCredsNamespaceName
 	}
-	name := os.Getenv(IasCredsSecretName)
+	name := os.Getenv(iasCredsSecretName)
 	if len(name) == 0 {
 		name = defaultIasCredsSecretName
 	}
