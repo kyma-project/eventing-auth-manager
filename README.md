@@ -8,6 +8,7 @@ SAP Cloud Identity Services - Identity Authentication (IAS) by creating and dele
 * [eventing-webhook-auth secret](#eventing-webhook-auth-secret)
 * [Name reference between resources](#name-reference-between-resources)
 * [Design decisions](#design-decisions)
+* [Future improvements](#future-improvements)
 * [Generating the SAP Cloud Identity Services API client](#generating-the-sap-cloud-identity-services-api-client)
 * [Getting Started](#getting-started)
 * [Contributing](#contributing)
@@ -96,7 +97,7 @@ In this case, there is still the option of not always deleting the application b
 
 ## Future Improvements
 - Identify IAS Application with its UUID. Currently, it is identified with its name, see [Referencing IAS applications by name](#referencing-ias-applications-by-name).
-Prevent IAS Application multiple recreation in case K8s secret creation fails, see [Handling of failed IAS application and secret creation](#handling-of-failed-ias-application-and-secret-creation).
+- Prevent IAS Application multiple recreation in case K8s secret creation fails, see [Handling of failed IAS application and secret creation](#handling-of-failed-ias-application-and-secret-creation).
 
 ## Generating the SAP Cloud Identity Services API client
 The OpenAPI specification is available in the [API Business Hub](https://api.sap.com/api/SCI_Application_Directory).
