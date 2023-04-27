@@ -58,8 +58,7 @@ data:
 ```
 
 ## Name reference between resources
-The Kyma CR, which creation is the trigger for the creation of the EventingAuth CR, uses the unqiue runtime ID of the managed Kyma runtime as name. This name is used as the name for the
-name for the EventingAuth CR and the IAS application. In this way, the eventing-auth CR and the IAS application can be assigned to the specific managed runtime.
+The Kyma CR, which creation is the trigger for the creation of the EventingAuth CR, uses the unique runtime ID of the managed Kyma runtime as name. This name is used as the name for the EventingAuth CR and the IAS application. In this way, the EventingAuth CR and the IAS application can be assigned to the specific managed runtime.
 
 ## Design decisions
 
