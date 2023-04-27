@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -18,17 +17,11 @@ func getTargetClusterClient(k8sClient client.Client, targetClusterId string) (cl
 		return nil, err
 	}
 
-	encoded := secret.Data["config"]
-	if len(encoded) == 0 {
+	kubeconfig := secret.Data["config"]
+	if len(kubeconfig) == 0 {
 		return nil, fmt.Errorf("failed to find target cluster kubeconfig in secret %s", kubeconfigSecretName)
 	}
 
-	decoded := make([]byte, base64.StdEncoding.DecodedLen(len(encoded)))
-	n, err := base64.StdEncoding.Decode(decoded, encoded)
-	if err != nil {
-		return nil, err
-	}
-	kubeconfig := decoded[:n]
 	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
 	if err != nil {
 		return nil, err
