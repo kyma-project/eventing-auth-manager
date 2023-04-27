@@ -52,7 +52,6 @@ type eventingAuthReconciler struct {
 	errorRequeuePeriod   time.Duration
 	defaultRequeuePeriod time.Duration
 	iasClient            ias.Client
-	iasCredentials       ias.Credentials
 }
 
 func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod time.Duration, defaultRequeuePeriod time.Duration) ManagedReconciler {
@@ -86,7 +85,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// sync IAS client credentials
-	iasClient, err := r.getIasClient()
+	r.iasClient, err = r.getIasClient()
 	if err != nil {
 		return ctrl.Result{
 			RequeueAfter: r.errorRequeuePeriod,
@@ -101,7 +100,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	} else {
 		logger.Info("Handling deletion", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
-		if err = r.handleDeletion(ctx, iasClient, targetK8sClient, &cr); err != nil {
+		if err = r.handleDeletion(ctx, r.iasClient, targetK8sClient, &cr); err != nil {
 			return ctrl.Result{
 				RequeueAfter: r.errorRequeuePeriod,
 			}, err
@@ -120,7 +119,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	if !appSecretExists {
 		logger.Info("Creating IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
-		iasApplication, createAppErr := iasClient.CreateApplication(ctx, cr.Name)
+		iasApplication, createAppErr := r.iasClient.CreateApplication(ctx, cr.Name)
 		if createAppErr != nil {
 			logger.Error(createAppErr, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
@@ -180,26 +179,23 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 func (r *eventingAuthReconciler) getIasClient() (ias.Client, error) {
 	namespace, name := getIasSecretNamespaceAndNameConfigs()
-	newIasCredentials, err := ias.ReadCredentials(*namespace, *name, r.Client)
+	newIasCredentials, err := ias.ReadCredentials(namespace, name, r.Client)
 	if err != nil {
 		return nil, err
 	}
 	// return from cache unless credentials are changed
-	if reflect.DeepEqual(newIasCredentials, r.iasCredentials) {
+	if r.iasClient != nil && reflect.DeepEqual(r.iasClient.GetCredentials(), newIasCredentials) {
 		return r.iasClient, nil
 	}
-	// update ias client if credentials are changed
-	r.iasCredentials = *newIasCredentials
+	// update IAS client if credentials are changed
 	iasClient, err := ias.NewIasClient(newIasCredentials.URL, newIasCredentials.Username, newIasCredentials.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to createa a new IAS client: %v", err)
 	}
-	// caching ias client
-	r.iasClient = iasClient
 	return iasClient, nil
 }
 
-func getIasSecretNamespaceAndNameConfigs() (*string, *string) {
+func getIasSecretNamespaceAndNameConfigs() (string, string) {
 	namespace := os.Getenv(IasCredsSecretNamespace)
 	if len(namespace) == 0 {
 		namespace = defaultIasCredsNamespaceName
@@ -208,7 +204,7 @@ func getIasSecretNamespaceAndNameConfigs() (*string, *string) {
 	if len(name) == 0 {
 		name = defaultIasCredsSecretName
 	}
-	return &namespace, &name
+	return namespace, name
 }
 
 // Adds the finalizer if none exists

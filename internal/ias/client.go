@@ -17,9 +17,10 @@ import (
 type Client interface {
 	CreateApplication(ctx context.Context, name string) (Application, error)
 	DeleteApplication(ctx context.Context, name string) error
+	GetCredentials() *Credentials
 }
 
-func NewIasClient(iasTenantUrl, user, password string) (Client, error) {
+var NewIasClient = func(iasTenantUrl, user, password string) (Client, error) {
 
 	basicAuthProvider, err := securityprovider.NewSecurityProviderBasicAuth(user, password)
 	if err != nil {
@@ -37,8 +38,9 @@ func NewIasClient(iasTenantUrl, user, password string) (Client, error) {
 	}
 
 	return &client{
-		api:        apiClient,
-		oidcClient: oidc.NewOidcClient(oidcHttpClient, iasTenantUrl),
+		api:         apiClient,
+		oidcClient:  oidc.NewOidcClient(oidcHttpClient, iasTenantUrl),
+		credentials: &Credentials{URL: iasTenantUrl, Username: user, Password: password},
 	}, nil
 }
 
@@ -47,7 +49,15 @@ type client struct {
 	oidcClient oidc.Client
 	// The token URL of the IAS client. Since this URL should only change when the tenant changes and this will lead to the initialization of
 	// a new client, we can cache the URL to avoid an additional request at each application creation.
-	tokenUrl *string
+	tokenUrl    *string
+	credentials *Credentials
+}
+
+func (c *client) GetCredentials() *Credentials {
+	if c.credentials == nil {
+		c.credentials = &Credentials{}
+	}
+	return c.credentials
 }
 
 // CreateApplication creates an application in IAS. This function is not idempotent, because if an application with the specified

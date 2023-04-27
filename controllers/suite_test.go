@@ -45,25 +45,31 @@ import (
 
 	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
+	"log"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 const (
-	defaultTimeout = time.Second * 5
+	defaultTimeout = time.Second * 10
 	namespace      = "test-namespace"
 )
 
 var (
-	cfg                    *rest.Config
-	k8sClient              client.Client
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	targetClusterK8sCfg    string
-	targetClusterK8sClient client.Client
-	testEnv                *envtest.Environment
-	targetClusterTestEnv   *envtest.Environment
+	cfg                         *rest.Config
+	k8sClient                   client.Client
+	ctx                         context.Context
+	cancel                      context.CancelFunc
+	targetClusterK8sCfg         string
+	targetClusterK8sClient      client.Client
+	testEnv                     *envtest.Environment
+	targetClusterTestEnv        *envtest.Environment
+	originalNewIasClientFunc    func(iasTenantUrl, user, password string) (ias.Client, error)
+	originalReadCredentialsFunc func(namespace, name string, k8sClient client.Client) (*ias.Credentials, error)
+	iasUrl                      string
+	iasUsername                 string
+	iasPassword                 string
 )
 
 func TestAPIs(t *testing.T) {
@@ -75,6 +81,10 @@ func TestAPIs(t *testing.T) {
 var _ = BeforeSuite(func(specCtx SpecContext) {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	ctx, cancel = context.WithCancel(context.TODO())
+
+	iasUrl = os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
+	iasUsername = os.Getenv("TEST_EVENTING_AUTH_IAS_USER")
+	iasPassword = os.Getenv("TEST_EVENTING_AUTH_IAS_PASSWORD")
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -126,7 +136,23 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), getIasTestClient(), time.Second*1, time.Second*3)
+	// mock ias.ReadCredentials function
+	originalReadCredentialsFunc = ias.ReadCredentials
+	ias.ReadCredentials = func(namespace, name string, k8sClient client.Client) (*ias.Credentials, error) {
+		return &ias.Credentials{URL: iasUrl, Username: iasUsername, Password: iasPassword}, nil
+	}
+
+	if !existIasCreds() {
+		// use IasClient stub unless test IAS ENV vars exist
+		log.Println("Using mock IAS client as TEST_EVENTING_AUTH_IAS_URL, TEST_EVENTING_AUTH_IAS_USER, and TEST_EVENTING_AUTH_IAS_PASSWORD are missing")
+		originalNewIasClientFunc = ias.NewIasClient
+		mockNewIasClientFunc := func(iasTenantUrl, user, password string) (ias.Client, error) {
+			return iasClientStub{}, nil
+		}
+		ias.NewIasClient = mockNewIasClientFunc
+	}
+
+	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1, time.Second*3)
 
 	Expect(reconciler.SetupWithManager(mgr)).Should(Succeed())
 
@@ -139,6 +165,10 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 
 var _ = AfterSuite(func() {
 	cancel()
+	ias.ReadCredentials = originalReadCredentialsFunc
+	if !existIasCreds() {
+		ias.NewIasClient = originalNewIasClientFunc
+	}
 	By("Tearing down the test environment")
 	stopTestEnv(testEnv)
 	stopTestEnv(targetClusterTestEnv)
@@ -154,18 +184,8 @@ func stopTestEnv(env *envtest.Environment) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func getIasTestClient() ias.Client {
-	url := os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
-	user := os.Getenv("TEST_EVENTING_AUTH_IAS_USER")
-	pw := os.Getenv("TEST_EVENTING_AUTH_IAS_PASSWORD")
-
-	if url != "" && user != "" && pw != "" {
-		iasClient, err := ias.NewIasClient(url, user, pw)
-		Expect(err).NotTo(HaveOccurred())
-		return iasClient
-	} else {
-		return iasClientStub{}
-	}
+func existIasCreds() bool {
+	return iasUrl != "" && iasUsername != "" && iasPassword != ""
 }
 
 type iasClientStub struct {
@@ -179,6 +199,10 @@ func (i iasClientStub) DeleteApplication(_ context.Context, _ string) error {
 	return nil
 }
 
+func (i iasClientStub) GetCredentials() *ias.Credentials {
+	return &ias.Credentials{}
+}
+
 func initTargetClusterConfig() (client.Client, error) {
 	targetK8sCfgPath := os.Getenv("TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH")
 
@@ -186,6 +210,7 @@ func initTargetClusterConfig() (client.Client, error) {
 	var clientConfig *rest.Config
 
 	if targetK8sCfgPath == "" {
+		log.Println("Starting local KubeAPI and ETCD server as target TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH is missing")
 		targetClusterTestEnv = &envtest.Environment{}
 
 		clientConfig, err = targetClusterTestEnv.Start()
@@ -203,6 +228,7 @@ func initTargetClusterConfig() (client.Client, error) {
 		Expect(err).NotTo(HaveOccurred())
 		targetClusterK8sCfg = base64.StdEncoding.EncodeToString(kubeconfig)
 	} else {
+		log.Println("Using a K8s cluster with kubeconfig file: " + targetK8sCfgPath)
 		kubeconfig, err := os.ReadFile(targetK8sCfgPath)
 		Expect(err).NotTo(HaveOccurred())
 		targetClusterK8sCfg = base64.StdEncoding.EncodeToString(kubeconfig)
