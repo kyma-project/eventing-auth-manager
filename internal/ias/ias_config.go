@@ -31,7 +31,6 @@ type Credentials struct {
 
 // ReadCredentials fetches ias credentials from secret in the cluster. Reads from env vars if secret is missing.
 var ReadCredentials = func(namespace, name string, k8sClient ctlrClient.Client) (*Credentials, error) {
-	iasConfig := &Credentials{}
 	namespacedName := types.NamespacedName{
 		Namespace: namespace,
 		Name:      name,
@@ -58,6 +57,6 @@ var ReadCredentials = func(namespace, name string, k8sClient ctlrClient.Client) 
 	if err != nil {
 		return nil, err
 	}
-	iasConfig = NewCredentials(string(url[:]), string(username[:]), string(password[:]))
+	iasConfig := NewCredentials(string(url[:]), string(username[:]), string(password[:]))
 	return iasConfig, nil
 }
