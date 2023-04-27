@@ -15,7 +15,7 @@ import (
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var appSecretObjectKey = ctrlClient.ObjectKey{Name: "eventing-auth-application", Namespace: "kyma-system"}
+var appSecretObjectKey = ctrlClient.ObjectKey{Name: "eventing-webhook-auth", Namespace: "kyma-system"}
 
 // Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially
 var _ = Describe("EventingAuth Controller", Serial, func() {

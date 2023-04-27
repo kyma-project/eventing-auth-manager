@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/mocks"
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api/mocks"
 	oidcmocks "github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

@@ -175,7 +175,6 @@ func (c *client) createNewApplication(ctx context.Context, name string) (uuid.UU
 		return uuid.UUID{}, err
 	}
 
-	// TODO: Do we need handling for 429 (Too Many Requests) or other status codes?
 	if res.StatusCode() != http.StatusCreated {
 		ctrl.Log.Error(err, "Failed to create application", "name", name, "statusCode", res.StatusCode())
 		return uuid.UUID{}, errors.New("failed to create application")
