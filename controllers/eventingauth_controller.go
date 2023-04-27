@@ -67,9 +67,10 @@ func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, errorRequeueP
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=watch,list
 func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
-	logger.Info("Reconciling EventingAuth", "name", req.Name, "namespace", req.Namespace)
+	logger.Info("Reconciling EventingAuth")
 
 	cr, err := fetchEventingAuth(ctx, r.Client, req.NamespacedName)
 	if err != nil {

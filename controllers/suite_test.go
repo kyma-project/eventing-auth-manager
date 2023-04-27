@@ -18,7 +18,6 @@ package controllers_test
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
@@ -226,12 +225,12 @@ func initTargetClusterConfig() (client.Client, error) {
 
 		kubeconfig, err := adminUser.KubeConfig()
 		Expect(err).NotTo(HaveOccurred())
-		targetClusterK8sCfg = base64.StdEncoding.EncodeToString(kubeconfig)
+		targetClusterK8sCfg = string(kubeconfig)
 	} else {
 		log.Println("Using a K8s cluster with kubeconfig file: " + targetK8sCfgPath)
 		kubeconfig, err := os.ReadFile(targetK8sCfgPath)
 		Expect(err).NotTo(HaveOccurred())
-		targetClusterK8sCfg = base64.StdEncoding.EncodeToString(kubeconfig)
+		targetClusterK8sCfg = string(kubeconfig)
 
 		config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
 		Expect(err).NotTo(HaveOccurred())
