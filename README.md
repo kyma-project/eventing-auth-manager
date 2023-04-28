@@ -54,9 +54,9 @@ metadata:
   namespace: kyma-system
 type: Opaque
 data:
-  client_id: "850d10a4-6e0b-4958-8232-066962ed3b46"
-  client_secret: "h?VTJMDxj0Trn8t=yE55gW_dsJgXR[df3IQ"
-  token_url: "https://<tenant>.accounts400.ondemand.com/oauth2/token"
+  client_id: <client_id>
+  client_secret: <client_secret>
+  token_url: "https://<tenant>.accounts.ondemand.com/oauth2/token"
 ```
 
 ## Name reference between resources
@@ -65,7 +65,7 @@ The Kyma CR, which creation is the trigger for the creation of the EventingAuth 
 ## Assumptions about resource names and structure
 The controller makes assumptions about the names used in the control plane cluster to read the correct resources. The assumptions are the following:
 - The name of the Kyma CR is the unique runtime ID of the managed runtime.
-- The name of the Kyma CR can be used to read the kubeconfig of the managed runtimes from a K8s secret with the name format "kubeconfig-<runtime-id>" in the "kcp-system" namespace.
+- The name of the Kyma CR can be used to read the kubeconfig of the managed runtimes from a K8s secret with the name format `kubeconfig-<runtime-id>` in the "kcp-system" namespace.
 - The IAS credentials are stored in a K8s secret named "eventing-auth-ias-creds" in the "kcp-system" namespace, and the data is stored in the following format:
   ```yaml
   apiVersion: v1
@@ -77,7 +77,7 @@ The controller makes assumptions about the names used in the control plane clust
   data:
     username: ias-user
     password: ias-password
-    url: https://<tenant>.accounts400.ondemand.com
+    url: https://<tenant>.accounts.ondemand.com
   ```
 
 ## Design decisions
@@ -206,7 +206,7 @@ Per default the integration tests use a stub for the IAS API.
 It's also possible to use the real IAS API by setting all the following environment variables:
 
 ```sh
-export TEST_EVENTING_AUTH_IAS_URL=https://my-tenant.accounts400.ondemand.com
+export TEST_EVENTING_AUTH_IAS_URL=https://my-tenant.accounts.ondemand.com
 export TEST_EVENTING_AUTH_IAS_USER=user@sap.com
 export TEST_EVENTING_AUTH_IAS_PASSWORD=password
 ```
