@@ -78,6 +78,10 @@ var _ = Describe("EventingAuth Controller", Serial, func() {
 		It("should retry and create secret when first attempt of secret creation failed", func() {
 			// TODO: Implement test
 		})
+
+		It("should not recreate IAS application if it exists in reconciler cache", func() {
+			// TODO: Implement test
+		})
 	})
 
 })
