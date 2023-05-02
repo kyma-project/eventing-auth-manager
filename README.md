@@ -7,7 +7,7 @@ SAP Cloud Identity Services - Identity Authentication (IAS) by creating and dele
 * [EventingAuth CR](#eventingauth-cr)
 * [eventing-webhook-auth secret](#eventing-webhook-auth-secret)
 * [Name reference between resources](#name-reference-between-resources)
-* [Assumptions about resource names and structure](#assumptions-about-resource-names-and-structure)
+* [Resource Naming Constraints](#resource-naming-constraints)
 * [Design decisions](#design-decisions)
 * [Future improvements](#future-improvements)
 * [Generating the SAP Cloud Identity Services API client](#generating-the-sap-cloud-identity-services-api-client)
@@ -62,7 +62,7 @@ data:
 ## Name reference between resources
 The Kyma CR, which creation is the trigger for the creation of the EventingAuth CR, uses the unique runtime ID of the managed Kyma runtime as name. This name is used as the name for the EventingAuth CR and the IAS application. In this way, the EventingAuth CR and the IAS application can be assigned to the specific managed runtime.
 
-## Assumptions about resource names and structure
+## Resource Naming Constraints
 The controller makes assumptions about the names used in the control plane cluster to read the correct resources. The assumptions are the following:
 - The name of the Kyma CR is the unique runtime ID of the managed runtime.
 - The name of the Kyma CR can be used to read the kubeconfig of the managed runtimes from a K8s secret with the name format `kubeconfig-<runtime-id>` in the "kcp-system" namespace.
@@ -134,7 +134,11 @@ make gen-ias-client
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 
-### Preparing the clusters
+### Preparing the clusters for local development
+To run the controller locally, you need to have two clusters available. One cluster is used to run the controller, and the other cluster is used as a target for the created secret.
+
+#### Prepare the cluster that is used to run the controller:
+
 1. Create the namespace to deploy the manager and the IAS credential secret:
 
 ```sh
@@ -153,7 +157,8 @@ kubectl create secret generic eventing-auth-ias-creds -n kcp-system --from-liter
 kubectl create secret generic kubeconfig-$EVENTING_AUTH_CR_NAME -n kcp-system --from-file=config=$PATH_TO_TARGET_CLUSTER_KUBECONFIG
 ```
 
-4. Create the namespace in which the "eventing-webhook-auth" secret is created on the target cluster:
+#### Prepare the secret target cluster
+Create the namespace in which the "eventing-webhook-auth" secret is created on the target cluster:
 
 ```sh
 kubectl create ns kyma-system
@@ -202,7 +207,7 @@ make test
 ```
 
 #### IAS stub
-Per default the integration tests use a stub for the IAS API.  
+Per default the integration tests use a stub for the IAS API. This stub will return 
 It's also possible to use the real IAS API by setting all the following environment variables:
 
 ```sh
