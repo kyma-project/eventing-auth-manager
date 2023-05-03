@@ -92,12 +92,11 @@ During the application creation process, there are several steps that can fail. 
 It was decided to always delete the application if any of these steps fail, as this makes the whole process more understandable and easier to maintain.  
 The reason for this is that the existing application can only be reused if the reconciliation failed before the client secret was successfully created, as we have no way to retrieve the client secret the next time the reconciliation is performed. 
 
-Additionally,if the creation of the secret on the managed runtime fails, we also delete the application and recreate it during the next reconciliation.
-In this case, there is still the option of not always deleting the application by caching the created application in the operator, but caching the application and thus the client secrets might not be a good idea either for security reasons.
+Additionally, if the creation of the secret on the managed runtime fails, we retrieve the created IAS application from the memory instead of recreating it in the IAS. 
 
 ## Future Improvements
 - Identify IAS Application with its UUID. Currently, it is identified with its name, see [Referencing IAS applications by name](#referencing-ias-applications-by-name).
-- Prevent IAS Application multiple recreation in case K8s secret creation fails, see [Handling of failed IAS application and secret creation](#handling-of-failed-ias-application-and-secret-creation).
+- Watch K8s secret in target runtime cluster so that it is reconciled in case deleted/modified.
 
 ## Generating the SAP Cloud Identity Services API client
 The OpenAPI specification is available in the [API Business Hub](https://api.sap.com/api/SCI_Application_Directory).
