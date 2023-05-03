@@ -67,6 +67,7 @@ type AuthSecret struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state"
 
 // EventingAuth is the Schema for the eventingauths API
 type EventingAuth struct {

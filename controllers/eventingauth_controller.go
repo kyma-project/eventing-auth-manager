@@ -52,14 +52,17 @@ type eventingAuthReconciler struct {
 	errorRequeuePeriod   time.Duration
 	defaultRequeuePeriod time.Duration
 	iasClient            ias.Client
+	// existingIasApplications stores existing IAS apps in memory not to recreate again if exists
+	existingIasApplications map[string]ias.Application
 }
 
 func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod time.Duration, defaultRequeuePeriod time.Duration) ManagedReconciler {
 	return &eventingAuthReconciler{
-		Client:               c,
-		Scheme:               s,
-		errorRequeuePeriod:   errorRequeuePeriod,
-		defaultRequeuePeriod: defaultRequeuePeriod,
+		Client:                  c,
+		Scheme:                  s,
+		errorRequeuePeriod:      errorRequeuePeriod,
+		defaultRequeuePeriod:    defaultRequeuePeriod,
+		existingIasApplications: map[string]ias.Application{},
 	}
 }
 
@@ -79,7 +82,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	targetK8sClient, err := getTargetClusterClient(r.Client, cr.Name)
 	if err != nil {
-		logger.Error(err, "Failed to retrieve client of target cluster", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+		logger.Error(err, "Failed to retrieve client of target cluster")
 		return ctrl.Result{
 			RequeueAfter: r.errorRequeuePeriod,
 		}, err
@@ -100,7 +103,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}, err
 		}
 	} else {
-		logger.Info("Handling deletion", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+		logger.Info("Handling deletion")
 		if err = r.handleDeletion(ctx, r.iasClient, targetK8sClient, &cr); err != nil {
 			return ctrl.Result{
 				RequeueAfter: r.errorRequeuePeriod,
@@ -112,27 +115,32 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	appSecretExists, err := hasTargetClusterApplicationSecret(ctx, targetK8sClient)
 	if err != nil {
-		logger.Error(err, "Failed to retrieve secret state from target cluster", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+		logger.Error(err, "Failed to retrieve secret state from target cluster")
 		return ctrl.Result{
 			RequeueAfter: r.errorRequeuePeriod,
 		}, err
 	}
 
+	// TODO: check if secret creation condition is also true, otherwise it never updates false secret ready condition
 	if !appSecretExists {
-		logger.Info("Creating IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
-		iasApplication, createAppErr := r.iasClient.CreateApplication(ctx, cr.Name)
-		if createAppErr != nil {
-			logger.Error(createAppErr, "Failed to create IAS application", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
-			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
+		logger.Info("Creating IAS application")
+		var createAppErr error
+		iasApplication, appExists := r.existingIasApplications[cr.Name]
+		if !appExists {
+			iasApplication, createAppErr = r.iasClient.CreateApplication(ctx, cr.Name)
+			if createAppErr != nil {
+				logger.Error(createAppErr, "Failed to create IAS application")
+				if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
+					return ctrl.Result{
+						RequeueAfter: r.errorRequeuePeriod,
+					}, err
+				}
 				return ctrl.Result{
 					RequeueAfter: r.errorRequeuePeriod,
-				}, err
+				}, createAppErr
 			}
-			return ctrl.Result{
-				RequeueAfter: r.errorRequeuePeriod,
-			}, createAppErr
+			r.existingIasApplications[cr.Name] = iasApplication
 		}
-
 		cr.Status.Application = &operatorv1alpha1.IASApplication{
 			Name: cr.Name,
 			UUID: iasApplication.GetId(),
@@ -148,7 +156,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		createSecretErr := targetK8sClient.Create(ctx, &appSecret)
 		if createSecretErr != nil {
-			logger.Error(createSecretErr, "Failed to create application secret", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+			logger.Error(createSecretErr, "Failed to create application secret")
 			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, createSecretErr); err != nil {
 				return ctrl.Result{
 					RequeueAfter: r.errorRequeuePeriod,
@@ -158,8 +166,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				RequeueAfter: r.errorRequeuePeriod,
 			}, createAppErr
 		}
-
-		logger.Info("Created IAS application secret", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+		logger.Info("Created IAS application secret")
 
 		cr.Status.AuthSecret = &operatorv1alpha1.AuthSecret{
 			ClusterId:      cr.Name,
@@ -172,7 +179,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	}
 
-	logger.Info("Reconciliation done", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
+	logger.Info("Reconciliation done")
 	return ctrl.Result{
 		RequeueAfter: r.defaultRequeuePeriod,
 	}, nil
@@ -234,6 +241,8 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient i
 		if err := iasClient.DeleteApplication(ctx, cr.Name); err != nil {
 			return fmt.Errorf("failed to delete IAS Application: %v", err)
 		}
+		// delete the app from the cache
+		delete(r.existingIasApplications, cr.Name)
 		ctrl.Log.Info("Deleted IAS Application", "name", cr.Name)
 
 		// remove our finalizer from the list and update it.
