@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	v1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	"github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,20 +33,24 @@ func NewKymaReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod ti
 	}
 }
 
-// +kubebuilder:rbac:groups=operator.kyma-project.io,resources=kyma,verbs=get;list;watch
+// +kubebuilder:rbac:groups=operator.kyma-project.io,resources=kymas,verbs=get;list;watch
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/status,verbs=get;list
 func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciling Kyma resource")
 
 	kyma := &kymav1beta1.Kyma{}
 	err := r.Client.Get(ctx, req.NamespacedName, kyma)
 	if err != nil {
+		if apiErrors.IsNotFound(err) {
+			return ctrl.Result{
+				RequeueAfter: r.defaultRequeuePeriod,
+			}, nil
+		}
 		return ctrl.Result{
 			RequeueAfter: r.errorRequeuePeriod,
-		}, client.IgnoreNotFound(err)
+		}, err
 	}
 
 	if err = r.createEventingAuth(ctx, kyma); err != nil {

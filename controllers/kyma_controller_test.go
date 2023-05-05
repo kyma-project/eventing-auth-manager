@@ -15,11 +15,6 @@ import (
 
 // Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially
 var _ = Describe("Kyma Controller", Serial, func() {
-	BeforeEach(func() {
-		deleteKymaResources()
-		deleteKubeconfigSecrets()
-	})
-
 	AfterEach(func() {
 		deleteKymaResources()
 		deleteKubeconfigSecrets()
