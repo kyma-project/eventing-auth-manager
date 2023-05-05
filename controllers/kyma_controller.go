@@ -68,7 +68,7 @@ func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *kymav1bet
 		},
 	}
 
-	err := r.Client.Get(ctx, types.NamespacedName{eventingAuth.Namespace, eventingAuth.Name}, eventingAuth)
+	err := r.Client.Get(ctx, types.NamespacedName{Namespace: eventingAuth.Namespace, Name: eventingAuth.Name}, eventingAuth)
 	if err != nil {
 		if apiErrors.IsNotFound(err) {
 			if err = controllerutil.SetControllerReference(kyma, eventingAuth, r.Scheme); err != nil {
@@ -78,10 +78,10 @@ func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *kymav1bet
 			if err != nil {
 				return fmt.Errorf("failed to create EventingAuth resource: %v", err)
 			}
+			return nil
 		}
 		return fmt.Errorf("failed to retrieve EventingAuth resource: %v", err)
 	}
-
 	return nil
 }
 
