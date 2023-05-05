@@ -18,10 +18,8 @@ package controllers_test
 
 import (
 	"context"
-	"fmt"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/utils/pointer"
@@ -56,19 +54,17 @@ const (
 )
 
 var (
-	cfg                         *rest.Config
-	k8sClient                   client.Client
-	ctx                         context.Context
-	cancel                      context.CancelFunc
-	targetClusterK8sCfg         string
-	targetClusterK8sClient      client.Client
-	testEnv                     *envtest.Environment
-	targetClusterTestEnv        *envtest.Environment
-	originalNewIasClientFunc    func(iasTenantUrl, user, password string) (ias.Client, error)
-	originalReadCredentialsFunc func(namespace, name string, k8sClient client.Client) (*ias.Credentials, error)
-	iasUrl                      string
-	iasUsername                 string
-	iasPassword                 string
+	cfg                    *rest.Config
+	k8sClient              client.Client
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	targetClusterK8sCfg    string
+	targetClusterK8sClient client.Client
+	testEnv                *envtest.Environment
+	targetClusterTestEnv   *envtest.Environment
+	iasUrl                 string
+	iasUsername            string
+	iasPassword            string
 )
 
 func TestAPIs(t *testing.T) {
@@ -101,7 +97,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	kymaNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kyma-system"}}
 	err = targetClusterK8sClient.Get(context.TODO(), client.ObjectKeyFromObject(kymaNs), &corev1.Namespace{})
 	if err != nil {
-		Expect(errors.IsNotFound(err)).To(BeTrue())
+		Expect(apierrors.IsNotFound(err)).To(BeTrue())
 		err := targetClusterK8sClient.Create(context.TODO(), kymaNs)
 		Expect(err).NotTo(HaveOccurred())
 	}
@@ -135,21 +131,8 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	// mock ias.ReadCredentials function
-	originalReadCredentialsFunc = ias.ReadCredentials
-	ias.ReadCredentials = func(namespace, name string, k8sClient client.Client) (*ias.Credentials, error) {
-		return &ias.Credentials{URL: iasUrl, Username: iasUsername, Password: iasPassword}, nil
-	}
-
-	if !existIasCreds() {
-		// use IasClient stub unless test IAS ENV vars exist
-		log.Println("Using mock IAS client as TEST_EVENTING_AUTH_IAS_URL, TEST_EVENTING_AUTH_IAS_USER, and TEST_EVENTING_AUTH_IAS_PASSWORD are missing")
-		originalNewIasClientFunc = ias.NewIasClient
-		mockNewIasClientFunc := func(iasTenantUrl, user, password string) (ias.Client, error) {
-			return iasClientStub{}, nil
-		}
-		ias.NewIasClient = mockNewIasClientFunc
-	}
+	// Since we are replacing in some test scenarios the original functions we need to keep them, so we are able to reset them after the tests.
+	storeOriginalsOfStubbedFunctions()
 
 	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1, time.Second*3)
 
@@ -164,10 +147,12 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 
 var _ = AfterSuite(func() {
 	cancel()
-	ias.ReadCredentials = originalReadCredentialsFunc
+	revertSkrNewClientStub()
+	revertReadCredentialsStub()
 	if !existIasCreds() {
-		ias.NewIasClient = originalNewIasClientFunc
+		revertIasNewClientStub()
 	}
+	targetClusterTestEnv.ControlPlane.GetAPIServer()
 	By("Tearing down the test environment")
 	stopTestEnv(testEnv)
 	stopTestEnv(targetClusterTestEnv)
@@ -185,21 +170,6 @@ func stopTestEnv(env *envtest.Environment) {
 
 func existIasCreds() bool {
 	return iasUrl != "" && iasUsername != "" && iasPassword != ""
-}
-
-type iasClientStub struct {
-}
-
-func (i iasClientStub) CreateApplication(_ context.Context, name string) (ias.Application, error) {
-	return ias.NewApplication(fmt.Sprintf("id-for-%s", name), fmt.Sprintf("client-id-for-%s", name), "test-client-secret", "https://test-token-url.com/token"), nil
-}
-
-func (i iasClientStub) DeleteApplication(_ context.Context, _ string) error {
-	return nil
-}
-
-func (i iasClientStub) GetCredentials() *ias.Credentials {
-	return &ias.Credentials{}
 }
 
 func initTargetClusterConfig() (client.Client, error) {
