@@ -125,16 +125,18 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	}
 	Expect(k8sClient.Create(context.TODO(), kcpNs)).Should(Succeed())
 
+	defaultReconcilationTime := time.Second * 3
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme.Scheme,
 		MetricsBindAddress: "0",
+		SyncPeriod:         &defaultReconcilationTime,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	// Since we are replacing in some test scenarios the original functions we need to keep them, so we are able to reset them after the tests.
 	storeOriginalsOfStubbedFunctions()
 
-	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1, time.Second*3)
+	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1)
 
 	Expect(reconciler.SetupWithManager(mgr)).Should(Succeed())
 

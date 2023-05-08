@@ -45,20 +45,18 @@ const (
 // eventingAuthReconciler reconciles a EventingAuth object
 type eventingAuthReconciler struct {
 	client.Client
-	Scheme               *runtime.Scheme
-	errorRequeuePeriod   time.Duration
-	defaultRequeuePeriod time.Duration
-	iasClient            ias.Client
+	Scheme             *runtime.Scheme
+	errorRequeuePeriod time.Duration
+	iasClient          ias.Client
 	// existingIasApplications stores existing IAS apps in memory not to recreate again if exists
 	existingIasApplications map[string]ias.Application
 }
 
-func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod time.Duration, defaultRequeuePeriod time.Duration) ManagedReconciler {
+func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod time.Duration) ManagedReconciler {
 	return &eventingAuthReconciler{
 		Client:                  c,
 		Scheme:                  s,
 		errorRequeuePeriod:      errorRequeuePeriod,
-		defaultRequeuePeriod:    defaultRequeuePeriod,
 		existingIasApplications: map[string]ias.Application{},
 	}
 }
@@ -179,9 +177,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	logger.Info("Reconciliation done")
-	return ctrl.Result{
-		RequeueAfter: r.defaultRequeuePeriod,
-	}, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *eventingAuthReconciler) getIasClient() (ias.Client, error) {
