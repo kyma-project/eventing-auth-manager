@@ -19,7 +19,6 @@ package controllers_test
 import (
 	"context"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,20 +55,20 @@ const (
 )
 
 var (
-	cfg                         *rest.Config
-	k8sClient                   client.Client
-	ctx                         context.Context
-	cancel                      context.CancelFunc
-	targetClusterK8sCfg         string
-	targetClusterK8sClient      client.Client
-	testEnv                     *envtest.Environment
-	targetClusterTestEnv        *envtest.Environment
-	iasUrl                      string
-	iasUsername                 string
-	iasPassword                 string
-	useExistingCluster          bool
-	testNs                      *corev1.Namespace
-	kcpNs                       *corev1.Namespace
+	cfg                    *rest.Config
+	k8sClient              client.Client
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	targetClusterK8sCfg    string
+	targetClusterK8sClient client.Client
+	testEnv                *envtest.Environment
+	targetClusterTestEnv   *envtest.Environment
+	iasUrl                 string
+	iasUsername            string
+	iasPassword            string
+	useExistingCluster     bool
+	testNs                 *corev1.Namespace
+	kcpNs                  *corev1.Namespace
 )
 
 func TestAPIs(t *testing.T) {
@@ -133,18 +132,18 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	}
 	Expect(k8sClient.Create(context.TODO(), kcpNs)).Should(Succeed())
 
-	defaultReconcilationTime := time.Second * 3
+	testSyncPeriod := time.Second * 3
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme.Scheme,
 		MetricsBindAddress: "0",
-		SyncPeriod:         &defaultReconcilationTime,
+		SyncPeriod:         &testSyncPeriod,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	// Since we are replacing in some test scenarios the original functions we need to keep them, so we are able to reset them after the tests.
 	storeOriginalsOfStubbedFunctions()
 
-	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1, time.Second*3)
+	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1)
 	Expect(kymaReconciler.SetupWithManager(mgr)).Should(Succeed())
 
 	eventingAuthReconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1)

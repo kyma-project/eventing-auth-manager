@@ -40,7 +40,6 @@ import (
 
 const (
 	requeueAfterError = time.Minute * 1
-	requeueAfter      = time.Hour * 10
 )
 
 var (
@@ -98,7 +97,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme(), requeueAfterError, requeueAfter)
+	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme(), requeueAfterError)
 	if err = kymaReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Kyma")
 		os.Exit(1)
