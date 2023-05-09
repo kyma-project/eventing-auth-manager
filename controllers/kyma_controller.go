@@ -44,9 +44,7 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	err := r.Client.Get(ctx, req.NamespacedName, kyma)
 	if err != nil {
 		if apiErrors.IsNotFound(err) {
-			return ctrl.Result{
-				RequeueAfter: r.defaultRequeuePeriod,
-			}, nil
+			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{
 			RequeueAfter: r.errorRequeuePeriod,
