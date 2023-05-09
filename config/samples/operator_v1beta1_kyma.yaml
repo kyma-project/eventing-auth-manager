@@ -1,0 +1,8 @@
+apiVersion: operator.kyma-project.io/v1beta1
+kind: Kyma
+metadata:
+  name: kyma1
+spec:
+  modules:
+    - name: sample-module
+  channel: alpha

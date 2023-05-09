@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
+	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
@@ -69,6 +70,9 @@ var (
 	iasUrl                      string
 	iasUsername                 string
 	iasPassword                 string
+	useExistingCluster          bool
+	testNs                      *corev1.Namespace
+	kcpNs                       *corev1.Namespace
 )
 
 func TestAPIs(t *testing.T) {
@@ -84,11 +88,13 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	iasUrl = os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
 	iasUsername = os.Getenv("TEST_EVENTING_AUTH_IAS_USER")
 	iasPassword = os.Getenv("TEST_EVENTING_AUTH_IAS_PASSWORD")
+	useExistingCluster = os.Getenv("USE_EXISTING_CLUSTER") == "true"
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases"), filepath.Join("..", "config", "crd", "external")},
 		ErrorIfCRDPathMissing: true,
+		UseExistingCluster:    &useExistingCluster,
 	}
 
 	var err error
@@ -111,19 +117,20 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
+	Expect(kymav1beta1.AddToScheme(scheme.Scheme)).Should(Succeed())
 	Expect(operatorv1alpha1.AddToScheme(scheme.Scheme)).Should(Succeed())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	ns := &corev1.Namespace{
+	testNs = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		Spec:       corev1.NamespaceSpec{},
 	}
-	Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
+	Expect(k8sClient.Create(context.TODO(), testNs)).Should(Succeed())
 
-	kcpNs := &corev1.Namespace{
+	kcpNs = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: "kcp-system"},
 		Spec:       corev1.NamespaceSpec{},
 	}
@@ -151,9 +158,11 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 		ias.NewIasClient = mockNewIasClientFunc
 	}
 
-	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1, time.Second*3)
+	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1, time.Second*3)
+	Expect(kymaReconciler.SetupWithManager(mgr)).Should(Succeed())
 
-	Expect(reconciler.SetupWithManager(mgr)).Should(Succeed())
+	eventingAuthReconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1, time.Second*3)
+	Expect(eventingAuthReconciler.SetupWithManager(mgr)).Should(Succeed())
 
 	go func() {
 		defer GinkgoRecover()
@@ -168,6 +177,10 @@ var _ = AfterSuite(func() {
 	if !existIasCreds() {
 		ias.NewIasClient = originalNewIasClientFunc
 	}
+	By("Cleaning up the created namespaces")
+	Expect(k8sClient.Delete(context.TODO(), testNs)).Should(Succeed())
+	Expect(k8sClient.Delete(context.TODO(), kcpNs)).Should(Succeed())
+
 	By("Tearing down the test environment")
 	stopTestEnv(testEnv)
 	stopTestEnv(targetClusterTestEnv)
