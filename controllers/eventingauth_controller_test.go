@@ -34,7 +34,7 @@ var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() 
 		}
 	})
 
-	BeforeEach(func() {
+	AfterEach(func() {
 		cleanup()
 	})
 

@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
+	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	"os"
 	"time"
 
@@ -39,6 +40,7 @@ import (
 
 const (
 	requeueAfterError = time.Minute * 1
+	requeueAfter      = time.Hour * 10
 )
 
 var (
@@ -48,6 +50,8 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+
+	utilruntime.Must(kymav1beta1.AddToScheme(scheme))
 
 	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
@@ -94,9 +98,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	reconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), requeueAfterError)
+	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme(), requeueAfterError, requeueAfter)
+	if err = kymaReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Kyma")
+		os.Exit(1)
+	}
 
-	if err = reconciler.SetupWithManager(mgr); err != nil {
+	eventingAuthReconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), requeueAfterError)
+	if err = eventingAuthReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EventingAuth")
 		os.Exit(1)
 	}

@@ -150,13 +150,13 @@ kubectl create ns kcp-system
 kubectl create secret generic eventing-auth-ias-creds -n kcp-system --from-literal=username=$TEST_EVENTING_AUTH_IAS_USER --from-literal=password=$TEST_EVENTING_AUTH_IAS_PASSWORD --from-literal=url=$TEST_EVENTING_AUTH_IAS_URL
 ```
 
-3. Create the secret containing the kubeconfig of the cluster on which the "eventing-webhook-auth" secret is created by specifying `PATH_TO_TARGET_CLUSTER_KUBECONFIG` and `EVENTING_AUTH_CR_NAME`:
+3. Create the secret containing the kubeconfig of the cluster on which the "eventing-webhook-auth" secret is created by specifying `PATH_TO_TARGET_CLUSTER_KUBECONFIG` and `KYMA_CR_NAME`:
 
 ```sh
-kubectl create secret generic kubeconfig-$EVENTING_AUTH_CR_NAME -n kcp-system --from-file=config=$PATH_TO_TARGET_CLUSTER_KUBECONFIG
+kubectl create secret generic kubeconfig-$KYMA_CR_NAME -n kcp-system --from-file=config=$PATH_TO_TARGET_CLUSTER_KUBECONFIG
 ```
 
-#### Prepare the secret target cluster
+#### Prepare the target cluster
 Create the namespace in which the "eventing-webhook-auth" secret is created on the target cluster:
 
 ```sh
@@ -164,21 +164,27 @@ kubectl create ns kyma-system
 ```
 
 ### Running on the cluster
-1. Update name of Custom Resource in `config/samples/eventing_v1alpha1_eventingauth.yaml` to contain the name of the kubeconfig secret created in [Preparing the clusters](#preparing-the-clusters).
+1. Install the Kyma and EventingAuth CRDs:
+```sh
+make install
+```
 
-2. Install Instances of Custom Resources:
+2. Update name of Custom Resource in `config/samples/operator_v1beta1_kyma.yaml` to contain the name of the kubeconfig secret created in [Preparing the clusters](#preparing-the-clusters).
+The Kyma CR name is equal to target K8s cluster name too.
+
+3. Install Instances of Custom Resources:
 
 ```sh
 kubectl apply -f config/samples/
 ```
 
-3. Build and push your image to the location specified by `IMG`:
+4. Build and push your image to the location specified by `IMG`:
 
 ```sh
 make docker-build docker-push IMG=<some-registry>/eventing-auth-manager:tag
 ```
 
-4. Deploy the controller to the cluster with the image specified by `IMG`:
+5. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
 make deploy IMG=<some-registry>/eventing-auth-manager:tag
