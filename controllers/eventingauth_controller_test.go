@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -17,7 +18,7 @@ import (
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var appSecretObjectKey = ctrlClient.ObjectKey{Name: "eventing-webhook-auth", Namespace: "kyma-system"}
+var appSecretObjectKey = ctrlClient.ObjectKey{Name: skr.ApplicationSecretName, Namespace: skr.ApplicationSecretNamespace}
 
 // Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially
 var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() {
@@ -261,7 +262,7 @@ func deleteEventingAuths() {
 
 func deleteKubeconfigSecrets() {
 	sList := corev1.SecretList{}
-	Expect(k8sClient.List(context.TODO(), &sList, ctrlClient.InNamespace("kcp-system"))).Should(Succeed())
+	Expect(k8sClient.List(context.TODO(), &sList, ctrlClient.InNamespace(skr.SkrKubeconfigNamespace))).Should(Succeed())
 
 	for _, s := range sList.Items {
 		if err := k8sClient.Delete(context.TODO(), &s); err != nil && !errors.IsNotFound(err) {
@@ -288,7 +289,7 @@ func createKubeconfigSecret(crName string) *corev1.Secret {
 	kubeconfigSecret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("kubeconfig-%s", crName),
-			Namespace: "kcp-system",
+			Namespace: skr.SkrKubeconfigNamespace,
 		},
 		Data: map[string][]byte{
 			"config": []byte(targetClusterK8sCfg),

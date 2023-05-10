@@ -19,6 +19,7 @@ package controllers_test
 import (
 	"context"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -99,8 +100,8 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	targetClusterK8sClient, err = initTargetClusterConfig()
 	Expect(err).NotTo(HaveOccurred())
 
-	// In case we are using an existing cluster the Kyma-system namespace might already exist, so we need to guard against that.
-	kymaNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kyma-system"}}
+	// In case we are using an existing cluster the namespace of the application secret might already exist, so we need to guard against that.
+	kymaNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: skr.ApplicationSecretNamespace}}
 	err = targetClusterK8sClient.Get(context.TODO(), client.ObjectKeyFromObject(kymaNs), &corev1.Namespace{})
 	if err != nil {
 		Expect(apierrors.IsNotFound(err)).To(BeTrue())
@@ -127,7 +128,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(k8sClient.Create(context.TODO(), testNs)).Should(Succeed())
 
 	kcpNs = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: "kcp-system"},
+		ObjectMeta: metav1.ObjectMeta{Name: skr.SkrKubeconfigNamespace},
 		Spec:       corev1.NamespaceSpec{},
 	}
 	Expect(k8sClient.Create(context.TODO(), kcpNs)).Should(Succeed())

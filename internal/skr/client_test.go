@@ -33,7 +33,7 @@ func Test_NewClient(t *testing.T) {
 		{
 			name: "should return error when secret doesn't contain config key",
 			args: args{
-				k8sClient:    fake.NewClientBuilder().WithObjects(&v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig-test", Namespace: "kcp-system"}}).Build(),
+				k8sClient:    fake.NewClientBuilder().WithObjects(&v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig-test", Namespace: SkrKubeconfigNamespace}}).Build(),
 				skrClusterId: "test",
 			},
 			wantError: errors.New("failed to find SKR cluster kubeconfig in secret kubeconfig-test"),
@@ -45,12 +45,8 @@ func Test_NewClient(t *testing.T) {
 			_, err := NewClient(tt.args.k8sClient, tt.args.skrClusterId)
 
 			// then
-			if tt.wantError != nil {
-				require.Error(t, err)
-				require.EqualError(t, tt.wantError, err.Error())
-			} else {
-				require.NoError(t, err)
-			}
+			require.Error(t, err)
+			require.EqualError(t, tt.wantError, err.Error())
 		})
 	}
 }
@@ -70,8 +66,8 @@ func Test_client_DeleteSecret(t *testing.T) {
 				k8sClient: fake.NewClientBuilder().WithObjects(
 					&v1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "eventing-webhook-auth",
-							Namespace: "kyma-system",
+							Name:      ApplicationSecretName,
+							Namespace: ApplicationSecretNamespace,
 						},
 					}).Build(),
 			},
@@ -97,7 +93,7 @@ func Test_client_DeleteSecret(t *testing.T) {
 			fields: fields{
 				k8sClient: errorFakeClient{
 					Client:     fake.NewClientBuilder().Build(),
-					errorOnGet: apierrors.NewNotFound(v1.Resource("secret"), "eventing-webhook-auth"),
+					errorOnGet: apierrors.NewNotFound(v1.Resource("secret"), ApplicationSecretName),
 				},
 			},
 		},
@@ -143,8 +139,8 @@ func Test_client_HasApplicationSecret(t *testing.T) {
 				k8sClient: fake.NewClientBuilder().WithObjects(
 					&v1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "eventing-webhook-auth",
-							Namespace: "kyma-system",
+							Name:      ApplicationSecretName,
+							Namespace: ApplicationSecretNamespace,
 						},
 					}).Build(),
 			},
@@ -166,7 +162,7 @@ func Test_client_HasApplicationSecret(t *testing.T) {
 			fields: fields{
 				k8sClient: errorFakeClient{
 					Client:     fake.NewClientBuilder().Build(),
-					errorOnGet: apierrors.NewNotFound(v1.Resource("secret"), "eventing-webhook-auth"),
+					errorOnGet: apierrors.NewNotFound(v1.Resource("secret"), ApplicationSecretName),
 				},
 			},
 			want: false,

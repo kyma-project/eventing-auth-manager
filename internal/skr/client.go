@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	applicationSecretName      = "eventing-webhook-auth"
-	applicationSecretNamespace = "kyma-system"
+	ApplicationSecretName      = "eventing-webhook-auth"
+	ApplicationSecretNamespace = "kyma-system"
+	SkrKubeconfigNamespace     = "kcp-system"
 )
 
 type Client interface {
@@ -30,7 +31,7 @@ var NewClient = func(k8sClient ctrlclient.Client, skrClusterId string) (Client, 
 	kubeconfigSecretName := fmt.Sprintf("kubeconfig-%s", skrClusterId)
 
 	secret := &v1.Secret{}
-	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: kubeconfigSecretName, Namespace: "kcp-system"}, secret); err != nil {
+	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: kubeconfigSecretName, Namespace: SkrKubeconfigNamespace}, secret); err != nil {
 		return nil, err
 	}
 
@@ -55,8 +56,8 @@ var NewClient = func(k8sClient ctrlclient.Client, skrClusterId string) (Client, 
 func (c *client) DeleteSecret(ctx context.Context) error {
 	var s v1.Secret
 	if err := c.k8sClient.Get(ctx, ctrlclient.ObjectKey{
-		Name:      applicationSecretName,
-		Namespace: applicationSecretNamespace,
+		Name:      ApplicationSecretName,
+		Namespace: ApplicationSecretNamespace,
 	}, &s); err != nil {
 		return ctrlclient.IgnoreNotFound(err)
 	}
@@ -68,7 +69,7 @@ func (c *client) DeleteSecret(ctx context.Context) error {
 }
 
 func (c *client) CreateSecret(ctx context.Context, app ias.Application) (v1.Secret, error) {
-	appSecret := app.ToSecret(applicationSecretName, applicationSecretNamespace)
+	appSecret := app.ToSecret(ApplicationSecretName, ApplicationSecretNamespace)
 	err := c.k8sClient.Create(ctx, &appSecret)
 	return appSecret, err
 }
@@ -76,8 +77,8 @@ func (c *client) CreateSecret(ctx context.Context, app ias.Application) (v1.Secr
 func (c *client) HasApplicationSecret(ctx context.Context) (bool, error) {
 	var s v1.Secret
 	err := c.k8sClient.Get(ctx, ctrlclient.ObjectKey{
-		Name:      applicationSecretName,
-		Namespace: applicationSecretNamespace,
+		Name:      ApplicationSecretName,
+		Namespace: ApplicationSecretNamespace,
 	}, &s)
 
 	if apiErrors.IsNotFound(err) {

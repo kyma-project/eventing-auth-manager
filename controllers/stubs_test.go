@@ -90,7 +90,7 @@ type skrClientStub struct {
 }
 
 func (s skrClientStub) CreateSecret(_ context.Context, app ias.Application) (v1.Secret, error) {
-	return app.ToSecret("eventing-webhook-auth", "kyma-system"), nil
+	return app.ToSecret(skr.ApplicationSecretName, skr.ApplicationSecretNamespace), nil
 }
 func (s skrClientStub) HasApplicationSecret(_ context.Context) (bool, error) {
 	return false, nil
