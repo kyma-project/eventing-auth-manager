@@ -20,8 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
-	v1 "k8s.io/api/core/v1"
-	apiErrors "k8s.io/apimachinery/pkg/api/errors"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"os"
@@ -36,8 +35,6 @@ import (
 )
 
 const (
-	applicationSecretName               = "eventing-webhook-auth"
-	applicationSecretNamespace          = "kyma-system"
 	eventingAuthFinalizerName           = "eventingauth.operator.kyma-project.io/finalizer"
 	iasCredsSecretNamespace      string = "IAS_CREDS_SECRET_NAMESPACE"
 	iasCredsSecretName           string = "IAS_CREDS_SECRET_NAME"
@@ -48,20 +45,18 @@ const (
 // eventingAuthReconciler reconciles a EventingAuth object
 type eventingAuthReconciler struct {
 	client.Client
-	Scheme               *runtime.Scheme
-	errorRequeuePeriod   time.Duration
-	defaultRequeuePeriod time.Duration
-	iasClient            ias.Client
+	Scheme             *runtime.Scheme
+	errorRequeuePeriod time.Duration
+	iasClient          ias.Client
 	// existingIasApplications stores existing IAS apps in memory not to recreate again if exists
 	existingIasApplications map[string]ias.Application
 }
 
-func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod time.Duration, defaultRequeuePeriod time.Duration) ManagedReconciler {
+func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod time.Duration) ManagedReconciler {
 	return &eventingAuthReconciler{
 		Client:                  c,
 		Scheme:                  s,
 		errorRequeuePeriod:      errorRequeuePeriod,
-		defaultRequeuePeriod:    defaultRequeuePeriod,
 		existingIasApplications: map[string]ias.Application{},
 	}
 }
@@ -80,7 +75,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	targetK8sClient, err := getTargetClusterClient(r.Client, cr.Name)
+	skrClient, err := skr.NewClient(r.Client, cr.Name)
 	if err != nil {
 		logger.Error(err, "Failed to retrieve client of target cluster")
 		return ctrl.Result{
@@ -104,7 +99,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	} else {
 		logger.Info("Handling deletion")
-		if err = r.handleDeletion(ctx, r.iasClient, targetK8sClient, &cr); err != nil {
+		if err = r.handleDeletion(ctx, r.iasClient, skrClient, &cr); err != nil {
 			return ctrl.Result{
 				RequeueAfter: r.errorRequeuePeriod,
 			}, err
@@ -113,7 +108,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
-	appSecretExists, err := hasTargetClusterApplicationSecret(ctx, targetK8sClient)
+	appSecretExists, err := skrClient.HasApplicationSecret(ctx)
 	if err != nil {
 		logger.Error(err, "Failed to retrieve secret state from target cluster")
 		return ctrl.Result{
@@ -123,13 +118,13 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// TODO: check if secret creation condition is also true, otherwise it never updates false secret ready condition
 	if !appSecretExists {
-		logger.Info("Creating IAS application")
 		var createAppErr error
 		iasApplication, appExists := r.existingIasApplications[cr.Name]
 		if !appExists {
+			logger.Info("Creating application in IAS")
 			iasApplication, createAppErr = r.iasClient.CreateApplication(ctx, cr.Name)
 			if createAppErr != nil {
-				logger.Error(createAppErr, "Failed to create IAS application")
+				logger.Error(createAppErr, "Failed to create application in IAS")
 				if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
 					return ctrl.Result{
 						RequeueAfter: r.errorRequeuePeriod,
@@ -139,6 +134,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 					RequeueAfter: r.errorRequeuePeriod,
 				}, createAppErr
 			}
+			logger.Info("Successfully created application in IAS")
 			r.existingIasApplications[cr.Name] = iasApplication
 		}
 		cr.Status.Application = &operatorv1alpha1.IASApplication{
@@ -151,12 +147,10 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}, err
 		}
 
-		// TODO: keep the IAS secret in memory to check for existence, otherwise, new IAS secret is recreated multiple times for error in case K8s secret creation fails.
-		appSecret := iasApplication.ToSecret(applicationSecretName, applicationSecretNamespace)
-
-		createSecretErr := targetK8sClient.Create(ctx, &appSecret)
+		logger.Info("Creating application secret on SKR")
+		appSecret, createSecretErr := skrClient.CreateSecret(ctx, iasApplication)
 		if createSecretErr != nil {
-			logger.Error(createSecretErr, "Failed to create application secret")
+			logger.Error(createSecretErr, "Failed to create application secret on SKR")
 			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, createSecretErr); err != nil {
 				return ctrl.Result{
 					RequeueAfter: r.errorRequeuePeriod,
@@ -166,7 +160,10 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				RequeueAfter: r.errorRequeuePeriod,
 			}, createAppErr
 		}
-		logger.Info("Created IAS application secret")
+		logger.Info("Successfully created application secret on SKR")
+
+		// Because the application secret is created on the SKR, we can delete it from the cache.
+		delete(r.existingIasApplications, cr.Name)
 
 		cr.Status.AuthSecret = &operatorv1alpha1.AuthSecret{
 			ClusterId:      cr.Name,
@@ -180,9 +177,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	logger.Info("Reconciliation done")
-	return ctrl.Result{
-		RequeueAfter: r.defaultRequeuePeriod,
-	}, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *eventingAuthReconciler) getIasClient() (ias.Client, error) {
@@ -196,7 +191,7 @@ func (r *eventingAuthReconciler) getIasClient() (ias.Client, error) {
 		return r.iasClient, nil
 	}
 	// update IAS client if credentials are changed
-	iasClient, err := ias.NewIasClient(newIasCredentials.URL, newIasCredentials.Username, newIasCredentials.Password)
+	iasClient, err := ias.NewClient(newIasCredentials.URL, newIasCredentials.Username, newIasCredentials.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to createa a new IAS client: %v", err)
 	}
@@ -228,14 +223,14 @@ func (r *eventingAuthReconciler) addFinalizer(ctx context.Context, cr *operatorv
 }
 
 // Deletes the secret and IAS app. Finally, removes the finalizer.
-func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient ias.Client, targetClusterClient client.Client, cr *operatorv1alpha1.EventingAuth) error {
+func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient ias.Client, skrClient skr.Client, cr *operatorv1alpha1.EventingAuth) error {
 	// The object is being deleted
 	if controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
-		// delete k8s secret
-		if err := deleteSecret(ctx, targetClusterClient); err != nil {
+		// delete k8s secret on SKR
+		if err := skrClient.DeleteSecret(ctx); err != nil {
 			return fmt.Errorf("failed to delete secret: %v", err)
 		}
-		ctrl.Log.Info("Deleted IAS application secret on target cluster", "eventingAuth", cr.Name, "namespace", cr.Namespace)
+		ctrl.Log.Info("Deleted IAS application secret on SKR", "eventingAuth", cr.Name, "namespace", cr.Namespace)
 
 		// delete IAS application clean-up
 		if err := iasClient.DeleteApplication(ctx, cr.Name); err != nil {
@@ -299,39 +294,6 @@ func fetchEventingAuth(ctx context.Context, c client.Client, name types.Namespac
 		return cr, err
 	}
 	return cr, nil
-}
-
-func hasTargetClusterApplicationSecret(ctx context.Context, c client.Client) (bool, error) {
-	var s v1.Secret
-	err := c.Get(ctx, client.ObjectKey{
-		Name:      applicationSecretName,
-		Namespace: applicationSecretNamespace,
-	}, &s)
-
-	if apiErrors.IsNotFound(err) {
-		return false, nil
-	}
-
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
-func deleteSecret(ctx context.Context, c client.Client) error {
-	var s v1.Secret
-	if err := c.Get(ctx, client.ObjectKey{
-		Name:      applicationSecretName,
-		Namespace: applicationSecretNamespace,
-	}, &s); err != nil {
-		return client.IgnoreNotFound(err)
-	}
-
-	if err := c.Delete(ctx, &s); err != nil {
-		return err
-	}
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

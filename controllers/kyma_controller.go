@@ -24,12 +24,11 @@ type KymaReconciler struct {
 	defaultRequeuePeriod time.Duration
 }
 
-func NewKymaReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod time.Duration, defaultRequeuePeriod time.Duration) *KymaReconciler {
+func NewKymaReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod time.Duration) *KymaReconciler {
 	return &KymaReconciler{
-		Client:               c,
-		Scheme:               s,
-		errorRequeuePeriod:   errorRequeuePeriod,
-		defaultRequeuePeriod: defaultRequeuePeriod,
+		Client:             c,
+		Scheme:             s,
+		errorRequeuePeriod: errorRequeuePeriod,
 	}
 }
 
