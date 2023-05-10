@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -13,38 +14,35 @@ import (
 
 func Test_NewClient(t *testing.T) {
 	type args struct {
-		k8sClient       ctrlclient.Client
+		k8sClient    ctrlclient.Client
 		skrClusterId string
 	}
 	tests := []struct {
-		name       string
-		args       args
-		wantClient bool
-		wantError  error
+		name      string
+		args      args
+		wantError error
 	}{
 		{
 			name: "should return error when secret with kubeconfig is not found",
 			args: args{
-				k8sClient:       fake.NewClientBuilder().Build(),
-				targetClusterId: "test",
+				k8sClient:    fake.NewClientBuilder().Build(),
+				skrClusterId: "test",
 			},
-			wantClient: false,
-			wantError:  errors.New("secrets \"kubeconfig-test\" not found"),
+			wantError: errors.New("secrets \"kubeconfig-test\" not found"),
 		},
 		{
 			name: "should return error when secret doesn't contain config key",
 			args: args{
-				k8sClient:       fake.NewClientBuilder().WithObjects(&v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig-test", Namespace: "kcp-system"}}).Build(),
-				targetClusterId: "test",
+				k8sClient:    fake.NewClientBuilder().WithObjects(&v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig-test", Namespace: "kcp-system"}}).Build(),
+				skrClusterId: "test",
 			},
-			wantClient: false,
-			wantError:  errors.New("failed to find target cluster kubeconfig in secret kubeconfig-test"),
+			wantError: errors.New("failed to find SKR cluster kubeconfig in secret kubeconfig-test"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// when
-			got, err := NewClient(tt.args.k8sClient, tt.args.targetClusterId)
+			_, err := NewClient(tt.args.k8sClient, tt.args.skrClusterId)
 
 			// then
 			if tt.wantError != nil {
@@ -52,10 +50,6 @@ func Test_NewClient(t *testing.T) {
 				require.EqualError(t, tt.wantError, err.Error())
 			} else {
 				require.NoError(t, err)
-			}
-
-			if tt.wantClient {
-				require.NotNil(t, got)
 			}
 		})
 	}
@@ -86,6 +80,25 @@ func Test_client_DeleteSecret(t *testing.T) {
 			name: "should return no error when secret does not exist",
 			fields: fields{
 				k8sClient: fake.NewClientBuilder().Build(),
+			},
+		},
+		{
+			name: "should return error when fetching secret",
+			fields: fields{
+				k8sClient: errorFakeClient{
+					Client:     fake.NewClientBuilder().Build(),
+					errorOnGet: errors.New("error on getting secret"),
+				},
+			},
+			wantErr: errors.New("error on getting secret"),
+		},
+		{
+			name: "should ignore NotFound error when fetching secret",
+			fields: fields{
+				k8sClient: errorFakeClient{
+					Client:     fake.NewClientBuilder().Build(),
+					errorOnGet: apierrors.NewNotFound(v1.Resource("secret"), "eventing-webhook-auth"),
+				},
 			},
 		},
 	}
@@ -137,6 +150,27 @@ func Test_client_HasApplicationSecret(t *testing.T) {
 			},
 			want: true,
 		},
+		{
+			name: "should return error when fetching secret",
+			fields: fields{
+				k8sClient: errorFakeClient{
+					Client:     fake.NewClientBuilder().Build(),
+					errorOnGet: errors.New("error on getting secret"),
+				},
+			},
+			want:    false,
+			wantErr: errors.New("error on getting secret"),
+		},
+		{
+			name: "should ignore NotFound error when fetching secret",
+			fields: fields{
+				k8sClient: errorFakeClient{
+					Client:     fake.NewClientBuilder().Build(),
+					errorOnGet: apierrors.NewNotFound(v1.Resource("secret"), "eventing-webhook-auth"),
+				},
+			},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -156,4 +190,16 @@ func Test_client_HasApplicationSecret(t *testing.T) {
 			require.Equal(t, tt.want, got)
 		})
 	}
+}
+
+type errorFakeClient struct {
+	ctrlclient.Client
+	errorOnGet error
+}
+
+func (e errorFakeClient) Get(ctx context.Context, key ctrlclient.ObjectKey, obj ctrlclient.Object, opts ...ctrlclient.GetOption) error {
+	if e.errorOnGet == nil {
+		return e.Client.Get(ctx, key, obj, opts...)
+	}
+	return e.errorOnGet
 }
