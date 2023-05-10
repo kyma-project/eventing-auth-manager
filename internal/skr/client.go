@@ -26,8 +26,8 @@ type client struct {
 	k8sClient ctrlclient.Client
 }
 
-var NewClient = func(k8sClient ctrlclient.Client, targetClusterId string) (Client, error) {
-	kubeconfigSecretName := fmt.Sprintf("kubeconfig-%s", targetClusterId)
+var NewClient = func(k8sClient ctrlclient.Client, skrClusterId string) (Client, error) {
+	kubeconfigSecretName := fmt.Sprintf("kubeconfig-%s", skrClusterId)
 
 	secret := &v1.Secret{}
 	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: kubeconfigSecretName, Namespace: "kcp-system"}, secret); err != nil {
@@ -36,7 +36,7 @@ var NewClient = func(k8sClient ctrlclient.Client, targetClusterId string) (Clien
 
 	kubeconfig := secret.Data["config"]
 	if len(kubeconfig) == 0 {
-		return nil, fmt.Errorf("failed to find target cluster kubeconfig in secret %s", kubeconfigSecretName)
+		return nil, fmt.Errorf("failed to find SKR cluster kubeconfig in secret %s", kubeconfigSecretName)
 	}
 
 	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)

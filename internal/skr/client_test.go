@@ -14,7 +14,7 @@ import (
 func Test_NewClient(t *testing.T) {
 	type args struct {
 		k8sClient       ctrlclient.Client
-		targetClusterId string
+		skrClusterId string
 	}
 	tests := []struct {
 		name       string
