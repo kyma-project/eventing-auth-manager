@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "eventing-auth-manager.fullname" . }}
+  labels:
+    app.kubernetes.io/component: eventing-auth-manager.kyma-project.io
+    app.kubernetes.io/created-by: eventing-auth-manager
+    app.kubernetes.io/part-of: eventing-auth-manager
+  {{- include "eventing-auth-manager.labels" . | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "eventing-auth-manager.fullname" . }}
+  labels:
+    app.kubernetes.io/component: eventing-auth-manager.kyma-project.io
+    app.kubernetes.io/created-by: eventing-auth-manager
+    app.kubernetes.io/part-of: eventing-auth-manager
+    control-plane: controller-manager
+  {{- include "eventing-auth-manager.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: eventing-auth-manager.kyma-project.io
+      control-plane: controller-manager
+    {{- include "eventing-auth-manager.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: eventing-auth-manager.kyma-project.io
+        control-plane: controller-manager
+      {{- include "eventing-auth-manager.selectorLabels" . | nindent 8 }}
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - arm64
+                - ppc64le
+                - s390x
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+      containers:
+      - args:
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=127.0.0.1:8080
+        - --leader-elect
+        command:
+        - /manager
+        image: {{ .Values.manager.image.repository }}:{{ .Values.manager.image.tag
+          | default .Chart.AppVersion }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources: {{- toYaml .Values.manager.resources | nindent 10
+          }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: {{ include "eventing-auth-manager.fullname" . }}
+      terminationGracePeriodSeconds: 10

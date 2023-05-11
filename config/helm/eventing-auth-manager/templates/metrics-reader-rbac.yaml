@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "eventing-auth-manager.fullname" . }}-metrics-reader
+  labels:
+    app.kubernetes.io/component: eventing-auth-manager.kyma-project.io
+    app.kubernetes.io/created-by: eventing-auth-manager
+    app.kubernetes.io/part-of: eventing-auth-manager
+  {{- include "eventing-auth-manager.labels" . | nindent 4 }}
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
