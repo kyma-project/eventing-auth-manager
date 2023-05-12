@@ -32,7 +32,7 @@ var _ = Describe("Kyma Controller", Serial, func() {
 	Context("Creating and Deleting Kyma CR", func() {
 		It("should delete Kyma CR", func() {
 			if !useExistingCluster {
-				Skip("Skipping not for a real cluster as k8s garbage collection works with a real cluster")
+				Skip("Skipping for a not real cluster as k8s garbage collection works with a real cluster")
 			}
 			// create Kyma CR
 			crName := generateCrName()

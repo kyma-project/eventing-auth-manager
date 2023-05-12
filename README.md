@@ -115,7 +115,6 @@ Additionally, if the creation of the secret on the managed runtime fails, we ret
 
 ## Future Improvements
 - Identify IAS Application with its UUID. Currently, it is identified with its name, see [Referencing IAS applications by name](#referencing-ias-applications-by-name).
-- Watch K8s secret in target runtime cluster so that it is reconciled in case deleted/modified.
 
 ## Generating the SAP Cloud Identity Services API client
 The OpenAPI specification is available in the [API Business Hub](https://api.sap.com/api/SCI_Application_Directory).
@@ -164,7 +163,7 @@ kubectl create ns kyma-system
 ```
 
 ### Running on the cluster
-1. Install the Kyma and EventingAuth CRDs:
+1. Install the EventingAuth CRDs:
 ```sh
 make install
 ```
@@ -187,7 +186,7 @@ make docker-build docker-push IMG=<some-registry>/eventing-auth-manager:tag
 5. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
-make deploy IMG=<some-registry>/eventing-auth-manager:tag
+make deploy IMG_REPO=<some-registry>/eventing-auth-manager IMG_TAG=<image-tag>
 ```
 
 ### Uninstall CRDs
