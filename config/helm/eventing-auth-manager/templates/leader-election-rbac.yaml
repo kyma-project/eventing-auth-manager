@@ -2,6 +2,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ include "eventing-auth-manager.fullname" . }}-leader-election-role
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/component: eventing-auth-manager.kyma-project.io
     app.kubernetes.io/created-by: eventing-auth-manager
@@ -44,6 +45,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "eventing-auth-manager.fullname" . }}-leader-election-rolebinding
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/component: eventing-auth-manager.kyma-project.io
     app.kubernetes.io/created-by: eventing-auth-manager

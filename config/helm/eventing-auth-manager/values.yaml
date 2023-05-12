@@ -1,7 +1,7 @@
 manager:
   image:
     repository: docker.io/muralov/eventing-auth-manager
-    tag: v2
+    tag: v1
   resources:
     limits:
       cpu: 500m
@@ -17,3 +17,9 @@ metricsService:
     protocol: TCP
     targetPort: https
   type: ClusterIP
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

@@ -89,7 +89,8 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases"), filepath.Join("..", "config", "crd", "external")},
+		CRDDirectoryPaths: []string{filepath.Join("..", "config", "helm", "eventing-auth-manager", "crds"),
+			filepath.Join("..", "config", "external", "crds")},
 		ErrorIfCRDPathMissing: true,
 		UseExistingCluster:    &useExistingCluster,
 	}

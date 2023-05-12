@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ include "eventing-auth-manager.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/component: eventing-auth-manager.kyma-project.io
     app.kubernetes.io/created-by: eventing-auth-manager
@@ -12,6 +13,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "eventing-auth-manager.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/component: eventing-auth-manager.kyma-project.io
     app.kubernetes.io/created-by: eventing-auth-manager
@@ -34,22 +36,6 @@ spec:
       annotations:
         kubectl.kubernetes.io/default-container: manager
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/arch
-                operator: In
-                values:
-                - amd64
-                - arm64
-                - ppc64le
-                - s390x
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
       containers:
       - args:
         - --health-probe-bind-address=:8081
@@ -83,3 +69,15 @@ spec:
         runAsNonRoot: true
       serviceAccountName: {{ include "eventing-auth-manager.fullname" . }}
       terminationGracePeriodSeconds: 10
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
