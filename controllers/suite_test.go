@@ -144,10 +144,10 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	// Since we are replacing in some test scenarios the original functions we need to keep them, so we are able to reset them after the tests.
 	storeOriginalsOfStubbedFunctions()
 
-	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1)
+	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme())
 	Expect(kymaReconciler.SetupWithManager(mgr)).Should(Succeed())
 
-	eventingAuthReconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), time.Second*1)
+	eventingAuthReconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme())
 	Expect(eventingAuthReconciler.SetupWithManager(mgr)).Should(Succeed())
 
 	go func() {
