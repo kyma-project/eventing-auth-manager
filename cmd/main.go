@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	"os"
 	"time"
@@ -80,6 +81,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "210590f8.kyma-project.io",
+		Namespace:              skr.SkrKubeconfigNamespace,
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
