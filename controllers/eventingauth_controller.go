@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,9 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"time"
-
-	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 )
 
 const (
@@ -45,18 +43,16 @@ const (
 // eventingAuthReconciler reconciles a EventingAuth object
 type eventingAuthReconciler struct {
 	client.Client
-	Scheme             *runtime.Scheme
-	errorRequeuePeriod time.Duration
-	iasClient          ias.Client
+	Scheme    *runtime.Scheme
+	iasClient ias.Client
 	// existingIasApplications stores existing IAS apps in memory not to recreate again if exists
 	existingIasApplications map[string]ias.Application
 }
 
-func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod time.Duration) ManagedReconciler {
+func NewEventingAuthReconciler(c client.Client, s *runtime.Scheme) ManagedReconciler {
 	return &eventingAuthReconciler{
 		Client:                  c,
 		Scheme:                  s,
-		errorRequeuePeriod:      errorRequeuePeriod,
 		existingIasApplications: map[string]ias.Application{},
 	}
 }
@@ -78,31 +74,23 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	skrClient, err := skr.NewClient(r.Client, cr.Name)
 	if err != nil {
 		logger.Error(err, "Failed to retrieve client of target cluster")
-		return ctrl.Result{
-			RequeueAfter: r.errorRequeuePeriod,
-		}, err
+		return ctrl.Result{}, err
 	}
 
 	// sync IAS client credentials
 	r.iasClient, err = r.getIasClient()
 	if err != nil {
-		return ctrl.Result{
-			RequeueAfter: r.errorRequeuePeriod,
-		}, err
+		return ctrl.Result{}, err
 	}
 	// check DeletionTimestamp to determine if object is under deletion
 	if cr.ObjectMeta.DeletionTimestamp.IsZero() {
 		if err = r.addFinalizer(ctx, &cr); err != nil {
-			return ctrl.Result{
-				RequeueAfter: r.errorRequeuePeriod,
-			}, err
+			return ctrl.Result{}, err
 		}
 	} else {
 		logger.Info("Handling deletion")
 		if err = r.handleDeletion(ctx, r.iasClient, skrClient, &cr); err != nil {
-			return ctrl.Result{
-				RequeueAfter: r.errorRequeuePeriod,
-			}, err
+			return ctrl.Result{}, err
 		}
 		// Stop reconciliation as the item is being deleted
 		return ctrl.Result{}, nil
@@ -111,9 +99,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	appSecretExists, err := skrClient.HasApplicationSecret(ctx)
 	if err != nil {
 		logger.Error(err, "Failed to retrieve secret state from target cluster")
-		return ctrl.Result{
-			RequeueAfter: r.errorRequeuePeriod,
-		}, err
+		return ctrl.Result{}, err
 	}
 
 	// TODO: check if secret creation condition is also true, otherwise it never updates false secret ready condition
@@ -126,13 +112,9 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			if createAppErr != nil {
 				logger.Error(createAppErr, "Failed to create application in IAS")
 				if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
-					return ctrl.Result{
-						RequeueAfter: r.errorRequeuePeriod,
-					}, err
+					return ctrl.Result{}, err
 				}
-				return ctrl.Result{
-					RequeueAfter: r.errorRequeuePeriod,
-				}, createAppErr
+				return ctrl.Result{}, createAppErr
 			}
 			logger.Info("Successfully created application in IAS")
 			r.existingIasApplications[cr.Name] = iasApplication
@@ -142,9 +124,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			UUID: iasApplication.GetId(),
 		}
 		if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionApplicationReady, nil); err != nil {
-			return ctrl.Result{
-				RequeueAfter: r.errorRequeuePeriod,
-			}, err
+			return ctrl.Result{}, err
 		}
 
 		logger.Info("Creating application secret on SKR")
@@ -152,13 +132,9 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if createSecretErr != nil {
 			logger.Error(createSecretErr, "Failed to create application secret on SKR")
 			if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, createSecretErr); err != nil {
-				return ctrl.Result{
-					RequeueAfter: r.errorRequeuePeriod,
-				}, err
+				return ctrl.Result{}, err
 			}
-			return ctrl.Result{
-				RequeueAfter: r.errorRequeuePeriod,
-			}, createAppErr
+			return ctrl.Result{}, createAppErr
 		}
 		logger.Info("Successfully created application secret on SKR")
 
@@ -170,9 +146,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			NamespacedName: fmt.Sprintf("%s/%s", appSecret.Namespace, appSecret.Name),
 		}
 		if err := r.updateEventingAuthStatus(ctx, &cr, operatorv1alpha1.ConditionSecretReady, nil); err != nil {
-			return ctrl.Result{
-				RequeueAfter: r.errorRequeuePeriod,
-			}, err
+			return ctrl.Result{}, err
 		}
 	}
 

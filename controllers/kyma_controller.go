@@ -19,16 +19,14 @@ import (
 // KymaReconciler reconciles a Kyma resource
 type KymaReconciler struct {
 	client.Client
-	Scheme               *runtime.Scheme
-	errorRequeuePeriod   time.Duration
-	defaultRequeuePeriod time.Duration
+	Scheme *runtime.Scheme
+	time.Duration
 }
 
-func NewKymaReconciler(c client.Client, s *runtime.Scheme, errorRequeuePeriod time.Duration) *KymaReconciler {
+func NewKymaReconciler(c client.Client, s *runtime.Scheme) *KymaReconciler {
 	return &KymaReconciler{
-		Client:             c,
-		Scheme:             s,
-		errorRequeuePeriod: errorRequeuePeriod,
+		Client: c,
+		Scheme: s,
 	}
 }
 
@@ -42,23 +40,14 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	kyma := &kymav1beta1.Kyma{}
 	err := r.Client.Get(ctx, req.NamespacedName, kyma)
 	if err != nil {
-		if apiErrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{
-			RequeueAfter: r.errorRequeuePeriod,
-		}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if err = r.createEventingAuth(ctx, kyma); err != nil {
-		return ctrl.Result{
-			RequeueAfter: r.errorRequeuePeriod,
-		}, err
+		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{
-		RequeueAfter: r.defaultRequeuePeriod,
-	}, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *kymav1beta1.Kyma) error {
