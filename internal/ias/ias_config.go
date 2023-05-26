@@ -2,7 +2,6 @@ package ias
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -43,19 +42,26 @@ var ReadCredentials = func(namespace, name string, k8sClient ctlrClient.Client) 
 
 	var exists bool
 	var url, username, password []byte
-	var errUrl, errUsername, errPassword error
+	var errors error
 	if url, exists = iasSecret.Data[urlString]; !exists {
-		errUrl = fmt.Errorf("key %s is not found in ias secret", urlString)
+		errors = fmt.Errorf("key %s is not found in ias secret", urlString)
 	}
 	if username, exists = iasSecret.Data[usernameString]; !exists {
-		errUsername = fmt.Errorf("key %s is not found in ias secret", usernameString)
+		if errors != nil {
+			errors = fmt.Errorf("%w: key %s is not found in ias secret", errors, usernameString)
+		} else {
+			errors = fmt.Errorf("key %s is not found in ias secret", usernameString)
+		}
 	}
 	if password, exists = iasSecret.Data[passwordString]; !exists {
-		errPassword = fmt.Errorf("key %s is not found in ias secret", passwordString)
+		if errors != nil {
+			errors = fmt.Errorf("%w: key %s is not found in ias secret", errors, passwordString)
+		} else {
+			errors = fmt.Errorf("key %s is not found in ias secret", passwordString)
+		}
 	}
-	err = errors.Join(errUrl, errUsername, errPassword)
-	if err != nil {
-		return nil, err
+	if errors != nil {
+		return nil, errors
 	}
 	iasConfig := NewCredentials(string(url[:]), string(username[:]), string(password[:]))
 	return iasConfig, nil
