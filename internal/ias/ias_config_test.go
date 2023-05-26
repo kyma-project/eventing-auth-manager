@@ -58,8 +58,28 @@ func Test_ReadCredentials(t *testing.T) {
 				},
 				MockSecret: createMockSecretWithoutDataFields(testNamespace, testPassword),
 			},
-			wantError: fmt.Errorf("key %s is not found in ias secret\nkey %s is not found in ias secret\nkey %s is not found in ias secret",
+			wantError: fmt.Errorf("key %s is not found in ias secret: key %s is not found in ias secret: key %s is not found in ias secret",
 				urlString, usernameString, passwordString),
+		},
+		{
+			name: "Fails with missing username data fields error",
+			givenK8sClientMock: &mocks.MockClient{
+				MockFunction: func() error {
+					return nil
+				},
+				MockSecret: createMockSecretWithoutUsernameDataFields(testNamespace, testName, testUrl, testPassword),
+			},
+			wantError: fmt.Errorf("key %s is not found in ias secret", usernameString),
+		},
+		{
+			name: "Fails with missing username and password data fields error",
+			givenK8sClientMock: &mocks.MockClient{
+				MockFunction: func() error {
+					return nil
+				},
+				MockSecret: createMockSecretWithoutUsernameAndPasswordDataFields(testNamespace, testName, testUrl),
+			},
+			wantError: fmt.Errorf("key %s is not found in ias secret: key %s is not found in ias secret", usernameString, passwordString),
 		},
 	}
 
@@ -101,5 +121,30 @@ func createMockSecretWithoutDataFields(testNamespace, testName string) *v1.Secre
 		Data: map[string][]byte{},
 	}
 	s.Data = map[string][]byte{}
+	return s
+}
+
+func createMockSecretWithoutUsernameDataFields(testNamespace, testName, testUrl, testPassword string) *v1.Secret {
+	s := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testNamespace,
+			Namespace: testName,
+		},
+		Data: map[string][]byte{},
+	}
+	s.Data[urlString] = []byte(testUrl)
+	s.Data[passwordString] = []byte(testPassword)
+	return s
+}
+
+func createMockSecretWithoutUsernameAndPasswordDataFields(testNamespace, testName, testUrl string) *v1.Secret {
+	s := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testNamespace,
+			Namespace: testName,
+		},
+		Data: map[string][]byte{},
+	}
+	s.Data[urlString] = []byte(testUrl)
 	return s
 }
