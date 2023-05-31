@@ -26,7 +26,7 @@ var _ = Describe("Kyma Controller", Serial, func() {
 	})
 
 	AfterEach(func() {
-		deleteKubeconfigSecrets()
+		deleteKubeconfigSecret(crName)
 	})
 
 	Context("Creating Kyma CR", func() {
@@ -82,10 +82,14 @@ func deleteKymaResource(kyma *kymav1beta1.Kyma) {
 	Eventually(func(g Gomega) {
 		err := k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(kyma), &kymav1beta1.Kyma{})
 		g.Expect(errors.IsNotFound(err)).To(BeTrue())
+		eventingAuth := &v1alpha1.EventingAuth{}
+		err = k8sClient.Get(context.TODO(), types.NamespacedName{Namespace: skr.KcpNamespace, Name: kyma.Name}, eventingAuth)
 		if useExistingCluster {
-			err = k8sClient.Get(context.TODO(), types.NamespacedName{Namespace: skr.KcpNamespace, Name: kyma.Name}, &v1alpha1.EventingAuth{})
 			g.Expect(err).ShouldNot(BeNil())
 			g.Expect(errors.IsNotFound(err)).To(BeTrue())
+		} else {
+			// clean up EventingAuth for not real cluster
+			deleteEventingAuth(eventingAuth)
 		}
 	}, defaultTimeout).Should(Succeed())
 }
