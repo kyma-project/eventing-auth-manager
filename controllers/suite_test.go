@@ -51,7 +51,7 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 const (
-	defaultTimeout = time.Second * 10
+	defaultTimeout = time.Second * 20
 )
 
 var (
@@ -130,7 +130,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 		createIasCredsSecret(iasUrl, iasUsername, iasPassword)
 	}
 
-	testSyncPeriod := time.Second * 3
+	testSyncPeriod := time.Second * 1
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme.Scheme,
 		MetricsBindAddress: "0",

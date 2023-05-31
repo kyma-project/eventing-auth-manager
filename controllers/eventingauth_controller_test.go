@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/onsi/gomega/types"
+	gtypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,11 +21,12 @@ var appSecretObjectKey = ctrlClient.ObjectKey{Name: skr.ApplicationSecretName, N
 
 // Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially
 var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() {
+	var (
+		eventingAuth *v1alpha1.EventingAuth
+		crName       string
+	)
 
 	BeforeAll(func() {
-		revertSkrNewClientStub()
-		replaceIasReadCredentialsWithStub(ias.Credentials{URL: iasUrl, Username: iasUsername, Password: iasPassword})
-
 		// We allow the happy path tests to use the real IAS client if the test env vars are set
 		if !existIasCreds() {
 			// use IasClient stub unless test IAS ENV vars exist
@@ -35,94 +35,91 @@ var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() 
 		}
 	})
 
+	AfterAll(func() {
+		revertIasNewClientStub()
+	})
+
+	BeforeEach(func() {
+		crName = generateCrName()
+		createKubeconfigSecret(crName)
+	})
+
 	AfterEach(func() {
-		deleteEventingAuths()
-		deleteApplicationSecretOnTargetCluster()
-		deleteKubeconfigSecrets()
+		deleteEventingAuth(eventingAuth)
+		deleteKubeconfigSecret(crName)
 	})
 
-	Context("Creating EventingAuth CR", func() {
-
-		It("should create secret with IAS applications credentials", func() {
-			cr := createEventingAuthAndKubeconfigSecret()
-			verifyEventingAuthStatusReady(cr)
-			verifySecretExistsOnTargetCluster()
-		})
-	})
-
-	Context("Deleting EventingAuth CR", func() {
-
+	Context("Creating and Deleting EventingAuth CR", func() {
 		It("should delete secret with IAS applications credentials", func() {
-			cr := createEventingAuthAndKubeconfigSecret()
-			verifyEventingAuthStatusReady(cr)
-			verifySecretExistsOnTargetCluster()
-			deleteEventingAuth(cr, false)
-			verifySecretDoesNotExistOnTargetCluster()
-		})
-	})
+			eventingAuth = createEventingAuth(crName)
+			verifyEventingAuthStatusReady(eventingAuth)
 
-	Context("Time-based EventingAuth CR reconciliation", func() {
-
-		It("should create new secret on target cluster on next reconciliation when secret was deleted manually", func() {
-			cr := createEventingAuthAndKubeconfigSecret()
-			verifyEventingAuthStatusReady(cr)
+			// Time-based EventingAuth CR reconciliation
 			secret := verifySecretExistsOnTargetCluster()
 			deleteSecretOnTargetCluster(secret)
 			verifySecretDoesNotExistOnTargetCluster()
 			verifySecretExistsOnTargetCluster()
+
+			// Testing deletion
+			deleteEventingAuth(eventingAuth)
+			verifySecretDoesNotExistOnTargetCluster()
 		})
-
 	})
-
 })
 
-var _ = Describe("EventingAuth Controller unhappy tests", Serial, func() {
+var _ = Describe("EventingAuth Controller unhappy tests", Serial, Ordered, func() {
+	var (
+		eventingAuth *v1alpha1.EventingAuth
+		crName       string
+	)
+
+	BeforeEach(func() {
+		crName = generateCrName()
+		createKubeconfigSecret(crName)
+	})
 
 	AfterEach(func() {
 		// as these tests uses mock IAS we can force delete EventingAuth CR
-		forceDeleteEventingAuths()
+		deleteEventingAuth(eventingAuth)
 		deleteApplicationSecretOnTargetCluster()
-		deleteKubeconfigSecrets()
+		deleteKubeconfigSecret(crName)
+		// set SKR client to original
+		revertReadCredentialsStub()
+		revertSkrNewClientStub()
+		revertIasNewClientStub()
 	})
 
 	It("should have CR status NotReady when IAS app creation fails", func() {
 		stubFailedIasAppCreation()
-		cr := createEventingAuthAndKubeconfigSecret()
-		verifyEventingAuthStatusNotReadyAppCreationFailed(cr)
+		eventingAuth = createEventingAuth(crName)
+		verifyEventingAuthStatusNotReadyAppCreationFailed(eventingAuth)
 	})
 
 	It("should have CR status NotReady when secret creation on target cluster fails", func() {
 		stubSuccessfulIasAppCreation()
 		stubFailedSkrSecretCreation()
-		cr := createEventingAuthAndKubeconfigSecret()
-		verifyEventingAuthStatusNotReadySecretCreationFailed(cr)
+		eventingAuth = createEventingAuth(crName)
+		verifyEventingAuthStatusNotReadySecretCreationFailed(eventingAuth)
 	})
 
 	It("should retry and create application when first attempt of application creation failed", func() {
 		stubFailedIasAppCreation()
 		stubSuccessfulSkrSecretCreation()
-		cr := createEventingAuthAndKubeconfigSecret()
-		verifyEventingAuthStatusNotReadyAppCreationFailed(cr)
+		eventingAuth = createEventingAuth(crName)
+		verifyEventingAuthStatusNotReadyAppCreationFailed(eventingAuth)
 		stubSuccessfulIasAppCreation()
-		verifyEventingAuthStatusReady(cr)
+		verifyEventingAuthStatusReady(eventingAuth)
 	})
 
 	It("should retry and create secret when first attempt of secret creation failed", func() {
 		stubSuccessfulIasAppCreation()
 		stubFailedSkrSecretCreation()
-		cr := createEventingAuthAndKubeconfigSecret()
-		verifyEventingAuthStatusNotReadySecretCreationFailed(cr)
+		eventingAuth = createEventingAuth(crName)
+		verifyEventingAuthStatusNotReadySecretCreationFailed(eventingAuth)
 		stubSuccessfulSkrSecretCreation()
-		verifyEventingAuthStatusReady(cr)
+		verifyEventingAuthStatusReady(eventingAuth)
 	})
 })
-
-func createEventingAuthAndKubeconfigSecret() *v1alpha1.EventingAuth {
-	crName := generateCrName()
-	createKubeconfigSecret(crName)
-	cr := createEventingAuth(crName)
-	return cr
-}
 
 func deleteSecretOnTargetCluster(secret *corev1.Secret) {
 	By("Deleting secret on target cluster")
@@ -230,7 +227,7 @@ func verifyEventingAuthStatusNotReadySecretCreationFailed(cr *v1alpha1.EventingA
 	}, defaultTimeout).Should(Succeed())
 }
 
-func conditionMatcher(t string, s metav1.ConditionStatus, r, m string) types.GomegaMatcher {
+func conditionMatcher(t string, s metav1.ConditionStatus, r, m string) gtypes.GomegaMatcher {
 	return MatchFields(IgnoreExtras, Fields{
 		"Type":    Equal(t),
 		"Status":  Equal(s),
@@ -238,47 +235,19 @@ func conditionMatcher(t string, s metav1.ConditionStatus, r, m string) types.Gom
 		"Message": Equal(m),
 	})
 }
-func deleteEventingAuth(e *v1alpha1.EventingAuth, forceDelete bool) {
+func deleteEventingAuth(e *v1alpha1.EventingAuth) {
 	By(fmt.Sprintf("Deleting EventingAuth %s", e.Name))
+	if err := k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(e), &v1alpha1.EventingAuth{}); err != nil {
+		Expect(errors.IsNotFound(err)).Should(BeTrue())
+		return
+	}
 	Expect(k8sClient.Delete(context.TODO(), e)).Should(Succeed())
 	Eventually(func(g Gomega) {
 		latestEAuth := &v1alpha1.EventingAuth{}
 		err := k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(e), latestEAuth)
-		if err == nil && forceDelete {
-			e.Finalizers = []string{}
-			g.Expect(k8sClient.Update(context.TODO(), latestEAuth)).Should(Succeed())
-		}
-		g.Expect(errors.IsNotFound(err)).To(BeTrue())
+		g.Expect(err).ShouldNot(BeNil())
+		g.Expect(errors.IsNotFound(err)).Should(BeTrue())
 	}, defaultTimeout).Should(Succeed())
-}
-
-func deleteEventingAuths() {
-	eaList := v1alpha1.EventingAuthList{}
-	Expect(k8sClient.List(context.TODO(), &eaList, ctrlClient.InNamespace(skr.KcpNamespace))).Should(Succeed())
-
-	for _, ea := range eaList.Items {
-		deleteEventingAuth(&ea, false)
-	}
-}
-
-func forceDeleteEventingAuths() {
-	eaList := v1alpha1.EventingAuthList{}
-	Expect(k8sClient.List(context.TODO(), &eaList, ctrlClient.InNamespace(skr.KcpNamespace))).Should(Succeed())
-
-	for _, ea := range eaList.Items {
-		deleteEventingAuth(&ea, true)
-	}
-}
-
-func deleteKubeconfigSecrets() {
-	sList := corev1.SecretList{}
-	Expect(k8sClient.List(context.TODO(), &sList, ctrlClient.InNamespace(skr.KcpNamespace))).Should(Succeed())
-
-	for _, s := range sList.Items {
-		if err := k8sClient.Delete(context.TODO(), &s); err != nil && !errors.IsNotFound(err) {
-			Expect(err).Should(Succeed())
-		}
-	}
 }
 
 func deleteApplicationSecretOnTargetCluster() {
@@ -306,5 +275,17 @@ func createKubeconfigSecret(crName string) *corev1.Secret {
 		},
 	}
 	Expect(k8sClient.Create(context.TODO(), &kubeconfigSecret)).Should(Succeed())
+	return &kubeconfigSecret
+}
+
+func deleteKubeconfigSecret(crName string) *corev1.Secret {
+	By("Deleting secret with kubeconfig of target cluster")
+	kubeconfigSecret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("kubeconfig-%s", crName),
+			Namespace: skr.KcpNamespace,
+		},
+	}
+	Expect(k8sClient.Delete(context.TODO(), &kubeconfigSecret)).Should(Succeed())
 	return &kubeconfigSecret
 }
