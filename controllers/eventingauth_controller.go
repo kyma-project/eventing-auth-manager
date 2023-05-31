@@ -37,7 +37,7 @@ const (
 	iasCredsSecretNamespace      string = "IAS_CREDS_SECRET_NAMESPACE"
 	iasCredsSecretName           string = "IAS_CREDS_SECRET_NAME"
 	defaultIasCredsNamespaceName string = "kcp-system"
-	defaultIasCredsSecretName    string = "eventing-auth-ias-creds"
+	DefaultIasCredsSecretName    string = "eventing-auth-ias-creds"
 )
 
 // eventingAuthReconciler reconciles a EventingAuth object
@@ -179,7 +179,7 @@ func getIasSecretNamespaceAndNameConfigs() (string, string) {
 	}
 	name := os.Getenv(iasCredsSecretName)
 	if len(name) == 0 {
-		name = defaultIasCredsSecretName
+		name = DefaultIasCredsSecretName
 	}
 	return namespace, name
 }

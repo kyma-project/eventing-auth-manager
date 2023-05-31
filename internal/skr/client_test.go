@@ -33,7 +33,7 @@ func Test_NewClient(t *testing.T) {
 		{
 			name: "should return error when secret doesn't contain config key",
 			args: args{
-				k8sClient:    fake.NewClientBuilder().WithObjects(&v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig-test", Namespace: SkrKubeconfigNamespace}}).Build(),
+				k8sClient:    fake.NewClientBuilder().WithObjects(&v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig-test", Namespace: KcpNamespace}}).Build(),
 				skrClusterId: "test",
 			},
 			wantError: errors.New("failed to find SKR cluster kubeconfig in secret kubeconfig-test"),
