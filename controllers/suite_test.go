@@ -52,7 +52,6 @@ import (
 
 const (
 	defaultTimeout = time.Second * 10
-	namespace      = "test-namespace"
 )
 
 var (
@@ -68,8 +67,8 @@ var (
 	iasUsername            string
 	iasPassword            string
 	useExistingCluster     bool
-	testNs                 *corev1.Namespace
 	kcpNs                  *corev1.Namespace
+	kymaNs                 *corev1.Namespace
 )
 
 func TestAPIs(t *testing.T) {
@@ -101,7 +100,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(err).NotTo(HaveOccurred())
 
 	// In case we are using an existing cluster the namespace of the application secret might already exist, so we need to guard against that.
-	kymaNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: skr.ApplicationSecretNamespace}}
+	kymaNs = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: skr.ApplicationSecretNamespace}}
 	err = targetClusterK8sClient.Get(context.TODO(), client.ObjectKeyFromObject(kymaNs), &corev1.Namespace{})
 	if err != nil {
 		Expect(apierrors.IsNotFound(err)).To(BeTrue())
@@ -121,17 +120,15 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	testNs = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: namespace},
-		Spec:       corev1.NamespaceSpec{},
-	}
-	Expect(k8sClient.Create(context.TODO(), testNs)).Should(Succeed())
-
 	kcpNs = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: skr.SkrKubeconfigNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: skr.KcpNamespace},
 		Spec:       corev1.NamespaceSpec{},
 	}
 	Expect(k8sClient.Create(context.TODO(), kcpNs)).Should(Succeed())
+
+	if existIasCreds() {
+		createIasCredsSecret(iasUrl, iasUsername, iasPassword)
+	}
 
 	testSyncPeriod := time.Second * 3
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -163,9 +160,12 @@ var _ = AfterSuite(func() {
 	revertReadCredentialsStub()
 	if !existIasCreds() {
 		revertIasNewClientStub()
+	} else {
+		deleteIasCredsSecret()
 	}
-	By("Cleaning up the created namespaces")
-	Expect(k8sClient.Delete(context.TODO(), testNs)).Should(Succeed())
+	By("Cleaning up the kyma-system namespace in SKR cluster")
+	Expect(targetClusterK8sClient.Delete(context.TODO(), kymaNs)).Should(Succeed())
+	By("Cleaning up the kcp-system namespace in kcp cluster")
 	Expect(k8sClient.Delete(context.TODO(), kcpNs)).Should(Succeed())
 
 	By("Tearing down the test environment")

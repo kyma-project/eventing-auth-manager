@@ -14,7 +14,7 @@ import (
 const (
 	ApplicationSecretName      = "eventing-webhook-auth"
 	ApplicationSecretNamespace = "kyma-system"
-	SkrKubeconfigNamespace     = "kcp-system"
+	KcpNamespace               = "kcp-system"
 )
 
 type Client interface {
@@ -31,7 +31,7 @@ var NewClient = func(k8sClient ctrlclient.Client, skrClusterId string) (Client, 
 	kubeconfigSecretName := fmt.Sprintf("kubeconfig-%s", skrClusterId)
 
 	secret := &v1.Secret{}
-	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: kubeconfigSecretName, Namespace: SkrKubeconfigNamespace}, secret); err != nil {
+	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: kubeconfigSecretName, Namespace: KcpNamespace}, secret); err != nil {
 		return nil, err
 	}
 

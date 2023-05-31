@@ -36,7 +36,9 @@ var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() 
 	})
 
 	AfterEach(func() {
-		cleanup()
+		deleteEventingAuths()
+		deleteApplicationSecretOnTargetCluster()
+		deleteKubeconfigSecrets()
 	})
 
 	Context("Creating EventingAuth CR", func() {
@@ -54,7 +56,7 @@ var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() 
 			cr := createEventingAuthAndKubeconfigSecret()
 			verifyEventingAuthStatusReady(cr)
 			verifySecretExistsOnTargetCluster()
-			deleteEventingAuth(cr)
+			deleteEventingAuth(cr, false)
 			verifySecretDoesNotExistOnTargetCluster()
 		})
 	})
@@ -76,8 +78,11 @@ var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() 
 
 var _ = Describe("EventingAuth Controller unhappy tests", Serial, func() {
 
-	BeforeEach(func() {
-		cleanup()
+	AfterEach(func() {
+		// as these tests uses mock IAS we can force delete EventingAuth CR
+		forceDeleteEventingAuths()
+		deleteApplicationSecretOnTargetCluster()
+		deleteKubeconfigSecrets()
 	})
 
 	It("should have CR status NotReady when IAS app creation fails", func() {
@@ -112,13 +117,6 @@ var _ = Describe("EventingAuth Controller unhappy tests", Serial, func() {
 	})
 })
 
-func cleanup() {
-	deleteEventingAuths()
-	// We also need to clean up the app secret before each test, because a failing test could leave the secret in the cluster and this can lead to cascading failures.
-	deleteApplicationSecretOnTargetCluster()
-	deleteKubeconfigSecrets()
-}
-
 func createEventingAuthAndKubeconfigSecret() *v1alpha1.EventingAuth {
 	crName := generateCrName()
 	createKubeconfigSecret(crName)
@@ -135,7 +133,7 @@ func createEventingAuth(name string) *v1alpha1.EventingAuth {
 	e := v1alpha1.EventingAuth{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: namespace,
+			Namespace: skr.KcpNamespace,
 		},
 	}
 
@@ -240,29 +238,41 @@ func conditionMatcher(t string, s metav1.ConditionStatus, r, m string) types.Gom
 		"Message": Equal(m),
 	})
 }
-func deleteEventingAuth(e *v1alpha1.EventingAuth) {
+func deleteEventingAuth(e *v1alpha1.EventingAuth, forceDelete bool) {
 	By(fmt.Sprintf("Deleting EventingAuth %s", e.Name))
 	Expect(k8sClient.Delete(context.TODO(), e)).Should(Succeed())
 	Eventually(func(g Gomega) {
-		err := k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(e), &v1alpha1.EventingAuth{})
+		latestEAuth := &v1alpha1.EventingAuth{}
+		err := k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(e), latestEAuth)
+		if err == nil && forceDelete {
+			e.Finalizers = []string{}
+			g.Expect(k8sClient.Update(context.TODO(), latestEAuth)).Should(Succeed())
+		}
 		g.Expect(errors.IsNotFound(err)).To(BeTrue())
 	}, defaultTimeout).Should(Succeed())
 }
 
 func deleteEventingAuths() {
 	eaList := v1alpha1.EventingAuthList{}
-	Expect(k8sClient.List(context.TODO(), &eaList, ctrlClient.InNamespace(namespace))).Should(Succeed())
+	Expect(k8sClient.List(context.TODO(), &eaList, ctrlClient.InNamespace(skr.KcpNamespace))).Should(Succeed())
 
 	for _, ea := range eaList.Items {
-		if err := k8sClient.Delete(context.TODO(), &ea); err != nil && !errors.IsNotFound(err) {
-			Expect(err).Should(Succeed())
-		}
+		deleteEventingAuth(&ea, false)
+	}
+}
+
+func forceDeleteEventingAuths() {
+	eaList := v1alpha1.EventingAuthList{}
+	Expect(k8sClient.List(context.TODO(), &eaList, ctrlClient.InNamespace(skr.KcpNamespace))).Should(Succeed())
+
+	for _, ea := range eaList.Items {
+		deleteEventingAuth(&ea, true)
 	}
 }
 
 func deleteKubeconfigSecrets() {
 	sList := corev1.SecretList{}
-	Expect(k8sClient.List(context.TODO(), &sList, ctrlClient.InNamespace(skr.SkrKubeconfigNamespace))).Should(Succeed())
+	Expect(k8sClient.List(context.TODO(), &sList, ctrlClient.InNamespace(skr.KcpNamespace))).Should(Succeed())
 
 	for _, s := range sList.Items {
 		if err := k8sClient.Delete(context.TODO(), &s); err != nil && !errors.IsNotFound(err) {
@@ -289,7 +299,7 @@ func createKubeconfigSecret(crName string) *corev1.Secret {
 	kubeconfigSecret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("kubeconfig-%s", crName),
-			Namespace: skr.SkrKubeconfigNamespace,
+			Namespace: skr.KcpNamespace,
 		},
 		Data: map[string][]byte{
 			"config": []byte(targetClusterK8sCfg),
