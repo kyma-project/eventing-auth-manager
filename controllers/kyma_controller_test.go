@@ -3,6 +3,8 @@ package controllers_test
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
@@ -17,9 +19,23 @@ import (
 )
 
 // Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially
-var _ = Describe("Kyma Controller", Serial, func() {
+var _ = Describe("Kyma Controller", Serial, Ordered, func() {
 	var kyma *kymav1beta1.Kyma
 	var crName string
+
+	BeforeAll(func() {
+		// We allow the happy path tests to use the real IAS client if the test env vars are set
+		if !existIasCreds() {
+			// use IasClient stub unless test IAS ENV vars exist
+			log.Println("Using mock IAS client as TEST_EVENTING_AUTH_IAS_URL, TEST_EVENTING_AUTH_IAS_USER, and TEST_EVENTING_AUTH_IAS_PASSWORD are missing")
+			stubSuccessfulIasAppCreation()
+		}
+	})
+
+	AfterAll(func() {
+		revertIasNewClientStub()
+	})
+
 	BeforeEach(func() {
 		crName = generateCrName()
 		createKubeconfigSecret(crName)
