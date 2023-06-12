@@ -8,4 +8,4 @@
 * @kyma-project/eventing
 
 # All readme files.
-# *.md @kyma-project/technical-writers @
+*.md @kyma-project/technical-writers
