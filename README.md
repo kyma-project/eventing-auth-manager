@@ -57,6 +57,7 @@ data:
   client_id: <client_id>
   client_secret: <client_secret>
   token_url: "https://<tenant>.accounts.ondemand.com/oauth2/token"
+  certs_url: "https://<tenant>.accounts.ondemand.com/oauth2/certs"
 ```
 
 ## Name reference between resources

@@ -10,14 +10,16 @@ type Application struct {
 	clientId     string
 	clientSecret string
 	tokenUrl     string
+	certsUrl     string
 }
 
-func NewApplication(id, clientId, clientSecret, tokenUrl string) Application {
+func NewApplication(id, clientId, clientSecret, tokenUrl, certsUrl string) Application {
 	return Application{
 		id:           id,
 		clientId:     clientId,
 		clientSecret: clientSecret,
 		tokenUrl:     tokenUrl,
+		certsUrl:     certsUrl,
 	}
 }
 
@@ -31,6 +33,7 @@ func (a Application) ToSecret(name, ns string) v1.Secret {
 			"client_id":     []byte(a.clientId),
 			"client_secret": []byte(a.clientSecret),
 			"token_url":     []byte(a.tokenUrl),
+			"certs_url":     []byte(a.certsUrl),
 		},
 	}
 }

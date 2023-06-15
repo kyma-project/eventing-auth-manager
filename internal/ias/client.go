@@ -49,7 +49,10 @@ type client struct {
 	oidcClient oidc.Client
 	// The token URL of the IAS client. Since this URL should only change when the tenant changes and this will lead to the initialization of
 	// a new client, we can cache the URL to avoid an additional request at each application creation.
-	tokenUrl    *string
+	tokenUrl *string
+	// The jwks URI of the IAS client. Since this URI should only change when the tenant changes and this will lead to the initialization of
+	// a new client, we can cache the URI to avoid an additional request at each application creation.
+	jwksURI     *string
 	credentials *Credentials
 }
 
@@ -104,7 +107,13 @@ func (c *client) CreateApplication(ctx context.Context, name string) (Applicatio
 		return Application{}, err
 	}
 
-	return NewApplication(appId.String(), *clientId, *clientSecret, *tokenUrl), nil
+	// Since the jwks URI is not part of the application response, we have to fetch it from the OIDC configuration.
+	jwksURI, err := c.GetJWKSURI(ctx)
+	if err != nil {
+		return Application{}, err
+	}
+
+	return NewApplication(appId.String(), *clientId, *clientSecret, *tokenUrl, *jwksURI), nil
 }
 
 func (c *client) GetTokenUrl(ctx context.Context) (*string, error) {
@@ -121,6 +130,22 @@ func (c *client) GetTokenUrl(ctx context.Context) (*string, error) {
 	}
 
 	return c.tokenUrl, nil
+}
+
+func (c *client) GetJWKSURI(ctx context.Context) (*string, error) {
+	if c.jwksURI == nil {
+		jwksURI, err := c.oidcClient.GetJWKSURI(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if jwksURI == nil {
+			return nil, errors.New("failed to fetch jwks uri")
+		}
+
+		c.jwksURI = jwksURI
+	}
+
+	return c.jwksURI, nil
 }
 
 // DeleteApplication deletes an application in IAS. If the application does not exist, this function does nothing.
