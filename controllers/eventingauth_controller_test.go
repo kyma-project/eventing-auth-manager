@@ -159,6 +159,8 @@ func verifySecretExistsOnTargetCluster() *corev1.Secret {
 		g.Expect(s.Data["client_secret"]).ToNot(BeEmpty())
 		g.Expect(s.Data).To(HaveKey("token_url"))
 		g.Expect(s.Data["token_url"]).To(ContainSubstring("/token"))
+		g.Expect(s.Data).To(HaveKey("certs_url"))
+		g.Expect(s.Data["certs_url"]).To(ContainSubstring("/certs"))
 	}, defaultTimeout).Should(Succeed())
 
 	return &s

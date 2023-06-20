@@ -11,10 +11,12 @@ import (
 //go:generate mockery --name=Client --outpkg=mocks --case=underscore
 type Client interface {
 	GetTokenEndpoint(ctx context.Context) (*string, error)
+	GetJWKSURI(ctx context.Context) (*string, error)
 }
 
 type wellKnown struct {
 	TokenEndpoint *string `json:"token_endpoint,omitempty"`
+	JWKSURI       *string `json:"jwks_uri,omitempty"`
 }
 
 type client struct {
@@ -38,6 +40,16 @@ func (c client) GetTokenEndpoint(ctx context.Context) (*string, error) {
 	}
 
 	return w.TokenEndpoint, nil
+}
+
+// GetJWKSURI returns the OIDC jwks uri for a specific tenant.
+func (c client) GetJWKSURI(ctx context.Context) (*string, error) {
+	w, err := c.getWellKnown(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return w.JWKSURI, nil
 }
 
 func (c client) getWellKnown(ctx context.Context) (wellKnown, error) {

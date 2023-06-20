@@ -22,6 +22,7 @@ func Test_CreateApplication(t *testing.T) {
 		givenApiMock       func() *mocks.ClientWithResponsesInterface
 		oidcClientMock     *oidcmocks.Client
 		clientTokenUrlMock *string
+		clientJWKSURIMock  *string
 		assertCalls        func(*testing.T, *mocks.ClientWithResponsesInterface)
 		wantApp            Application
 		wantError          error
@@ -38,8 +39,18 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockGetTokenUrl(t, pointer.String("https://test.com/token")),
-			wantApp:        NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com/token"),
+			oidcClientMock: mockClient(
+				t,
+				pointer.String("https://test.com/token"),
+				pointer.String("https://test.com/certs"),
+			),
+			wantApp: NewApplication(
+				appId.String(),
+				"clientIdMock",
+				"clientSecretMock",
+				"https://test.com/token",
+				"https://test.com/certs",
+			),
 		},
 		{
 			name: "should create new application when fetching existing applications returns status 404",
@@ -54,8 +65,18 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockGetTokenUrl(t, pointer.String("https://test.com/token")),
-			wantApp:        NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com/token"),
+			oidcClientMock: mockClient(
+				t,
+				pointer.String("https://test.com/token"),
+				pointer.String("https://test.com/certs"),
+			),
+			wantApp: NewApplication(
+				appId.String(),
+				"clientIdMock",
+				"clientSecretMock",
+				"https://test.com/token",
+				"https://test.com/certs",
+			),
 		},
 		{
 			name: "should recreate application when application already exists",
@@ -73,8 +94,18 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockGetTokenUrl(t, pointer.String("https://test.com/token")),
-			wantApp:        NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://test.com/token"),
+			oidcClientMock: mockClient(
+				t,
+				pointer.String("https://test.com/token"),
+				pointer.String("https://test.com/certs"),
+			),
+			wantApp: NewApplication(
+				appId.String(),
+				"clientIdMock",
+				"clientSecretMock",
+				"https://test.com/token",
+				"https://test.com/certs",
+			),
 		},
 		{
 			name: "should return an error when multiple applications exist for the given name",
@@ -184,9 +215,25 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockGetTokenUrl(t, nil),
+			oidcClientMock: mockGetTokenEndpoint(t, nil),
 			wantApp:        Application{},
 			wantError:      errors.New("failed to fetch token url"),
+		},
+		{
+			name: "should return an error when jwks URI wasn't fetched",
+			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+				clientMock := mocks.ClientWithResponsesInterface{}
+
+				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
+				mockCreateApiSecretWithResponseStatusCreated(&clientMock, appId, "clientSecretMock")
+				mockGetApplicationWithResponseStatusOK(&clientMock, appId, "clientIdMock")
+
+				return &clientMock
+			},
+			oidcClientMock: mockClient(t, pointer.String("https://test.com/token"), nil),
+			wantApp:        Application{},
+			wantError:      errors.New("failed to fetch jwks uri"),
 		},
 		{
 			name: "should create new application without fetching token URL when it is already cached in the client",
@@ -201,7 +248,14 @@ func Test_CreateApplication(t *testing.T) {
 				return &clientMock
 			},
 			clientTokenUrlMock: pointer.String("https://from-cache.com/token"),
-			wantApp:            NewApplication(appId.String(), "clientIdMock", "clientSecretMock", "https://from-cache.com/token"),
+			clientJWKSURIMock:  pointer.String("https://from-cache.com/certs"),
+			wantApp: NewApplication(
+				appId.String(),
+				"clientIdMock",
+				"clientSecretMock",
+				"https://from-cache.com/token",
+				"https://from-cache.com/certs",
+			),
 		},
 	}
 	for _, tt := range tests {
@@ -214,6 +268,7 @@ func Test_CreateApplication(t *testing.T) {
 				api:        apiMock,
 				oidcClient: oidcMock,
 				tokenUrl:   tt.clientTokenUrlMock,
+				jwksURI:    tt.clientJWKSURIMock,
 			}
 
 			// when
@@ -238,7 +293,6 @@ func Test_CreateApplication(t *testing.T) {
 			if oidcMock != nil {
 				oidcMock.AssertExpectations(t)
 			}
-
 		})
 	}
 }
@@ -471,10 +525,15 @@ func mockDeleteApplicationWithResponseStatusNotFound(clientMock *mocks.ClientWit
 		}, nil)
 }
 
-func mockGetTokenUrl(t *testing.T, tokenUrl *string) *oidcmocks.Client {
+func mockClient(t *testing.T, tokenUrl, jwksURI *string) *oidcmocks.Client {
 	clientMock := oidcmocks.NewClient(t)
-	clientMock.On("GetTokenEndpoint", mock.Anything).
-		Return(tokenUrl, nil)
+	clientMock.On("GetTokenEndpoint", mock.Anything).Return(tokenUrl, nil)
+	clientMock.On("GetJWKSURI", mock.Anything).Return(jwksURI, nil)
+	return clientMock
+}
 
+func mockGetTokenEndpoint(t *testing.T, tokenUrl *string) *oidcmocks.Client {
+	clientMock := oidcmocks.NewClient(t)
+	clientMock.On("GetTokenEndpoint", mock.Anything).Return(tokenUrl, nil)
 	return clientMock
 }

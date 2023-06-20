@@ -39,7 +39,13 @@ type iasClientStub struct {
 }
 
 func (i iasClientStub) CreateApplication(_ context.Context, name string) (ias.Application, error) {
-	return ias.NewApplication(fmt.Sprintf("id-for-%s", name), fmt.Sprintf("client-id-for-%s", name), "test-client-secret", "https://test-token-url.com/token"), nil
+	return ias.NewApplication(
+		fmt.Sprintf("id-for-%s", name),
+		fmt.Sprintf("client-id-for-%s", name),
+		"test-client-secret",
+		"https://test-token-url.com/token",
+		"https://test-token-url.com/certs",
+	), nil
 }
 
 func (i iasClientStub) DeleteApplication(_ context.Context, _ string) error {
