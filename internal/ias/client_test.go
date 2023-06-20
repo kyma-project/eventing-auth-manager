@@ -215,13 +215,9 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockClient(
-				t,
-				nil,
-				pointer.String("https://test.com/certs"),
-			),
-			wantApp:   Application{},
-			wantError: errors.New("failed to fetch token url"),
+			oidcClientMock: mockGetTokenEndpoint(t, nil),
+			wantApp:        Application{},
+			wantError:      errors.New("failed to fetch token url"),
 		},
 		{
 			name: "should return an error when jwks URI wasn't fetched",
@@ -235,13 +231,9 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockClient(
-				t,
-				pointer.String("https://test.com/token"),
-				nil,
-			),
-			wantApp:   Application{},
-			wantError: errors.New("failed to fetch jwks uri"),
+			oidcClientMock: mockClient(t, pointer.String("https://test.com/token"), nil),
+			wantApp:        Application{},
+			wantError:      errors.New("failed to fetch jwks uri"),
 		},
 		{
 			name: "should create new application without fetching token URL when it is already cached in the client",
@@ -536,8 +528,12 @@ func mockDeleteApplicationWithResponseStatusNotFound(clientMock *mocks.ClientWit
 func mockClient(t *testing.T, tokenUrl, jwksURI *string) *oidcmocks.Client {
 	clientMock := oidcmocks.NewClient(t)
 	clientMock.On("GetTokenEndpoint", mock.Anything).Return(tokenUrl, nil)
-	if tokenUrl != nil {
-		clientMock.On("GetJWKSURI", mock.Anything).Return(jwksURI, nil)
-	}
+	clientMock.On("GetJWKSURI", mock.Anything).Return(jwksURI, nil)
+	return clientMock
+}
+
+func mockGetTokenEndpoint(t *testing.T, tokenUrl *string) *oidcmocks.Client {
+	clientMock := oidcmocks.NewClient(t)
+	clientMock.On("GetTokenEndpoint", mock.Anything).Return(tokenUrl, nil)
 	return clientMock
 }
