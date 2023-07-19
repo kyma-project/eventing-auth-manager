@@ -19,13 +19,17 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"os"
+	"reflect"
+	"time"
+
 	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"os"
-	"reflect"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -201,18 +205,33 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient i
 	// The object is being deleted
 	if controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
 		// delete k8s secret on SKR
-		if err := skrClient.DeleteSecret(ctx); err != nil {
-			return fmt.Errorf("failed to delete secret: %v", err)
+		retryErr := retry.OnError(wait.Backoff{
+			Steps:    10,
+			Duration: 10 * time.Millisecond,
+			Factor:   2.0,
+			Jitter:   0.1,
+		}, func(err error) bool { return true }, func() error {
+			err := skrClient.DeleteSecret(ctx)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+
+		if retryErr != nil {
+			ctrl.Log.Error(retryErr, "failed to delete k8s secret on SKR", "eventingAuth", cr.Name, "namespace", cr.Namespace)
 		}
-		ctrl.Log.Info("Deleted IAS application secret on SKR", "eventingAuth", cr.Name, "namespace", cr.Namespace)
 
 		// delete IAS application clean-up
 		if err := iasClient.DeleteApplication(ctx, cr.Name); err != nil {
 			return fmt.Errorf("failed to delete IAS Application: %v", err)
 		}
+
+		ctrl.Log.Info("Deleted skr k8s secret and its IAS application",
+			"eventingAuth", cr.Name, "namespace", cr.Namespace)
+
 		// delete the app from the cache
 		delete(r.existingIasApplications, cr.Name)
-		ctrl.Log.Info("Deleted IAS Application", "name", cr.Name)
 
 		// remove our finalizer from the list and update it.
 		controllerutil.RemoveFinalizer(cr, eventingAuthFinalizerName)
