@@ -19,17 +19,14 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
 	"reflect"
-	"time"
 
 	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -75,12 +72,6 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	skrClient, err := skr.NewClient(r.Client, cr.Name)
-	if err != nil {
-		logger.Error(err, "Failed to retrieve client of target cluster")
-		return ctrl.Result{}, err
-	}
-
 	// sync IAS client credentials
 	r.iasClient, err = r.getIasClient()
 	if err != nil {
@@ -93,11 +84,17 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	} else {
 		logger.Info("Handling deletion")
-		if err = r.handleDeletion(ctx, r.iasClient, skrClient, &cr); err != nil {
+		if err = r.handleDeletion(ctx, r.iasClient, &cr); err != nil {
 			return ctrl.Result{}, err
 		}
 		// Stop reconciliation as the item is being deleted
 		return ctrl.Result{}, nil
+	}
+
+	skrClient, err := skr.NewClient(r.Client, cr.Name)
+	if err != nil {
+		logger.Error(err, "Failed to retrieve client of target cluster")
+		return ctrl.Result{}, err
 	}
 
 	appSecretExists, err := skrClient.HasApplicationSecret(ctx)
@@ -201,34 +198,19 @@ func (r *eventingAuthReconciler) addFinalizer(ctx context.Context, cr *operatorv
 }
 
 // Deletes the secret and IAS app. Finally, removes the finalizer.
-func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient ias.Client, skrClient skr.Client, cr *operatorv1alpha1.EventingAuth) error {
+func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient ias.Client, cr *operatorv1alpha1.EventingAuth) error {
 	// The object is being deleted
 	if controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
-		// delete k8s secret on SKR
-		retryErr := retry.OnError(wait.Backoff{
-			Steps:    10,
-			Duration: 10 * time.Millisecond,
-			Factor:   2.0,
-			Jitter:   0.1,
-		}, func(err error) bool { return true }, func() error {
-			err := skrClient.DeleteSecret(ctx)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-
-		if retryErr != nil {
-			ctrl.Log.Error(retryErr, "failed to delete k8s secret on SKR", "eventingAuth", cr.Name, "namespace", cr.Namespace)
-		}
-
 		// delete IAS application clean-up
 		if err := iasClient.DeleteApplication(ctx, cr.Name); err != nil {
 			return fmt.Errorf("failed to delete IAS Application: %v", err)
 		}
-
-		ctrl.Log.Info("Deleted skr k8s secret and its IAS application",
+		ctrl.Log.Info("Deleted IAS application",
 			"eventingAuth", cr.Name, "namespace", cr.Namespace)
+
+		if err := r.deleteK8sSecretOnSkr(ctx, cr); err != nil {
+			return err
+		}
 
 		// delete the app from the cache
 		delete(r.existingIasApplications, cr.Name)
@@ -239,6 +221,21 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient i
 			return fmt.Errorf("failed to remove finalizer: %v", err)
 		}
 	}
+	return nil
+}
+
+func (r *eventingAuthReconciler) deleteK8sSecretOnSkr(ctx context.Context, eventingAuth *operatorv1alpha1.EventingAuth) error {
+	skrClient, err := skr.NewClient(r.Client, eventingAuth.Name)
+	if err != nil {
+		// SKR kubeconfig secret absence means it might have been deleted
+		return client.IgnoreNotFound(err)
+	}
+	err = skrClient.DeleteSecret(ctx)
+	if err != nil {
+		return err
+	}
+	ctrl.Log.Info("Deleted SKR k8s secret",
+		"eventingAuth", eventingAuth.Name, "namespace", eventingAuth.Namespace)
 	return nil
 }
 

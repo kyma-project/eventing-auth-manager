@@ -3,8 +3,6 @@ package controllers_test
 import (
 	"context"
 	"fmt"
-	"log"
-
 	"github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
@@ -15,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"log"
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -105,7 +104,7 @@ func deleteKymaResource(kyma *kymav1beta1.Kyma) {
 			g.Expect(errors.IsNotFound(err)).To(BeTrue())
 		} else {
 			// clean up EventingAuth for not real cluster
-			deleteEventingAuth(eventingAuth)
+			deleteEventingAuthAndVerify(eventingAuth)
 		}
 	}, defaultTimeout).Should(Succeed())
 }

@@ -3,6 +3,8 @@ package controllers_test
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
@@ -13,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"log"
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -21,11 +22,6 @@ var appSecretObjectKey = ctrlClient.ObjectKey{Name: skr.ApplicationSecretName, N
 
 // Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially
 var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() {
-	var (
-		eventingAuth *v1alpha1.EventingAuth
-		crName       string
-	)
-
 	BeforeAll(func() {
 		// We allow the happy path tests to use the real IAS client if the test env vars are set
 		if !existIasCreds() {
@@ -39,17 +35,21 @@ var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() 
 		revertIasNewClientStub()
 	})
 
-	BeforeEach(func() {
-		crName = generateCrName()
-		createKubeconfigSecret(crName)
-	})
-
-	AfterEach(func() {
-		deleteEventingAuth(eventingAuth)
-		deleteKubeconfigSecret(crName)
-	})
-
 	Context("Creating and Deleting EventingAuth CR", func() {
+		var (
+			eventingAuth *v1alpha1.EventingAuth
+			crName       string
+		)
+		BeforeEach(func() {
+			crName = generateCrName()
+			createKubeconfigSecret(crName)
+		})
+
+		AfterEach(func() {
+			deleteEventingAuthAndVerify(eventingAuth)
+			deleteKubeconfigSecret(crName)
+		})
+
 		It("should delete secret with IAS applications credentials", func() {
 			eventingAuth = createEventingAuth(crName)
 			verifyEventingAuthStatusReady(eventingAuth)
@@ -61,8 +61,17 @@ var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() 
 			verifySecretExistsOnTargetCluster()
 
 			// Testing deletion
-			deleteEventingAuth(eventingAuth)
+			deleteEventingAuthAndVerify(eventingAuth)
 			verifySecretDoesNotExistOnTargetCluster()
+		})
+		It("should deletion succeed when kubeconfig secret is missing", func() {
+			// given
+			eventingAuth = createEventingAuth(crName)
+			verifyEventingAuthStatusReady(eventingAuth)
+			// when
+			deleteKubeconfigSecret(crName)
+			// then, eventingAuth deletion should succeed
+			deleteEventingAuthAndVerify(eventingAuth)
 		})
 	})
 })
@@ -80,7 +89,7 @@ var _ = Describe("EventingAuth Controller unhappy tests", Serial, Ordered, func(
 
 	AfterEach(func() {
 		// as these tests uses mock IAS we can force delete EventingAuth CR
-		deleteEventingAuth(eventingAuth)
+		deleteEventingAuthAndVerify(eventingAuth)
 		deleteApplicationSecretOnTargetCluster()
 		deleteKubeconfigSecret(crName)
 		// set SKR client to original
@@ -237,7 +246,7 @@ func conditionMatcher(t string, s metav1.ConditionStatus, r, m string) gtypes.Go
 		"Message": Equal(m),
 	})
 }
-func deleteEventingAuth(e *v1alpha1.EventingAuth) {
+func deleteEventingAuthAndVerify(e *v1alpha1.EventingAuth) {
 	By(fmt.Sprintf("Deleting EventingAuth %s", e.Name))
 	if err := k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(e), &v1alpha1.EventingAuth{}); err != nil {
 		Expect(errors.IsNotFound(err)).Should(BeTrue())
@@ -288,6 +297,11 @@ func deleteKubeconfigSecret(crName string) *corev1.Secret {
 			Namespace: skr.KcpNamespace,
 		},
 	}
-	Expect(k8sClient.Delete(context.TODO(), &kubeconfigSecret)).Should(Succeed())
+	Eventually(func(g Gomega) {
+		err := k8sClient.Delete(context.TODO(), &kubeconfigSecret)
+		if err != nil {
+			g.Expect(errors.IsNotFound(err)).Should(BeTrue())
+		}
+	}, defaultTimeout).Should(Succeed())
 	return &kubeconfigSecret
 }
