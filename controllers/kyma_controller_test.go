@@ -105,7 +105,7 @@ func deleteKymaResource(kyma *kymav1beta1.Kyma) {
 			g.Expect(errors.IsNotFound(err)).To(BeTrue())
 		} else {
 			// clean up EventingAuth for not real cluster
-			deleteEventingAuth(eventingAuth)
+			deleteEventingAuthAndVerify(eventingAuth)
 		}
 	}, defaultTimeout).Should(Succeed())
 }
