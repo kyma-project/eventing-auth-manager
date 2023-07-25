@@ -198,7 +198,9 @@ func initTargetClusterConfig() (client.Client, error) {
 		targetClusterTestEnv = &envtest.Environment{}
 
 		clientConfig, err = targetClusterTestEnv.Start()
+
 		Expect(err).NotTo(HaveOccurred())
+
 		Expect(clientConfig).NotTo(BeNil())
 
 		// We create a new user since this is the easiest way to get the kubeconfig in the right format to store it in the secret.
