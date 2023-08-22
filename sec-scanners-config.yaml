@@ -1,0 +1,9 @@
+module-name: nats-manager
+protecode:
+  - europe-docker.pkg.dev/kyma-project/dev/eventing-auth-manager:v20230725-6ae5684e
+whitesource:
+  language: golang-mod
+  subprojects: false
+  exclude:
+    - "**/test/**"
+    - "**/*_test.go"
