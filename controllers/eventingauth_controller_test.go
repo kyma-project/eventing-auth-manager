@@ -208,6 +208,7 @@ func verifyEventingAuthStatusNotReadyAppCreationFailed(cr *v1alpha1.EventingAuth
 		e := v1alpha1.EventingAuth{}
 		g.Expect(k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(cr), &e)).Should(Succeed())
 		g.Expect(e.Status.State).NotTo(BeNil())
+		g.Expect(e.Status.State).NotTo(BeEmpty())
 		g.Expect(e.Status.State).To(Equal(v1alpha1.StateNotReady))
 
 		g.Expect(e.Status.Conditions).To(ContainElements(

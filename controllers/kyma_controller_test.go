@@ -64,6 +64,7 @@ func verifyEventingAuth(namespace, name string) {
 		g.Expect(k8sClient.Get(context.TODO(), nsName, eventingAuth)).Should(Succeed())
 		g.Expect(eventingAuth.Name).To(Equal(name))
 		g.Expect(eventingAuth.Namespace).To(Equal(namespace))
+		g.Expect(eventingAuth.Status.State).ShouldNot(BeEmpty())
 		g.Expect(eventingAuth.Status.State).To(Equal(v1alpha1.StateReady))
 		g.Expect(eventingAuth.Status.Application).ShouldNot(BeNil())
 		g.Expect(eventingAuth.Status.Application.Name).To(Equal(name))
