@@ -72,6 +72,11 @@ var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() 
 			deleteKubeconfigSecret(crName)
 			// then, eventingAuth deletion should succeed
 			deleteEventingAuthAndVerify(eventingAuth)
+
+			// clean-up by recreating kubeconfig secret
+			createKubeconfigSecret(crName)
+			secret := verifySecretExistsOnTargetCluster()
+			deleteSecretOnTargetCluster(secret)
 		})
 	})
 })
