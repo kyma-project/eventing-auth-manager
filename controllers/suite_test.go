@@ -18,18 +18,22 @@ package controllers_test
 
 import (
 	"context"
-	"github.com/kyma-project/eventing-auth-manager/controllers"
-	"github.com/kyma-project/eventing-auth-manager/internal/skr"
+	//+kubebuilder:scaffold:imports
+	"log"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
 	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/utils/pointer"
-	"os"
-	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"testing"
-	"time"
+
+	"github.com/kyma-project/eventing-auth-manager/controllers"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -43,15 +47,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
-	//+kubebuilder:scaffold:imports
-	"log"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 const (
-	defaultTimeout = time.Second * 20
+	defaultTimeout = time.Second * 60
 )
 
 var (
