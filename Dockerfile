@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM eu.gcr.io/kyma-project/external/golang:1.20.2-alpine3.17 as builder
+FROM eu.gcr.io/kyma-project/external/golang:1.21.0-alpine3.18 as builder
 ARG TARGETOS
 ARG TARGETARCH
 
