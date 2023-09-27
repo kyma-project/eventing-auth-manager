@@ -29,7 +29,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/kyma-project/eventing-auth-manager/controllers"
@@ -224,7 +224,7 @@ func initTargetClusterConfig() (client.Client, error) {
 
 		targetClusterTestEnv = &envtest.Environment{
 			Config:             config,
-			UseExistingCluster: pointer.Bool(true),
+			UseExistingCluster: ptr.To(true),
 		}
 
 		clientConfig, err = targetClusterTestEnv.Start()

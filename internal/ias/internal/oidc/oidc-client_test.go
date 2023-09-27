@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc"
-	"github.com/stretchr/testify/require"
 	"io"
-	"k8s.io/client-go/rest/fake"
-	"k8s.io/utils/pointer"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/rest/fake"
+	"k8s.io/utils/ptr"
+
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc"
 )
 
 const oidcConfigMock = `{"token_endpoint":"https://domain-url.com/token"}`
@@ -30,7 +32,7 @@ func Test_oidcClient_getTokenUrl(t *testing.T) {
 			fields: fields{
 				httpClient: mockHttpClientResponseOk([]byte(oidcConfigMock)),
 			},
-			want: pointer.String("https://domain-url.com/token"),
+			want: ptr.To("https://domain-url.com/token"),
 		},
 		{
 			name: "should return token URL by using base url from client and well-known OIDC config path for request",
@@ -46,7 +48,7 @@ func Test_oidcClient_getTokenUrl(t *testing.T) {
 					}, nil
 				}),
 			},
-			want: pointer.String("https://domain-url.com/token"),
+			want: ptr.To("https://domain-url.com/token"),
 		},
 		{
 			name: "should return nil when well known contains no token endpoint",
