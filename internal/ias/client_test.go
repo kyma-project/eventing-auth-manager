@@ -10,7 +10,7 @@ import (
 	oidcmocks "github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"net/http"
 	"testing"
 )
@@ -41,8 +41,8 @@ func Test_CreateApplication(t *testing.T) {
 			},
 			oidcClientMock: mockClient(
 				t,
-				pointer.String("https://test.com/token"),
-				pointer.String("https://test.com/certs"),
+				ptr.To("https://test.com/token"),
+				ptr.To("https://test.com/certs"),
 			),
 			wantApp: NewApplication(
 				appId.String(),
@@ -67,8 +67,8 @@ func Test_CreateApplication(t *testing.T) {
 			},
 			oidcClientMock: mockClient(
 				t,
-				pointer.String("https://test.com/token"),
-				pointer.String("https://test.com/certs"),
+				ptr.To("https://test.com/token"),
+				ptr.To("https://test.com/certs"),
 			),
 			wantApp: NewApplication(
 				appId.String(),
@@ -96,8 +96,8 @@ func Test_CreateApplication(t *testing.T) {
 			},
 			oidcClientMock: mockClient(
 				t,
-				pointer.String("https://test.com/token"),
-				pointer.String("https://test.com/certs"),
+				ptr.To("https://test.com/token"),
+				ptr.To("https://test.com/certs"),
 			),
 			wantApp: NewApplication(
 				appId.String(),
@@ -231,7 +231,7 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			oidcClientMock: mockClient(t, pointer.String("https://test.com/token"), nil),
+			oidcClientMock: mockClient(t, ptr.To("https://test.com/token"), nil),
 			wantApp:        Application{},
 			wantError:      errors.New("failed to fetch jwks uri"),
 		},
@@ -247,8 +247,8 @@ func Test_CreateApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			clientTokenUrlMock: pointer.String("https://from-cache.com/token"),
-			clientJWKSURIMock:  pointer.String("https://from-cache.com/certs"),
+			clientTokenUrlMock: ptr.To("https://from-cache.com/token"),
+			clientJWKSURIMock:  ptr.To("https://from-cache.com/certs"),
 			wantApp: NewApplication(
 				appId.String(),
 				"clientIdMock",
