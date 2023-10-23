@@ -2,10 +2,12 @@ package mocks
 
 import (
 	"context"
+	"reflect"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"reflect"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctlrClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -59,4 +61,12 @@ func (m MockClient) Scheme() *runtime.Scheme {
 
 func (m MockClient) RESTMapper() meta.RESTMapper {
 	return nil
+}
+
+func (m MockClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
+	return schema.GroupVersionKind{}, nil
+}
+
+func (m MockClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
+	return false, nil
 }

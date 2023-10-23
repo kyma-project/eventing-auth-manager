@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api/mocks"
@@ -11,8 +14,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
-	"net/http"
-	"testing"
 )
 
 func Test_CreateApplication(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/mocks"
 	"github.com/stretchr/testify/require"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctlrClient "sigs.k8s.io/controller-runtime/pkg/client"
 )

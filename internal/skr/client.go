@@ -3,6 +3,7 @@ package skr
 import (
 	"context"
 	"fmt"
+
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	v1 "k8s.io/api/core/v1"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"

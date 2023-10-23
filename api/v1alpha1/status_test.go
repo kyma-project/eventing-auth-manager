@@ -2,9 +2,10 @@ package v1alpha1
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 const mockErrorMessage = "mock error message"
