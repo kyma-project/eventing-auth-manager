@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -13,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"time"
 )
 
 // KymaReconciler reconciles a Kyma resource

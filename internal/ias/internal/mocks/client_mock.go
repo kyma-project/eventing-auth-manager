@@ -2,10 +2,11 @@ package mocks
 
 import (
 	"context"
+	"reflect"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"reflect"
 	ctlrClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
