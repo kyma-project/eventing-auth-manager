@@ -89,10 +89,13 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
-		Metrics: server.Options{BindAddress: metricsAddr},
+		Metrics: server.Options{
+			BindAddress: metricsAddr,
+		},
 		WebhookServer: webhook.NewServer(webhook.Options{
 			Port: webhookPort,
-		}),
+		},
+		),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
