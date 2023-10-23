@@ -9,6 +9,7 @@ import (
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	kymav1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -81,7 +82,7 @@ func createKymaResource(name string) *kymav1beta1.Kyma {
 			Namespace: skr.KcpNamespace,
 		},
 		Spec: kymav1beta1.KymaSpec{
-			Modules: []kymav1beta1.Module{kymav1beta1.Module{Name: "nats"}},
+			Modules: []kymav1beta2.Module{{Name: "nats"}},
 			Channel: "alpha",
 		},
 	}
