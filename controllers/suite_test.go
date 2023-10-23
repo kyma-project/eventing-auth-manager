@@ -41,10 +41,12 @@ import (
 
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 )
@@ -134,9 +136,11 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 
 	testSyncPeriod := time.Second * 1
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme.Scheme,
-		MetricsBindAddress: "0",
-		SyncPeriod:         &testSyncPeriod,
+		Scheme: scheme.Scheme,
+		Metrics: server.Options{
+			BindAddress: "0",
+		},
+		Cache: cache.Options{SyncPeriod: &testSyncPeriod},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
