@@ -3,7 +3,7 @@ module github.com/kyma-project/eventing-auth-manager
 go 1.21
 
 require (
-	github.com/deepmap/oapi-codegen v1.15.0
+	github.com/deepmap/oapi-codegen v1.16.1
 	github.com/google/uuid v1.3.1
 	github.com/kyma-project/lifecycle-manager v0.0.0-20231020134859-d3b6e268f498
 	github.com/oapi-codegen/runtime v1.0.0
