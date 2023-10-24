@@ -1,6 +1,6 @@
 module-name: eventing-auth-manager
 protecode:
-  - europe-docker.pkg.dev/kyma-project/prod/eventing-auth-manager:v20230927-b5ed2832
+  - europe-docker.pkg.dev/kyma-project/prod/eventing-auth-manager:v20231024-13884189
 whitesource:
   language: golang-mod
   subprojects: false
