@@ -8,7 +8,7 @@ require (
 	github.com/kyma-project/lifecycle-manager v0.0.0-20231020134859-d3b6e268f498
 	github.com/oapi-codegen/runtime v1.0.0
 	github.com/onsi/ginkgo/v2 v2.13.0
-	github.com/onsi/gomega v1.28.1
+	github.com/onsi/gomega v1.29.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 	k8s.io/api v0.28.3
