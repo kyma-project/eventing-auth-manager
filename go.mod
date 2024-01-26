@@ -4,7 +4,7 @@ go 1.21.1
 
 require (
 	github.com/deepmap/oapi-codegen v1.16.2
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20240125111143-d3e789fc027c
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/onsi/ginkgo/v2 v2.15.0
