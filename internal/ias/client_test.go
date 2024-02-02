@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api/mocks"
-	oidcmocks "github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc/mocks"
+	eamoidcmocks "github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
@@ -21,7 +21,7 @@ func Test_CreateApplication(t *testing.T) {
 	tests := []struct {
 		name               string
 		givenApiMock       func() *mocks.ClientWithResponsesInterface
-		oidcClientMock     *oidcmocks.Client
+		oidcClientMock     *eamoidcmocks.Client
 		clientTokenUrlMock *string
 		clientJWKSURIMock  *string
 		assertCalls        func(*testing.T, *mocks.ClientWithResponsesInterface)
@@ -527,17 +527,17 @@ func mockDeleteApplicationWithResponseStatusNotFound(clientMock *mocks.ClientWit
 		}, nil)
 }
 
-func mockClient(t *testing.T, tokenUrl, jwksURI *string) *oidcmocks.Client {
+func mockClient(t *testing.T, tokenUrl, jwksURI *string) *eamoidcmocks.Client {
 	t.Helper()
-	clientMock := oidcmocks.NewClient(t)
+	clientMock := eamoidcmocks.NewClient(t)
 	clientMock.On("GetTokenEndpoint", mock.Anything).Return(tokenUrl, nil)
 	clientMock.On("GetJWKSURI", mock.Anything).Return(jwksURI, nil)
 	return clientMock
 }
 
-func mockGetTokenEndpoint(t *testing.T, tokenUrl *string) *oidcmocks.Client {
+func mockGetTokenEndpoint(t *testing.T, tokenUrl *string) *eamoidcmocks.Client {
 	t.Helper()
-	clientMock := oidcmocks.NewClient(t)
+	clientMock := eamoidcmocks.NewClient(t)
 	clientMock.On("GetTokenEndpoint", mock.Anything).Return(tokenUrl, nil)
 	return clientMock
 }

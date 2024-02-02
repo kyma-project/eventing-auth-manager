@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const mockErrorMessage = "mock error message"
@@ -40,10 +40,10 @@ func Test_DetermineEventingAuthState(t *testing.T) {
 		{
 			name: "Should not be ready if only application condition is available",
 			givenStatus: EventingAuthStatus{
-				Conditions: []metav1.Condition{
+				Conditions: []kmetav1.Condition{
 					{
 						Type:   string(ConditionApplicationReady),
-						Status: metav1.ConditionTrue,
+						Status: kmetav1.ConditionTrue,
 					},
 				},
 			},
@@ -52,10 +52,10 @@ func Test_DetermineEventingAuthState(t *testing.T) {
 		{
 			name: "Should not be ready if only secret condition is available",
 			givenStatus: EventingAuthStatus{
-				Conditions: []metav1.Condition{
+				Conditions: []kmetav1.Condition{
 					{
 						Type:   string(ConditionSecretReady),
-						Status: metav1.ConditionTrue,
+						Status: kmetav1.ConditionTrue,
 					},
 				},
 			},
@@ -81,26 +81,26 @@ func Test_IsEventingAuthStatusEqual(t *testing.T) {
 	}{
 		{
 			name:           "Should status be equal",
-			givenOldStatus: createEventingAuthStatus(metav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateReady),
-			givenNewStatus: createEventingAuthStatus(metav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateReady),
+			givenOldStatus: createEventingAuthStatus(kmetav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateReady),
+			givenNewStatus: createEventingAuthStatus(kmetav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateReady),
 			result:         true,
 		},
 		{
 			name:           "Should not be equal as conditions are different",
-			givenOldStatus: createEventingAuthStatus(metav1.ConditionFalse, "mock-app1", "mock-secret-ns1", StateReady),
-			givenNewStatus: createEventingAuthStatus(metav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateReady),
+			givenOldStatus: createEventingAuthStatus(kmetav1.ConditionFalse, "mock-app1", "mock-secret-ns1", StateReady),
+			givenNewStatus: createEventingAuthStatus(kmetav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateReady),
 			result:         false,
 		},
 		{
 			name:           "Should not be equal as ias app and secret names are different",
-			givenOldStatus: createEventingAuthStatus(metav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateReady),
-			givenNewStatus: createEventingAuthStatus(metav1.ConditionTrue, "mock-app2", "mock-secret-ns2", StateReady),
+			givenOldStatus: createEventingAuthStatus(kmetav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateReady),
+			givenNewStatus: createEventingAuthStatus(kmetav1.ConditionTrue, "mock-app2", "mock-secret-ns2", StateReady),
 			result:         false,
 		},
 		{
 			name:           "Should not be equal as state is different",
-			givenOldStatus: createEventingAuthStatus(metav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateReady),
-			givenNewStatus: createEventingAuthStatus(metav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateNotReady),
+			givenOldStatus: createEventingAuthStatus(kmetav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateReady),
+			givenNewStatus: createEventingAuthStatus(kmetav1.ConditionTrue, "mock-app1", "mock-secret-ns1", StateNotReady),
 			result:         false,
 		},
 	}
@@ -119,15 +119,15 @@ func Test_MakeApplicationReadyCondition(t *testing.T) {
 		name              string
 		givenEventingAuth *EventingAuth
 		givenErr          error
-		wantConditions    []metav1.Condition
+		wantConditions    []kmetav1.Condition
 	}{
 		{
 			name:              "Should application ready condition be added",
-			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []metav1.Condition{}}),
-			wantConditions: []metav1.Condition{
+			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []kmetav1.Condition{}}),
+			wantConditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonApplicationCreated,
 					Message: ConditionMessageApplicationCreated,
 				},
@@ -135,18 +135,18 @@ func Test_MakeApplicationReadyCondition(t *testing.T) {
 		},
 		{
 			name: "Should update false condition to true if no error",
-			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []metav1.Condition{
+			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
-					Status:  metav1.ConditionFalse,
+					Status:  kmetav1.ConditionFalse,
 					Reason:  ConditionReasonApplicationCreationFailed,
 					Message: mockErrorMessage,
 				},
 			}}),
-			wantConditions: []metav1.Condition{
+			wantConditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonApplicationCreated,
 					Message: ConditionMessageApplicationCreated,
 				},
@@ -154,19 +154,19 @@ func Test_MakeApplicationReadyCondition(t *testing.T) {
 		},
 		{
 			name: "Should update condition to false if error occurs",
-			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []metav1.Condition{
+			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonApplicationCreated,
 					Message: ConditionMessageApplicationCreated,
 				},
 			}}),
 			givenErr: fmt.Errorf(mockErrorMessage),
-			wantConditions: []metav1.Condition{
+			wantConditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
-					Status:  metav1.ConditionFalse,
+					Status:  kmetav1.ConditionFalse,
 					Reason:  ConditionReasonApplicationCreationFailed,
 					Message: mockErrorMessage,
 				},
@@ -188,28 +188,28 @@ func Test_MakeSecretReadyCondition(t *testing.T) {
 		name              string
 		givenEventingAuth *EventingAuth
 		givenErr          error
-		wantConditions    []metav1.Condition
+		wantConditions    []kmetav1.Condition
 	}{
 		{
 			name: "Should application ready condition be added",
-			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []metav1.Condition{
+			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonApplicationCreated,
 					Message: ConditionMessageApplicationCreated,
 				},
 			}}),
-			wantConditions: []metav1.Condition{
+			wantConditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonApplicationCreated,
 					Message: ConditionMessageApplicationCreated,
 				},
 				{
 					Type:    string(ConditionSecretReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonSecretCreated,
 					Message: ConditionMessageSecretCreated,
 				},
@@ -217,30 +217,30 @@ func Test_MakeSecretReadyCondition(t *testing.T) {
 		},
 		{
 			name: "Should update not ready secret condition to ready condition",
-			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []metav1.Condition{
+			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonApplicationCreated,
 					Message: ConditionMessageApplicationCreated,
 				},
 				{
 					Type:    string(ConditionSecretReady),
-					Status:  metav1.ConditionFalse,
+					Status:  kmetav1.ConditionFalse,
 					Reason:  ConditionReasonSecretCreationFailed,
 					Message: mockErrorMessage,
 				},
 			}}),
-			wantConditions: []metav1.Condition{
+			wantConditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonApplicationCreated,
 					Message: ConditionMessageApplicationCreated,
 				},
 				{
 					Type:    string(ConditionSecretReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonSecretCreated,
 					Message: ConditionMessageSecretCreated,
 				},
@@ -248,31 +248,31 @@ func Test_MakeSecretReadyCondition(t *testing.T) {
 		},
 		{
 			name: "Should update ready secret condition to not ready when error occurs",
-			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []metav1.Condition{
+			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{Conditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonApplicationCreated,
 					Message: ConditionMessageApplicationCreated,
 				},
 				{
 					Type:    string(ConditionSecretReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonSecretCreated,
 					Message: ConditionMessageSecretCreated,
 				},
 			}}),
 			givenErr: fmt.Errorf(mockErrorMessage),
-			wantConditions: []metav1.Condition{
+			wantConditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
-					Status:  metav1.ConditionTrue,
+					Status:  kmetav1.ConditionTrue,
 					Reason:  ConditionReasonApplicationCreated,
 					Message: ConditionMessageApplicationCreated,
 				},
 				{
 					Type:    string(ConditionSecretReady),
-					Status:  metav1.ConditionFalse,
+					Status:  kmetav1.ConditionFalse,
 					Reason:  ConditionReasonSecretCreationFailed,
 					Message: mockErrorMessage,
 				},
@@ -302,16 +302,16 @@ func Test_UpdateConditionAndState(t *testing.T) {
 		{
 			name: "Should update state to NotReady as error occurs",
 			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{
-				Conditions: []metav1.Condition{
+				Conditions: []kmetav1.Condition{
 					{
 						Type:    string(ConditionApplicationReady),
-						Status:  metav1.ConditionTrue,
+						Status:  kmetav1.ConditionTrue,
 						Reason:  ConditionReasonApplicationCreated,
 						Message: ConditionMessageApplicationCreated,
 					},
 					{
 						Type:    string(ConditionSecretReady),
-						Status:  metav1.ConditionTrue,
+						Status:  kmetav1.ConditionTrue,
 						Reason:  ConditionReasonSecretCreated,
 						Message: ConditionMessageSecretCreated,
 					},
@@ -321,16 +321,16 @@ func Test_UpdateConditionAndState(t *testing.T) {
 			conditionType: ConditionSecretReady,
 			givenErr:      fmt.Errorf(mockErrorMessage),
 			wantStatus: EventingAuthStatus{
-				Conditions: []metav1.Condition{
+				Conditions: []kmetav1.Condition{
 					{
 						Type:    string(ConditionApplicationReady),
-						Status:  metav1.ConditionTrue,
+						Status:  kmetav1.ConditionTrue,
 						Reason:  ConditionReasonApplicationCreated,
 						Message: ConditionMessageApplicationCreated,
 					},
 					{
 						Type:    string(ConditionSecretReady),
-						Status:  metav1.ConditionFalse,
+						Status:  kmetav1.ConditionFalse,
 						Reason:  ConditionReasonSecretCreationFailed,
 						Message: mockErrorMessage,
 					},
@@ -341,16 +341,16 @@ func Test_UpdateConditionAndState(t *testing.T) {
 		{
 			name: "Should update state to Ready as no error occurs",
 			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{
-				Conditions: []metav1.Condition{
+				Conditions: []kmetav1.Condition{
 					{
 						Type:    string(ConditionApplicationReady),
-						Status:  metav1.ConditionTrue,
+						Status:  kmetav1.ConditionTrue,
 						Reason:  ConditionReasonApplicationCreated,
 						Message: ConditionMessageApplicationCreated,
 					},
 					{
 						Type:    string(ConditionSecretReady),
-						Status:  metav1.ConditionFalse,
+						Status:  kmetav1.ConditionFalse,
 						Reason:  ConditionReasonSecretCreationFailed,
 						Message: mockErrorMessage,
 					},
@@ -359,16 +359,16 @@ func Test_UpdateConditionAndState(t *testing.T) {
 			}),
 			conditionType: ConditionSecretReady,
 			wantStatus: EventingAuthStatus{
-				Conditions: []metav1.Condition{
+				Conditions: []kmetav1.Condition{
 					{
 						Type:    string(ConditionApplicationReady),
-						Status:  metav1.ConditionTrue,
+						Status:  kmetav1.ConditionTrue,
 						Reason:  ConditionReasonApplicationCreated,
 						Message: ConditionMessageApplicationCreated,
 					},
 					{
 						Type:    string(ConditionSecretReady),
-						Status:  metav1.ConditionTrue,
+						Status:  kmetav1.ConditionTrue,
 						Reason:  ConditionReasonSecretCreated,
 						Message: ConditionMessageSecretCreated,
 					},
@@ -379,10 +379,10 @@ func Test_UpdateConditionAndState(t *testing.T) {
 		{
 			name: "Should update state to NotReady due to missing secret condition",
 			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{
-				Conditions: []metav1.Condition{
+				Conditions: []kmetav1.Condition{
 					{
 						Type:    string(ConditionApplicationReady),
-						Status:  metav1.ConditionFalse,
+						Status:  kmetav1.ConditionFalse,
 						Reason:  ConditionReasonApplicationCreated,
 						Message: "IAS application creation failed.",
 					},
@@ -391,10 +391,10 @@ func Test_UpdateConditionAndState(t *testing.T) {
 			}),
 			conditionType: ConditionApplicationReady,
 			wantStatus: EventingAuthStatus{
-				Conditions: []metav1.Condition{
+				Conditions: []kmetav1.Condition{
 					{
 						Type:    string(ConditionApplicationReady),
-						Status:  metav1.ConditionTrue,
+						Status:  kmetav1.ConditionTrue,
 						Reason:  ConditionReasonApplicationCreated,
 						Message: ConditionMessageApplicationCreated,
 					},
@@ -405,10 +405,10 @@ func Test_UpdateConditionAndState(t *testing.T) {
 		{
 			name: "Should fail if invalid condition type is provided",
 			givenEventingAuth: createEventingAuthWith(EventingAuthStatus{
-				Conditions: []metav1.Condition{
+				Conditions: []kmetav1.Condition{
 					{
 						Type:    string(ConditionApplicationReady),
-						Status:  metav1.ConditionFalse,
+						Status:  kmetav1.ConditionFalse,
 						Reason:  ConditionReasonApplicationCreated,
 						Message: "IAS application creation failed.",
 					},
@@ -436,50 +436,50 @@ func Test_UpdateConditionAndState(t *testing.T) {
 	}
 }
 
-func createTwoTrueConditions() []metav1.Condition {
-	return []metav1.Condition{
+func createTwoTrueConditions() []kmetav1.Condition {
+	return []kmetav1.Condition{
 		{
 			Type:   string(ConditionApplicationReady),
-			Status: metav1.ConditionTrue,
+			Status: kmetav1.ConditionTrue,
 		},
 		{
 			Type:   string(ConditionSecretReady),
-			Status: metav1.ConditionTrue,
+			Status: kmetav1.ConditionTrue,
 		},
 	}
 }
-func createTwoFalseConditions() []metav1.Condition {
-	return []metav1.Condition{
+func createTwoFalseConditions() []kmetav1.Condition {
+	return []kmetav1.Condition{
 		{
 			Type:   string(ConditionApplicationReady),
-			Status: metav1.ConditionFalse,
+			Status: kmetav1.ConditionFalse,
 		},
 		{
 			Type:   string(ConditionSecretReady),
-			Status: metav1.ConditionFalse,
-		},
-	}
-}
-
-func createTwoConditionsWithOneFalse() []metav1.Condition {
-	return []metav1.Condition{
-		{
-			Type:   string(ConditionApplicationReady),
-			Status: metav1.ConditionTrue,
-		},
-		{
-			Type:   string(ConditionSecretReady),
-			Status: metav1.ConditionFalse,
+			Status: kmetav1.ConditionFalse,
 		},
 	}
 }
 
-func createEventingAuthStatus(secretReadyStatus metav1.ConditionStatus, appName, secretNSName string, state State) EventingAuthStatus {
+func createTwoConditionsWithOneFalse() []kmetav1.Condition {
+	return []kmetav1.Condition{
+		{
+			Type:   string(ConditionApplicationReady),
+			Status: kmetav1.ConditionTrue,
+		},
+		{
+			Type:   string(ConditionSecretReady),
+			Status: kmetav1.ConditionFalse,
+		},
+	}
+}
+
+func createEventingAuthStatus(secretReadyStatus kmetav1.ConditionStatus, appName, secretNSName string, state State) EventingAuthStatus {
 	return EventingAuthStatus{
-		Conditions: []metav1.Condition{
+		Conditions: []kmetav1.Condition{
 			{
 				Type:   string(ConditionApplicationReady),
-				Status: metav1.ConditionTrue,
+				Status: kmetav1.ConditionTrue,
 			},
 			{
 				Type:   string(ConditionSecretReady),
@@ -500,7 +500,7 @@ func createEventingAuthStatus(secretReadyStatus metav1.ConditionStatus, appName,
 
 func createEventingAuthWith(status EventingAuthStatus) *EventingAuth {
 	return &EventingAuth{
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Namespace: "mock-eauth-ns",
 			Name:      "mock-eauth-name",
 		},

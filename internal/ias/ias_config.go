@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
+	kcorev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	ctlrClient "sigs.k8s.io/controller-runtime/pkg/client"
+	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -30,12 +30,12 @@ type Credentials struct {
 }
 
 // ReadCredentials fetches ias credentials from secret in the cluster. Reads from env vars if secret is missing.
-var ReadCredentials = func(namespace, name string, k8sClient ctlrClient.Client) (*Credentials, error) {
+var ReadCredentials = func(namespace, name string, k8sClient kpkgclient.Client) (*Credentials, error) {
 	namespacedName := types.NamespacedName{
 		Namespace: namespace,
 		Name:      name,
 	}
-	iasSecret := &corev1.Secret{}
+	iasSecret := &kcorev1.Secret{}
 	err := k8sClient.Get(context.TODO(), namespacedName, iasSecret)
 	if err != nil {
 		return nil, err

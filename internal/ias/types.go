@@ -1,8 +1,8 @@
 package ias
 
 import (
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kcorev1 "k8s.io/api/core/v1"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Application struct {
@@ -23,9 +23,9 @@ func NewApplication(id, clientId, clientSecret, tokenUrl, certsUrl string) Appli
 	}
 }
 
-func (a Application) ToSecret(name, ns string) v1.Secret {
-	return v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+func (a Application) ToSecret(name, ns string) kcorev1.Secret {
+	return kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 		},

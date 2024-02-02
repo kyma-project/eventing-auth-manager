@@ -12,7 +12,7 @@ import (
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc"
 	"github.com/pkg/errors"
-	ctrl "sigs.k8s.io/controller-runtime"
+	kcontrollerruntime "sigs.k8s.io/controller-runtime"
 )
 
 type Client interface {
@@ -81,7 +81,7 @@ func (c *client) CreateApplication(ctx context.Context, name string) (Applicatio
 			return Application{}, err
 		}
 		if res.StatusCode() != http.StatusOK {
-			ctrl.Log.Error(err, "Failed to delete existing application", "id", *existingApp.Id, "statusCode", res.StatusCode())
+			kcontrollerruntime.Log.Error(err, "Failed to delete existing application", "id", *existingApp.Id, "statusCode", res.StatusCode())
 			return Application{}, errors.New("failed to delete existing application before creation")
 		}
 	}
@@ -90,7 +90,7 @@ func (c *client) CreateApplication(ctx context.Context, name string) (Applicatio
 	if err != nil {
 		return Application{}, err
 	}
-	ctrl.Log.Info("Created application", "name", name, "id", appId)
+	kcontrollerruntime.Log.Info("Created application", "name", name, "id", appId)
 
 	clientSecret, err := c.createSecret(ctx, appId)
 	if err != nil {
@@ -175,7 +175,7 @@ func (c *client) getApplicationByName(ctx context.Context, name string) (*api.Ap
 	}
 
 	if res.StatusCode() != http.StatusOK {
-		ctrl.Log.Error(err, "Failed to fetch existing applications filtered by name", "name", name, "statusCode", res.StatusCode())
+		kcontrollerruntime.Log.Error(err, "Failed to fetch existing applications filtered by name", "name", name, "statusCode", res.StatusCode())
 		return nil, errors.New("failed to fetch existing applications")
 	}
 
@@ -202,7 +202,7 @@ func (c *client) createNewApplication(ctx context.Context, name string) (uuid.UU
 	}
 
 	if res.StatusCode() != http.StatusCreated {
-		ctrl.Log.Error(err, "Failed to create application", "name", name, "statusCode", res.StatusCode())
+		kcontrollerruntime.Log.Error(err, "Failed to create application", "name", name, "statusCode", res.StatusCode())
 		return uuid.UUID{}, errors.New("failed to create application")
 	}
 
@@ -216,7 +216,7 @@ func (c *client) createSecret(ctx context.Context, appId uuid.UUID) (*string, er
 	}
 
 	if res.StatusCode() != http.StatusCreated {
-		ctrl.Log.Error(err, "Failed to create api secret", "id", appId, "statusCode", res.StatusCode())
+		kcontrollerruntime.Log.Error(err, "Failed to create api secret", "id", appId, "statusCode", res.StatusCode())
 		return nil, errors.New("failed to create api secret")
 	}
 
@@ -231,7 +231,7 @@ func (c *client) getClientId(ctx context.Context, appId uuid.UUID) (*string, err
 	}
 
 	if applicationResponse.StatusCode() != http.StatusOK {
-		ctrl.Log.Error(err, "Failed to retrieve client ID", "id", appId, "statusCode", applicationResponse.StatusCode())
+		kcontrollerruntime.Log.Error(err, "Failed to retrieve client ID", "id", appId, "statusCode", applicationResponse.StatusCode())
 		return nil, errors.New("failed to retrieve client ID")
 	}
 	return applicationResponse.JSON200.UrnSapIdentityApplicationSchemasExtensionSci10Authentication.ClientId, nil
@@ -249,7 +249,7 @@ func (c *client) deleteApplication(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if res.StatusCode() != http.StatusOK {
-		ctrl.Log.Error(err, "Failed to delete application", "id", id, "statusCode", res.StatusCode())
+		kcontrollerruntime.Log.Error(err, "Failed to delete application", "id", id, "statusCode", res.StatusCode())
 		return errors.New("failed to delete application")
 	}
 

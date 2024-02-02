@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type ConditionType string
@@ -51,19 +51,19 @@ func UpdateConditionAndState(eventingAuth *EventingAuth, conditionType Condition
 }
 
 // MakeApplicationReadyCondition updates the ConditionApplicationActive condition based on the given error value.
-func MakeApplicationReadyCondition(eventingAuth *EventingAuth, err error) []metav1.Condition {
-	applicationReadyCondition := metav1.Condition{
+func MakeApplicationReadyCondition(eventingAuth *EventingAuth, err error) []kmetav1.Condition {
+	applicationReadyCondition := kmetav1.Condition{
 		Type:               string(ConditionApplicationReady),
-		LastTransitionTime: metav1.Now(),
+		LastTransitionTime: kmetav1.Now(),
 	}
 	if err == nil {
-		applicationReadyCondition.Status = metav1.ConditionTrue
+		applicationReadyCondition.Status = kmetav1.ConditionTrue
 		applicationReadyCondition.Reason = ConditionReasonApplicationCreated
 		applicationReadyCondition.Message = ConditionMessageApplicationCreated
 	} else {
 		applicationReadyCondition.Message = err.Error()
 		applicationReadyCondition.Reason = ConditionReasonApplicationCreationFailed
-		applicationReadyCondition.Status = metav1.ConditionFalse
+		applicationReadyCondition.Status = kmetav1.ConditionFalse
 	}
 	for ix, activeCond := range eventingAuth.Status.Conditions {
 		if activeCond.Type == string(ConditionApplicationReady) {
@@ -81,19 +81,19 @@ func MakeApplicationReadyCondition(eventingAuth *EventingAuth, err error) []meta
 }
 
 // MakeSecretReadyCondition updates the ConditionSecretReady condition based on the given error value.
-func MakeSecretReadyCondition(eventingAuth *EventingAuth, err error) []metav1.Condition {
-	secretReadyCondition := metav1.Condition{
+func MakeSecretReadyCondition(eventingAuth *EventingAuth, err error) []kmetav1.Condition {
+	secretReadyCondition := kmetav1.Condition{
 		Type:               string(ConditionSecretReady),
-		LastTransitionTime: metav1.Now(),
+		LastTransitionTime: kmetav1.Now(),
 	}
 	if err == nil {
-		secretReadyCondition.Status = metav1.ConditionTrue
+		secretReadyCondition.Status = kmetav1.ConditionTrue
 		secretReadyCondition.Reason = ConditionReasonSecretCreated
 		secretReadyCondition.Message = ConditionMessageSecretCreated
 	} else {
 		secretReadyCondition.Message = err.Error()
 		secretReadyCondition.Reason = ConditionReasonSecretCreationFailed
-		secretReadyCondition.Status = metav1.ConditionFalse
+		secretReadyCondition.Status = kmetav1.ConditionFalse
 	}
 	for ix, activeCond := range eventingAuth.Status.Conditions {
 		if activeCond.Type == string(ConditionSecretReady) {
@@ -111,14 +111,14 @@ func MakeSecretReadyCondition(eventingAuth *EventingAuth, err error) []metav1.Co
 }
 
 // ConditionsEqual checks if two list of conditions are equal.
-func ConditionsEqual(existing, expected []metav1.Condition) bool {
+func ConditionsEqual(existing, expected []kmetav1.Condition) bool {
 	// not equal if length is different
 	if len(existing) != len(expected) {
 		return false
 	}
 
 	// compile map of Conditions per ConditionType
-	existingMap := make(map[string]metav1.Condition, len(existing))
+	existingMap := make(map[string]kmetav1.Condition, len(existing))
 	for _, value := range existing {
 		existingMap[value.Type] = value
 	}
@@ -133,7 +133,7 @@ func ConditionsEqual(existing, expected []metav1.Condition) bool {
 }
 
 // ConditionEquals checks if two conditions are equal.
-func ConditionEquals(existing, expected metav1.Condition) bool {
+func ConditionEquals(existing, expected kmetav1.Condition) bool {
 	isTypeEqual := existing.Type == expected.Type
 	isStatusEqual := existing.Status == expected.Status
 	isReasonEqual := existing.Reason == expected.Reason
@@ -147,8 +147,8 @@ func IsEventingAuthStatusEqual(oldStatus, newStatus EventingAuthStatus) bool {
 	newStatusWithoutCond := newStatus.DeepCopy()
 
 	// remove conditions, so that we don't compare them
-	oldStatusWithoutCond.Conditions = []metav1.Condition{}
-	newStatusWithoutCond.Conditions = []metav1.Condition{}
+	oldStatusWithoutCond.Conditions = []kmetav1.Condition{}
+	newStatusWithoutCond.Conditions = []kmetav1.Condition{}
 
 	return reflect.DeepEqual(oldStatusWithoutCond, newStatusWithoutCond) &&
 		ConditionsEqual(oldStatus.Conditions, newStatus.Conditions)
@@ -159,10 +159,10 @@ func determineEventingAuthState(status EventingAuthStatus) State {
 	var applicationReady, secretReady bool
 	for _, cond := range status.Conditions {
 		if cond.Type == string(ConditionApplicationReady) {
-			applicationReady = cond.Status == metav1.ConditionTrue
+			applicationReady = cond.Status == kmetav1.ConditionTrue
 		}
 		if cond.Type == string(ConditionSecretReady) {
-			secretReady = cond.Status == metav1.ConditionTrue
+			secretReady = cond.Status == kmetav1.ConditionTrue
 		}
 	}
 	if applicationReady && secretReady {
