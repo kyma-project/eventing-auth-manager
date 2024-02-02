@@ -8,11 +8,10 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest/fake"
 	"k8s.io/utils/ptr"
-
-	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc"
 )
 
 const oidcConfigMock = `{"token_endpoint":"https://domain-url.com/token"}`

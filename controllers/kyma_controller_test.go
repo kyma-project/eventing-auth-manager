@@ -10,16 +10,17 @@ import (
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	kymav1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially
+// Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially.
 var _ = Describe("Kyma Controller", Serial, Ordered, func() {
 	var kyma *kymav1beta1.Kyma
 	var crName string
@@ -102,7 +103,7 @@ func deleteKymaResource(kyma *kymav1beta1.Kyma) {
 		eventingAuth := &v1alpha1.EventingAuth{}
 		err = k8sClient.Get(context.TODO(), types.NamespacedName{Namespace: skr.KcpNamespace, Name: kyma.Name}, eventingAuth)
 		if useExistingCluster {
-			g.Expect(err).ShouldNot(BeNil())
+			g.Expect(err).Should(HaveOccurred())
 			g.Expect(errors.IsNotFound(err)).To(BeTrue())
 		} else {
 			// clean up EventingAuth for not real cluster

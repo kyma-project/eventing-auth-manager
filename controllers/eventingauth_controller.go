@@ -38,10 +38,10 @@ const (
 	iasCredsSecretNamespace      string = "IAS_CREDS_SECRET_NAMESPACE"
 	iasCredsSecretName           string = "IAS_CREDS_SECRET_NAME"
 	defaultIasCredsNamespaceName string = "kcp-system"
-	DefaultIasCredsSecretName    string = "eventing-auth-ias-creds"
+	DefaultIasCredsSecretName    string = "eventing-auth-ias-creds" //nolint:gosec
 )
 
-// eventingAuthReconciler reconciles a EventingAuth object
+// eventingAuthReconciler reconciles a EventingAuth object.
 type eventingAuthReconciler struct {
 	client.Client
 	Scheme    *runtime.Scheme
@@ -168,7 +168,7 @@ func (r *eventingAuthReconciler) getIasClient() (ias.Client, error) {
 	// update IAS client if credentials are changed
 	iasClient, err := ias.NewClient(newIasCredentials.URL, newIasCredentials.Username, newIasCredentials.Password)
 	if err != nil {
-		return nil, fmt.Errorf("failed to createa a new IAS client: %v", err)
+		return nil, fmt.Errorf("failed to createa a new IAS client: %w", err)
 	}
 	return iasClient, nil
 }
@@ -185,13 +185,13 @@ func getIasSecretNamespaceAndNameConfigs() (string, string) {
 	return namespace, name
 }
 
-// Adds the finalizer if none exists
+// Adds the finalizer if none exists.
 func (r *eventingAuthReconciler) addFinalizer(ctx context.Context, cr *operatorv1alpha1.EventingAuth) error {
 	if !controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
 		ctrl.Log.Info("Adding finalizer", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 		controllerutil.AddFinalizer(cr, eventingAuthFinalizerName)
 		if err := r.Update(ctx, cr); err != nil {
-			return fmt.Errorf("failed to add finalizer: %v", err)
+			return fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
 	return nil
@@ -203,7 +203,7 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient i
 	if controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
 		// delete IAS application clean-up
 		if err := iasClient.DeleteApplication(ctx, cr.Name); err != nil {
-			return fmt.Errorf("failed to delete IAS Application: %v", err)
+			return fmt.Errorf("failed to delete IAS Application: %w", err)
 		}
 		ctrl.Log.Info("Deleted IAS application",
 			"eventingAuth", cr.Name, "namespace", cr.Namespace)
@@ -218,7 +218,7 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient i
 		// remove our finalizer from the list and update it.
 		controllerutil.RemoveFinalizer(cr, eventingAuthFinalizerName)
 		if err := r.Update(ctx, cr); err != nil {
-			return fmt.Errorf("failed to remove finalizer: %v", err)
+			return fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
 	return nil
@@ -263,7 +263,7 @@ func (r *eventingAuthReconciler) updateEventingAuthStatus(ctx context.Context, c
 
 	// sync EventingAuth status with k8s
 	if err = r.updateStatus(ctx, actualEventingAuth, desiredEventingAuth); err != nil {
-		return fmt.Errorf("failed to update EventingAuth status: %v", err)
+		return fmt.Errorf("failed to update EventingAuth status: %w", err)
 	}
 
 	return nil
