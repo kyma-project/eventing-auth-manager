@@ -64,6 +64,6 @@ var ReadCredentials = func(namespace, name string, k8sClient ctlrClient.Client) 
 	if errors != nil {
 		return nil, errors
 	}
-	iasConfig := NewCredentials(string(url[:]), string(username[:]), string(password[:]))
+	iasConfig := NewCredentials(string(url), string(username), string(password))
 	return iasConfig, nil
 }

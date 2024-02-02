@@ -28,13 +28,13 @@ const (
 	StateNotReady State = "NotReady"
 )
 
-// EventingAuthSpec defines the desired state of EventingAuth
+// EventingAuthSpec defines the desired state of EventingAuth.
 type EventingAuthSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-// EventingAuthStatus defines the observed state of EventingAuth
+// EventingAuthStatus defines the observed state of EventingAuth.
 type EventingAuthStatus struct {
 	// State signifies current state of CustomObject. Value
 	// can be one of ("Ready", "NotReady").
@@ -69,7 +69,7 @@ type AuthSecret struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state"
 
-// EventingAuth is the Schema for the eventingauths API
+// EventingAuth is the Schema for the eventingauths API.
 type EventingAuth struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -80,7 +80,7 @@ type EventingAuth struct {
 
 //+kubebuilder:object:root=true
 
-// EventingAuthList contains a list of EventingAuth
+// EventingAuthList contains a list of EventingAuth.
 type EventingAuthList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

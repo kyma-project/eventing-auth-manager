@@ -8,19 +8,20 @@ import (
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	gtypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 )
 
 var appSecretObjectKey = ctrlClient.ObjectKey{Name: skr.ApplicationSecretName, Namespace: skr.ApplicationSecretNamespace}
 
-// Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially
+// Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially.
 var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() {
 	BeforeAll(func() {
 		// We allow the happy path tests to use the real IAS client if the test env vars are set
@@ -261,7 +262,7 @@ func deleteEventingAuthAndVerify(e *v1alpha1.EventingAuth) {
 	Eventually(func(g Gomega) {
 		latestEAuth := &v1alpha1.EventingAuth{}
 		err := k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(e), latestEAuth)
-		g.Expect(err).ShouldNot(BeNil())
+		g.Expect(err).Should(HaveOccurred())
 		g.Expect(errors.IsNotFound(err)).Should(BeTrue())
 	}, defaultTimeout).Should(Succeed())
 }
@@ -279,7 +280,7 @@ func deleteApplicationSecretOnTargetCluster() {
 	}
 }
 
-func createKubeconfigSecret(crName string) *corev1.Secret {
+func createKubeconfigSecret(crName string) {
 	By("Creating secret with kubeconfig of target cluster")
 	kubeconfigSecret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -291,10 +292,9 @@ func createKubeconfigSecret(crName string) *corev1.Secret {
 		},
 	}
 	Expect(k8sClient.Create(context.TODO(), &kubeconfigSecret)).Should(Succeed())
-	return &kubeconfigSecret
 }
 
-func deleteKubeconfigSecret(crName string) *corev1.Secret {
+func deleteKubeconfigSecret(crName string) {
 	By("Deleting secret with kubeconfig of target cluster")
 	kubeconfigSecret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -308,5 +308,4 @@ func deleteKubeconfigSecret(crName string) *corev1.Secret {
 			g.Expect(errors.IsNotFound(err)).Should(BeTrue())
 		}
 	}, defaultTimeout).Should(Succeed())
-	return &kubeconfigSecret
 }

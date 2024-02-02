@@ -8,9 +8,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
-	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	. "github.com/onsi/ginkgo/v2"
 )
 
 var (

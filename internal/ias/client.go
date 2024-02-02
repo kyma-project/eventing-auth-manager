@@ -34,8 +34,9 @@ var NewClient = func(iasTenantUrl, user, password string) (Client, error) {
 		return nil, err
 	}
 
+	const timeout = time.Second * 5
 	oidcHttpClient := &http.Client{
-		Timeout: time.Second * 5,
+		Timeout: timeout,
 	}
 
 	return &client{
@@ -67,7 +68,6 @@ func (c *client) GetCredentials() *Credentials {
 // CreateApplication creates an application in IAS. This function is not idempotent, because if an application with the specified
 // name already exists, it will be deleted and recreated.
 func (c *client) CreateApplication(ctx context.Context, name string) (Application, error) {
-
 	existingApp, err := c.getApplicationByName(ctx, name)
 	if err != nil {
 		return Application{}, err
@@ -171,7 +171,7 @@ func (c *client) getApplicationByName(ctx context.Context, name string) (*api.Ap
 
 	// This is not documented in the API, but the actual API returned 404 if no applications were found.
 	if res.StatusCode() == http.StatusNotFound {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	}
 
 	if res.StatusCode() != http.StatusOK {
@@ -184,14 +184,14 @@ func (c *client) getApplicationByName(ctx context.Context, name string) (*api.Ap
 		// Since the handling of the 404 status is not documented, we also handle the case where no more applications are found,
 		// because we do not know what the expected behavior should be.
 		case 0:
-			return nil, nil
+			return nil, nil //nolint:nilnil
 		case 1:
 			return &(*res.JSON200.Applications)[0], nil
 		default:
 			return nil, fmt.Errorf("found multiple applications with the same name %s", name)
 		}
 	}
-	return nil, nil
+	return nil, nil //nolint:nilnil
 }
 
 func (c *client) createNewApplication(ctx context.Context, name string) (uuid.UUID, error) {

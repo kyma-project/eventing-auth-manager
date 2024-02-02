@@ -27,3 +27,4 @@ Dockerfile.cross
 
 vendor
 .golangci.yaml
+lint-report.json

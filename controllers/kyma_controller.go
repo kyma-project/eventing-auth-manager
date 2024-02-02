@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// KymaReconciler reconciles a Kyma resource
+// KymaReconciler reconciles a Kyma resource.
 type KymaReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -67,11 +67,11 @@ func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *kymav1bet
 			}
 			err = r.Client.Create(ctx, eventingAuth)
 			if err != nil {
-				return fmt.Errorf("failed to create EventingAuth resource: %v", err)
+				return fmt.Errorf("failed to create EventingAuth resource: %w", err)
 			}
 			return nil
 		}
-		return fmt.Errorf("failed to retrieve EventingAuth resource: %v", err)
+		return fmt.Errorf("failed to retrieve EventingAuth resource: %w", err)
 	}
 	return nil
 }
