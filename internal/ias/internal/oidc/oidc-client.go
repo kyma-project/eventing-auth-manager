@@ -22,14 +22,14 @@ type wellKnown struct {
 }
 
 type client struct {
-	domainUrl  string
+	domainURL  string
 	httpClient *http.Client
 }
 
 // NewOidcClient returns a new OIDC client. The domain URL is used to get the OIDC configuration for a specific tenant, e.g. 'https://some-tenant.accounts400.ondemand.com'.
-func NewOidcClient(h *http.Client, domainUrl string) Client {
+func NewOidcClient(h *http.Client, domainURL string) Client {
 	return client{
-		domainUrl:  domainUrl,
+		domainURL:  domainURL,
 		httpClient: h,
 	}
 }
@@ -55,7 +55,7 @@ func (c client) GetJWKSURI(ctx context.Context) (*string, error) {
 }
 
 func (c client) getWellKnown(ctx context.Context) (wellKnown, error) {
-	url := fmt.Sprintf("%s/.well-known/openid-configuration", c.domainUrl)
+	url := fmt.Sprintf("%s/.well-known/openid-configuration", c.domainURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return wellKnown{}, err

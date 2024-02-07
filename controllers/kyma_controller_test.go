@@ -72,7 +72,7 @@ func verifyEventingAuth(namespace, name string) {
 		g.Expect(eventingAuth.Status.Application.UUID).ShouldNot(BeEmpty())
 		g.Expect(eventingAuth.Status.AuthSecret).ShouldNot(BeNil())
 		g.Expect(eventingAuth.Status.AuthSecret.NamespacedName).To(Equal((skr.ApplicationSecretNamespace + "/" + skr.ApplicationSecretName)))
-		g.Expect(eventingAuth.Status.AuthSecret.ClusterId).ShouldNot(BeEmpty())
+		g.Expect(eventingAuth.Status.AuthSecret.ClusterID).ShouldNot(BeEmpty())
 	}, defaultTimeout).Should(Succeed())
 }
 

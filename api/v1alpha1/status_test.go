@@ -493,7 +493,7 @@ func createEventingAuthStatus(secretReadyStatus kmetav1.ConditionStatus, appName
 		},
 		AuthSecret: &AuthSecret{
 			NamespacedName: secretNSName,
-			ClusterId:      "mock-cluster-reference",
+			ClusterID:      "mock-cluster-reference",
 		},
 		State: state,
 	}

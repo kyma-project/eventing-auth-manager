@@ -38,20 +38,20 @@ var NewClient = func(iasTenantUrl, user, password string) (Client, error) { //no
 		return nil, err
 	}
 
-	applicationsEndpointUrl := fmt.Sprintf("%s/Applications/v1/", iasTenantUrl)
-	apiClient, err := api.NewClientWithResponses(applicationsEndpointUrl, api.WithRequestEditorFn(basicAuthProvider.Intercept))
+	applicationsEndpointURL := fmt.Sprintf("%s/Applications/v1/", iasTenantUrl)
+	apiClient, err := api.NewClientWithResponses(applicationsEndpointURL, api.WithRequestEditorFn(basicAuthProvider.Intercept))
 	if err != nil {
 		return nil, err
 	}
 
 	const timeout = time.Second * 5
-	oidcHttpClient := &http.Client{
+	oidcHTTPClient := &http.Client{
 		Timeout: timeout,
 	}
 
 	return &client{
 		api:         apiClient,
-		oidcClient:  oidc.NewOidcClient(oidcHttpClient, iasTenantUrl),
+		oidcClient:  oidc.NewOidcClient(oidcHTTPClient, iasTenantUrl),
 		credentials: &Credentials{URL: iasTenantUrl, Username: user, Password: password},
 	}, nil
 }
@@ -61,7 +61,7 @@ type client struct {
 	oidcClient oidc.Client
 	// The token URL of the IAS client. Since this URL should only change when the tenant changes and this will lead to the initialization of
 	// a new client, we can cache the URL to avoid an additional request at each application creation.
-	tokenUrl *string
+	tokenURL *string
 	// The jwks URI of the IAS client. Since this URI should only change when the tenant changes and this will lead to the initialization of
 	// a new client, we can cache the URI to avoid an additional request at each application creation.
 	jwksURI     *string
@@ -96,24 +96,24 @@ func (c *client) CreateApplication(ctx context.Context, name string) (Applicatio
 		}
 	}
 
-	appId, err := c.createNewApplication(ctx, name)
+	appID, err := c.createNewApplication(ctx, name)
 	if err != nil {
 		return Application{}, err
 	}
-	kcontrollerruntime.Log.Info("Created application", "name", name, "id", appId)
+	kcontrollerruntime.Log.Info("Created application", "name", name, "id", appID)
 
-	clientSecret, err := c.createSecret(ctx, appId)
+	clientSecret, err := c.createSecret(ctx, appID)
 	if err != nil {
 		return Application{}, err
 	}
 
-	clientId, err := c.getClientId(ctx, appId)
+	clientID, err := c.getClientID(ctx, appID)
 	if err != nil {
 		return Application{}, err
 	}
 
 	// Since the token url is not part of the application response, we have to fetch it from the OIDC configuration.
-	tokenUrl, err := c.GetTokenUrl(ctx)
+	tokenURL, err := c.GetTokenURL(ctx)
 	if err != nil {
 		return Application{}, err
 	}
@@ -124,11 +124,11 @@ func (c *client) CreateApplication(ctx context.Context, name string) (Applicatio
 		return Application{}, err
 	}
 
-	return NewApplication(appId.String(), *clientId, *clientSecret, *tokenUrl, *jwksURI), nil
+	return NewApplication(appID.String(), *clientID, *clientSecret, *tokenURL, *jwksURI), nil
 }
 
-func (c *client) GetTokenUrl(ctx context.Context) (*string, error) {
-	if c.tokenUrl == nil {
+func (c *client) GetTokenURL(ctx context.Context) (*string, error) {
+	if c.tokenURL == nil {
 		tokenEndpoint, err := c.oidcClient.GetTokenEndpoint(ctx)
 		if err != nil {
 			return nil, err
@@ -137,10 +137,10 @@ func (c *client) GetTokenUrl(ctx context.Context) (*string, error) {
 			return nil, errFetchTokenURL
 		}
 
-		c.tokenUrl = tokenEndpoint
+		c.tokenURL = tokenEndpoint
 	}
 
-	return c.tokenUrl, nil
+	return c.tokenURL, nil
 }
 
 func (c *client) GetJWKSURI(ctx context.Context) (*string, error) {
@@ -216,32 +216,32 @@ func (c *client) createNewApplication(ctx context.Context, name string) (uuid.UU
 		return uuid.UUID{}, errCreateApplication
 	}
 
-	return extractApplicationId(res)
+	return extractApplicationID(res)
 }
 
-func (c *client) createSecret(ctx context.Context, appId uuid.UUID) (*string, error) {
-	res, err := c.api.CreateApiSecretWithResponse(ctx, appId, newSecretRequest())
+func (c *client) createSecret(ctx context.Context, appID uuid.UUID) (*string, error) {
+	res, err := c.api.CreateApiSecretWithResponse(ctx, appID, newSecretRequest())
 	if err != nil {
 		return nil, err
 	}
 
 	if res.StatusCode() != http.StatusCreated {
-		kcontrollerruntime.Log.Error(err, "Failed to create api secret", "id", appId, "statusCode", res.StatusCode())
+		kcontrollerruntime.Log.Error(err, "Failed to create api secret", "id", appID, "statusCode", res.StatusCode())
 		return nil, errCreateAPISecret
 	}
 
 	return res.JSON201.Secret, nil
 }
 
-func (c *client) getClientId(ctx context.Context, appId uuid.UUID) (*string, error) {
+func (c *client) getClientID(ctx context.Context, appID uuid.UUID) (*string, error) {
 	// The client ID is generated only after an API secret is created, so we need to retrieve the application again to get the client ID.
-	applicationResponse, err := c.api.GetApplicationWithResponse(ctx, appId, &api.GetApplicationParams{})
+	applicationResponse, err := c.api.GetApplicationWithResponse(ctx, appID, &api.GetApplicationParams{})
 	if err != nil {
 		return nil, err
 	}
 
 	if applicationResponse.StatusCode() != http.StatusOK {
-		kcontrollerruntime.Log.Error(err, "Failed to retrieve client ID", "id", appId, "statusCode", applicationResponse.StatusCode())
+		kcontrollerruntime.Log.Error(err, "Failed to retrieve client ID", "id", appID, "statusCode", applicationResponse.StatusCode())
 		return nil, errRetrieveClientID
 	}
 	return applicationResponse.JSON200.UrnSapIdentityApplicationSchemasExtensionSci10Authentication.ClientId, nil
@@ -266,17 +266,17 @@ func (c *client) deleteApplication(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func extractApplicationId(createAppResponse *api.CreateApplicationResponse) (uuid.UUID, error) {
+func extractApplicationID(createAppResponse *api.CreateApplicationResponse) (uuid.UUID, error) {
 	// The application ID is only returned as the last part in the location header
 	locationHeader := createAppResponse.HTTPResponse.Header.Get("Location")
 	s := strings.Split(locationHeader, "/")
-	appId := s[len(s)-1]
+	appID := s[len(s)-1]
 
-	parsedAppId, err := uuid.Parse(appId)
+	parsedAppID, err := uuid.Parse(appID)
 	if err != nil {
-		return parsedAppId, errors.Wrap(err, "failed to retrieve application ID from header")
+		return parsedAppID, errors.Wrap(err, "failed to retrieve application ID from header")
 	}
-	return parsedAppId, nil
+	return parsedAppID, nil
 }
 
 func newIasApplication(name string) api.Application {

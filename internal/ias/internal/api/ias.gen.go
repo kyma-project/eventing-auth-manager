@@ -340,8 +340,8 @@ type AuthenticationSchema struct {
 	BiometricAuthenticationEnabled *bool          `json:"biometricAuthenticationEnabled,omitempty"`
 	CaptchaConfig                  *CaptchaConfig `json:"captchaConfig,omitempty"`
 
-	// ClientId it's the same for clientId in OIDC flows
-	ClientId                      *string                                            `json:"clientId,omitempty"`
+	// ClientId it's the same for clientID in OIDC flows
+	ClientId                      *string                                            `json:"clientID,omitempty"`
 	CompanyId                     *string                                            `json:"companyId,omitempty"`
 	ConcurrentAccess              *AuthenticationSchemaConcurrentAccess              `json:"concurrentAccess,omitempty"`
 	ConditionalAuthentication     *[]AuthenticationRule                              `json:"conditionalAuthentication,omitempty"`
@@ -440,15 +440,15 @@ type CaptchaConfig struct {
 // ConsumedApi defines model for ConsumedApi.
 type ConsumedApi struct {
 	ApiName  string             `json:"apiName"`
-	AppId    openapi_types.UUID `json:"appId"`
-	ClientId *string            `json:"clientId,omitempty"`
+	AppId    openapi_types.UUID `json:"appID"`
+	ClientId *string            `json:"clientID,omitempty"`
 	Name     string             `json:"name"`
 }
 
 // ConsumedService defines model for ConsumedService.
 type ConsumedService struct {
-	AppId             openapi_types.UUID `json:"appId"`
-	ClientId          string             `json:"clientId"`
+	AppId             openapi_types.UUID `json:"appID"`
+	ClientId          string             `json:"clientID"`
 	Inherit           bool               `json:"inherit"`
 	PlanName          *string            `json:"planName,omitempty"`
 	ServiceInstanceId *string            `json:"serviceInstanceId,omitempty"`
@@ -708,7 +708,7 @@ type GetAllApplicationsParams struct {
 	//   * name
 	//
 	// ### Authentication Schema
-	//   * clientId
+	//   * clientID
 	Filter *string `form:"filter,omitempty" json:"filter,omitempty"`
 
 	// Limit Number of items to return.

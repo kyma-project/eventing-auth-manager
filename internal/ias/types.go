@@ -7,19 +7,19 @@ import (
 
 type Application struct {
 	id           string
-	clientId     string
+	clientID     string
 	clientSecret string
-	tokenUrl     string
-	certsUrl     string
+	tokenURL     string
+	certsURL     string
 }
 
-func NewApplication(id, clientId, clientSecret, tokenUrl, certsUrl string) Application {
+func NewApplication(id, clientID, clientSecret, tokenURL, certsURL string) Application {
 	return Application{
 		id:           id,
-		clientId:     clientId,
+		clientID:     clientID,
 		clientSecret: clientSecret,
-		tokenUrl:     tokenUrl,
-		certsUrl:     certsUrl,
+		tokenURL:     tokenURL,
+		certsURL:     certsURL,
 	}
 }
 
@@ -30,14 +30,14 @@ func (a Application) ToSecret(name, ns string) kcorev1.Secret {
 			Namespace: ns,
 		},
 		Data: map[string][]byte{
-			"client_id":     []byte(a.clientId),
+			"client_id":     []byte(a.clientID),
 			"client_secret": []byte(a.clientSecret),
-			"token_url":     []byte(a.tokenUrl),
-			"certs_url":     []byte(a.certsUrl),
+			"token_url":     []byte(a.tokenURL),
+			"certs_url":     []byte(a.certsURL),
 		},
 	}
 }
 
-func (a Application) GetId() string {
+func (a Application) GetID() string {
 	return a.id
 }

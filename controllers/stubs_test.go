@@ -36,7 +36,7 @@ func stubFailedIasAppCreation() {
 func stubIasAppCreation(c eamias.Client) {
 	// The IAS client is initialized once in the "Reconcile" method of the controller. To update the IAS client stub by forcing a replacement, we need to
 	// update the IAS credentials stub so that the implemented logic assumes that the IAS credentials have been rotated and forces a reinitialization of the IAS client.
-	replaceIasReadCredentialsWithStub(eamias.Credentials{URL: iasUrl, Username: uuid.New().String(), Password: iasPassword})
+	replaceIasReadCredentialsWithStub(eamias.Credentials{URL: iasURL, Username: uuid.New().String(), Password: iasPassword})
 	replaceIasNewIasClientWithStub(c)
 }
 

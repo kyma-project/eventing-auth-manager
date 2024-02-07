@@ -123,7 +123,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req kcontrollerr
 		}
 		cr.Status.Application = &eamapiv1alpha1.IASApplication{
 			Name: cr.Name,
-			UUID: iasApplication.GetId(),
+			UUID: iasApplication.GetID(),
 		}
 		if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionApplicationReady, nil); err != nil {
 			return kcontrollerruntime.Result{}, err
@@ -144,7 +144,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req kcontrollerr
 		delete(r.existingIasApplications, cr.Name)
 
 		cr.Status.AuthSecret = &eamapiv1alpha1.AuthSecret{
-			ClusterId:      cr.Name,
+			ClusterID:      cr.Name,
 			NamespacedName: fmt.Sprintf("%s/%s", appSecret.Namespace, appSecret.Name),
 		}
 		if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionSecretReady, nil); err != nil {
