@@ -6,7 +6,7 @@ import (
 	"time"
 
 	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
-	lmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	klmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +38,7 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req kcontrollerruntime.R
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciling Kyma resource")
 
-	kyma := &lmapiv1beta1.Kyma{}
+	kyma := &klmapiv1beta1.Kyma{}
 	err := r.Client.Get(ctx, req.NamespacedName, kyma)
 	if err != nil {
 		return kcontrollerruntime.Result{}, client.IgnoreNotFound(err)
@@ -51,7 +51,7 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req kcontrollerruntime.R
 	return kcontrollerruntime.Result{}, nil
 }
 
-func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *lmapiv1beta1.Kyma) error {
+func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *klmapiv1beta1.Kyma) error {
 	eventingAuth := &eamapiv1alpha1.EventingAuth{
 		ObjectMeta: kmetav1.ObjectMeta{
 			Namespace: kyma.Namespace,
@@ -79,7 +79,7 @@ func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *lmapiv1be
 // SetupWithManager sets up the controller with the Manager.
 func (r *KymaReconciler) SetupWithManager(mgr kcontrollerruntime.Manager) error {
 	return kcontrollerruntime.NewControllerManagedBy(mgr).
-		For(&lmapiv1beta1.Kyma{}).
+		For(&klmapiv1beta1.Kyma{}).
 		Owns(&eamapiv1alpha1.EventingAuth{}).
 		Complete(r)
 }

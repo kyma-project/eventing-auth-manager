@@ -8,8 +8,8 @@ import (
 	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
-	lmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
-	lmapiv1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
+	klmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	klmapiv1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	kcorev1 "k8s.io/api/core/v1"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +22,7 @@ import (
 
 // Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially.
 var _ = Describe("Kyma Controller", Serial, Ordered, func() {
-	var kyma *lmapiv1beta1.Kyma
+	var kyma *klmapiv1beta1.Kyma
 	var crName string
 
 	BeforeAll(func() {
@@ -76,14 +76,14 @@ func verifyEventingAuth(namespace, name string) {
 	}, defaultTimeout).Should(Succeed())
 }
 
-func createKymaResource(name string) *lmapiv1beta1.Kyma {
-	kyma := lmapiv1beta1.Kyma{
+func createKymaResource(name string) *klmapiv1beta1.Kyma {
+	kyma := klmapiv1beta1.Kyma{
 		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      name,
 			Namespace: skr.KcpNamespace,
 		},
-		Spec: lmapiv1beta1.KymaSpec{
-			Modules: []lmapiv1beta2.Module{{Name: "nats"}},
+		Spec: klmapiv1beta1.KymaSpec{
+			Modules: []klmapiv1beta2.Module{{Name: "nats"}},
 			Channel: "alpha",
 		},
 	}
@@ -94,11 +94,11 @@ func createKymaResource(name string) *lmapiv1beta1.Kyma {
 	return &kyma
 }
 
-func deleteKymaResource(kyma *lmapiv1beta1.Kyma) {
+func deleteKymaResource(kyma *klmapiv1beta1.Kyma) {
 	By(fmt.Sprintf("Deleting Kyma %s", kyma.Name))
 	Expect(k8sClient.Delete(context.TODO(), kyma)).Should(Succeed())
 	Eventually(func(g Gomega) {
-		err := k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(kyma), &lmapiv1beta1.Kyma{})
+		err := k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(kyma), &klmapiv1beta1.Kyma{})
 		g.Expect(kapierrors.IsNotFound(err)).To(BeTrue())
 		eventingAuth := &eamapiv1alpha1.EventingAuth{}
 		err = k8sClient.Get(context.TODO(), types.NamespacedName{Namespace: skr.KcpNamespace, Name: kyma.Name}, eventingAuth)

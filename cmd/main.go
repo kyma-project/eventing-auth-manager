@@ -22,7 +22,7 @@ import (
 
 	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	eamcontrollers "github.com/kyma-project/eventing-auth-manager/controllers"
-	lmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	klmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kutilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
@@ -47,7 +47,7 @@ var (
 func init() {
 	kutilruntime.Must(kscheme.AddToScheme(scheme))
 
-	kutilruntime.Must(lmapiv1beta1.AddToScheme(scheme))
+	kutilruntime.Must(klmapiv1beta1.AddToScheme(scheme))
 
 	kutilruntime.Must(eamapiv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme

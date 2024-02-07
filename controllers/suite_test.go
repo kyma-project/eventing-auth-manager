@@ -28,7 +28,7 @@ import (
 	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
-	lmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	klmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	kcorev1 "k8s.io/api/core/v1"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -114,7 +114,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	Expect(lmapiv1beta1.AddToScheme(scheme.Scheme)).Should(Succeed())
+	Expect(klmapiv1beta1.AddToScheme(scheme.Scheme)).Should(Succeed())
 	Expect(eamapiv1alpha1.AddToScheme(scheme.Scheme)).Should(Succeed())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
