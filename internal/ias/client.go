@@ -15,6 +15,17 @@ import (
 	kcontrollerruntime "sigs.k8s.io/controller-runtime"
 )
 
+var (
+	errCreateApplication                       = errors.New("failed to create application")
+	errFetchExistingApplications               = errors.New("failed to fetch existing applications")
+	errDeleteExistingApplicationBeforeCreation = errors.New("failed to delete existing application before creation")
+	errCreateAPISecret                         = errors.New("failed to create api secret")
+	errRetrieveClientID                        = errors.New("failed to retrieve client ID")
+	errFetchTokenURL                           = errors.New("failed to fetch token url")
+	errFetchJWKSURI                            = errors.New("failed to fetch jwks uri")
+	errDeleteApplication                       = errors.New("failed to delete application")
+)
+
 type Client interface {
 	CreateApplication(ctx context.Context, name string) (Application, error)
 	DeleteApplication(ctx context.Context, name string) error
@@ -82,7 +93,7 @@ func (c *client) CreateApplication(ctx context.Context, name string) (Applicatio
 		}
 		if res.StatusCode() != http.StatusOK {
 			kcontrollerruntime.Log.Error(err, "Failed to delete existing application", "id", *existingApp.Id, "statusCode", res.StatusCode())
-			return Application{}, errors.New("failed to delete existing application before creation")
+			return Application{}, errDeleteExistingApplicationBeforeCreation
 		}
 	}
 
@@ -124,7 +135,7 @@ func (c *client) GetTokenUrl(ctx context.Context) (*string, error) {
 			return nil, err
 		}
 		if tokenEndpoint == nil {
-			return nil, errors.New("failed to fetch token url")
+			return nil, errFetchTokenURL
 		}
 
 		c.tokenUrl = tokenEndpoint
@@ -140,7 +151,7 @@ func (c *client) GetJWKSURI(ctx context.Context) (*string, error) {
 			return nil, err
 		}
 		if jwksURI == nil {
-			return nil, errors.New("failed to fetch jwks uri")
+			return nil, errFetchJWKSURI
 		}
 
 		c.jwksURI = jwksURI
@@ -176,7 +187,7 @@ func (c *client) getApplicationByName(ctx context.Context, name string) (*api.Ap
 
 	if res.StatusCode() != http.StatusOK {
 		kcontrollerruntime.Log.Error(err, "Failed to fetch existing applications filtered by name", "name", name, "statusCode", res.StatusCode())
-		return nil, errors.New("failed to fetch existing applications")
+		return nil, errFetchExistingApplications
 	}
 
 	if res.JSON200.Applications != nil {
@@ -188,7 +199,7 @@ func (c *client) getApplicationByName(ctx context.Context, name string) (*api.Ap
 		case 1:
 			return &(*res.JSON200.Applications)[0], nil
 		default:
-			return nil, fmt.Errorf("found multiple applications with the same name %s", name)
+			return nil, errors.Errorf("found multiple applications with the same name %s", name)
 		}
 	}
 	return nil, nil //nolint:nilnil
@@ -203,7 +214,7 @@ func (c *client) createNewApplication(ctx context.Context, name string) (uuid.UU
 
 	if res.StatusCode() != http.StatusCreated {
 		kcontrollerruntime.Log.Error(err, "Failed to create application", "name", name, "statusCode", res.StatusCode())
-		return uuid.UUID{}, errors.New("failed to create application")
+		return uuid.UUID{}, errCreateApplication
 	}
 
 	return extractApplicationId(res)
@@ -217,7 +228,7 @@ func (c *client) createSecret(ctx context.Context, appId uuid.UUID) (*string, er
 
 	if res.StatusCode() != http.StatusCreated {
 		kcontrollerruntime.Log.Error(err, "Failed to create api secret", "id", appId, "statusCode", res.StatusCode())
-		return nil, errors.New("failed to create api secret")
+		return nil, errCreateAPISecret
 	}
 
 	return res.JSON201.Secret, nil
@@ -232,7 +243,7 @@ func (c *client) getClientId(ctx context.Context, appId uuid.UUID) (*string, err
 
 	if applicationResponse.StatusCode() != http.StatusOK {
 		kcontrollerruntime.Log.Error(err, "Failed to retrieve client ID", "id", appId, "statusCode", applicationResponse.StatusCode())
-		return nil, errors.New("failed to retrieve client ID")
+		return nil, errRetrieveClientID
 	}
 	return applicationResponse.JSON200.UrnSapIdentityApplicationSchemasExtensionSci10Authentication.ClientId, nil
 }
@@ -250,7 +261,7 @@ func (c *client) deleteApplication(ctx context.Context, id uuid.UUID) error {
 
 	if res.StatusCode() != http.StatusOK {
 		kcontrollerruntime.Log.Error(err, "Failed to delete application", "id", id, "statusCode", res.StatusCode())
-		return errors.New("failed to delete application")
+		return errDeleteApplication
 	}
 
 	return nil

@@ -1,9 +1,9 @@
 package v1alpha1
 
 import (
-	"fmt"
 	"reflect"
 
+	"github.com/pkg/errors"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -39,7 +39,7 @@ func UpdateConditionAndState(eventingAuth *EventingAuth, conditionType Condition
 			eventingAuth.Status.Conditions = MakeSecretReadyCondition(eventingAuth, err)
 		}
 	default:
-		return eventingAuth.Status, fmt.Errorf("unsupported condition type: %s", conditionType)
+		return eventingAuth.Status, errors.Errorf("unsupported condition type: %s", conditionType)
 	}
 
 	if err != nil {

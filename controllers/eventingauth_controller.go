@@ -25,6 +25,7 @@ import (
 	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kcontrollerruntime "sigs.k8s.io/controller-runtime"
@@ -168,7 +169,7 @@ func (r *eventingAuthReconciler) getIasClient() (eamias.Client, error) {
 	// update IAS client if credentials are changed
 	iasClient, err := eamias.NewClient(newIasCredentials.URL, newIasCredentials.Username, newIasCredentials.Password)
 	if err != nil {
-		return nil, fmt.Errorf("failed to createa a new IAS client: %w", err)
+		return nil, errors.Wrap(err, "failed to create a new IAS client")
 	}
 	return iasClient, nil
 }
@@ -191,7 +192,7 @@ func (r *eventingAuthReconciler) addFinalizer(ctx context.Context, cr *eamapiv1a
 		kcontrollerruntime.Log.Info("Adding finalizer", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 		controllerutil.AddFinalizer(cr, eventingAuthFinalizerName)
 		if err := r.Update(ctx, cr); err != nil {
-			return fmt.Errorf("failed to add finalizer: %w", err)
+			return errors.Wrap(err, "failed to add finalizer")
 		}
 	}
 	return nil
@@ -203,7 +204,7 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient e
 	if controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
 		// delete IAS application clean-up
 		if err := iasClient.DeleteApplication(ctx, cr.Name); err != nil {
-			return fmt.Errorf("failed to delete IAS Application: %w", err)
+			return errors.Wrap(err, "failed to delete IAS Application")
 		}
 		kcontrollerruntime.Log.Info("Deleted IAS application",
 			"eventingAuth", cr.Name, "namespace", cr.Namespace)
@@ -218,7 +219,7 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient e
 		// remove our finalizer from the list and update it.
 		controllerutil.RemoveFinalizer(cr, eventingAuthFinalizerName)
 		if err := r.Update(ctx, cr); err != nil {
-			return fmt.Errorf("failed to remove finalizer: %w", err)
+			return errors.Wrap(err, "failed to remove finalizer")
 		}
 	}
 	return nil
@@ -263,7 +264,7 @@ func (r *eventingAuthReconciler) updateEventingAuthStatus(ctx context.Context, c
 
 	// sync EventingAuth status with k8s
 	if err = r.updateStatus(ctx, actualEventingAuth, desiredEventingAuth); err != nil {
-		return fmt.Errorf("failed to update EventingAuth status: %w", err)
+		return errors.Wrap(err, "failed to update EventingAuth status")
 	}
 
 	return nil

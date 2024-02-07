@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/pkg/errors"
 )
 
 //go:generate mockery --name=Client --outpkg=mocks --case=underscore
@@ -79,7 +81,7 @@ func (c client) do(req *http.Request) ([]byte, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code %d", res.StatusCode)
+		return nil, errors.Errorf("unexpected status code %d", res.StatusCode)
 	}
 
 	if res.Body != nil {

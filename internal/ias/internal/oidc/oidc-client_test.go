@@ -64,21 +64,21 @@ func Test_oidcClient_getTokenUrl(t *testing.T) {
 					}, nil
 				}),
 			},
-			wantErr: errors.New("unexpected status code 500"),
+			wantErr: errors.New("unexpected status code 500"), //nolint:goerr113 // used one time only in tests.
 		},
 		{
 			name: "should return error when response body is nil",
 			fields: fields{
 				httpClient: mockHttpClientResponseOk(nil),
 			},
-			wantErr: errors.New("unexpected end of JSON input"),
+			wantErr: errors.New("unexpected end of JSON input"), //nolint:goerr113 // used one time only in tests.
 		},
 		{
 			name: "should return error when response body is no json",
 			fields: fields{
 				httpClient: mockHttpClientResponseOk([]byte("invalid json")),
 			},
-			wantErr: errors.New("invalid character 'i' looking for beginning of value"),
+			wantErr: errors.New("invalid character 'i' looking for beginning of value"), //nolint:goerr113 // used one time only in tests.
 		},
 	}
 	for _, tt := range tests {

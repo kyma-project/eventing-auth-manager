@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	klmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	"github.com/pkg/errors"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -67,11 +67,11 @@ func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *klmapiv1b
 			}
 			err = r.Client.Create(ctx, eventingAuth)
 			if err != nil {
-				return fmt.Errorf("failed to create EventingAuth resource: %w", err)
+				return errors.Wrap(err, "failed to create EventingAuth resource")
 			}
 			return nil
 		}
-		return fmt.Errorf("failed to retrieve EventingAuth resource: %w", err)
+		return errors.Wrap(err, "failed to retrieve EventingAuth resource")
 	}
 	return nil
 }

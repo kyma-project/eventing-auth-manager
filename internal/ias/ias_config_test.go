@@ -1,11 +1,10 @@
 package ias
 
 import (
-	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/mocks"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	kcorev1 "k8s.io/api/core/v1"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,8 +57,8 @@ func Test_ReadCredentials(t *testing.T) {
 				},
 				MockSecret: createMockSecretWithoutDataFields(testNamespace, testPassword),
 			},
-			wantError: fmt.Errorf("key %s is not found in ias secret: key %s is not found in ias secret: key %s is not found in ias secret",
-				urlString, usernameString, passwordString),
+			wantError: errors.Errorf("key %s is not found in ias secret: key %s is not found in ias secret: key %s is not found in ias secret",
+				passwordString, usernameString, urlString),
 		},
 		{
 			name: "Fails with missing username data fields error",
@@ -69,7 +68,7 @@ func Test_ReadCredentials(t *testing.T) {
 				},
 				MockSecret: createMockSecretWithoutUsernameDataFields(testNamespace, testName, testUrl, testPassword),
 			},
-			wantError: fmt.Errorf("key %s is not found in ias secret", usernameString),
+			wantError: errors.Errorf("key %s is not found in ias secret", usernameString),
 		},
 		{
 			name: "Fails with missing username and password data fields error",
@@ -79,7 +78,7 @@ func Test_ReadCredentials(t *testing.T) {
 				},
 				MockSecret: createMockSecretWithoutUsernameAndPasswordDataFields(testNamespace, testName, testUrl),
 			},
-			wantError: fmt.Errorf("key %s is not found in ias secret: key %s is not found in ias secret", usernameString, passwordString),
+			wantError: errors.Errorf("key %s is not found in ias secret: key %s is not found in ias secret", passwordString, usernameString),
 		},
 	}
 

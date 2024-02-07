@@ -119,7 +119,7 @@ func Test_CreateApplication(t *testing.T) {
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("found multiple applications with the same name Test-App-Name"),
+			wantError: errors.New("found multiple applications with the same name Test-App-Name"), //nolint:goerr113 // used one time only in tests.
 		},
 		{
 			name: "should return error when application ID can't be retrieved from location header",
@@ -131,7 +131,7 @@ func Test_CreateApplication(t *testing.T) {
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to retrieve application ID from header: invalid UUID length: 23"),
+			wantError: errors.New("failed to retrieve application ID from header: invalid UUID length: 23"), //nolint:goerr113 // used one time only in tests.
 		},
 		{
 			name: "should return error when fetching existing application failed",
@@ -142,7 +142,7 @@ func Test_CreateApplication(t *testing.T) {
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to fetch existing applications"),
+			wantError: errFetchExistingApplications,
 		},
 		{
 			name: "should return error when application exists and deletion failed",
@@ -156,7 +156,7 @@ func Test_CreateApplication(t *testing.T) {
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to delete existing application before creation"),
+			wantError: errDeleteExistingApplicationBeforeCreation,
 		},
 		{
 			name: "should return error when application is not created",
@@ -169,7 +169,7 @@ func Test_CreateApplication(t *testing.T) {
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to create application"),
+			wantError: errCreateApplication,
 		},
 		{
 			name: "should return error when secret is not created",
@@ -185,7 +185,7 @@ func Test_CreateApplication(t *testing.T) {
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to create api secret"),
+			wantError: errCreateAPISecret,
 		},
 		{
 			name: "should return error when client id wasn't fetched",
@@ -201,7 +201,7 @@ func Test_CreateApplication(t *testing.T) {
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to retrieve client ID"),
+			wantError: errRetrieveClientID,
 		},
 		{
 			name: "should return an error when token URL wasn't fetched",
@@ -217,7 +217,7 @@ func Test_CreateApplication(t *testing.T) {
 			},
 			oidcClientMock: mockGetTokenEndpoint(t, nil),
 			wantApp:        Application{},
-			wantError:      errors.New("failed to fetch token url"),
+			wantError:      errFetchTokenURL,
 		},
 		{
 			name: "should return an error when jwks URI wasn't fetched",
@@ -233,7 +233,7 @@ func Test_CreateApplication(t *testing.T) {
 			},
 			oidcClientMock: mockClient(t, ptr.To("https://test.com/token"), nil),
 			wantApp:        Application{},
-			wantError:      errors.New("failed to fetch jwks uri"),
+			wantError:      errFetchJWKSURI,
 		},
 		{
 			name: "should create new application without fetching token URL when it is already cached in the client",
@@ -326,7 +326,7 @@ func Test_DeleteApplication(t *testing.T) {
 
 				return &clientMock
 			},
-			wantError: errors.New("failed to delete application"),
+			wantError: errDeleteApplication,
 		},
 		{
 			name: "should not return an error when application doesn't exist",

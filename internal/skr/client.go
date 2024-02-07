@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
+	"github.com/pkg/errors"
 	kcorev1 "k8s.io/api/core/v1"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,7 +39,7 @@ var NewClient = func(k8sClient kpkgclient.Client, skrClusterId string) (Client, 
 
 	kubeconfig := secret.Data["config"]
 	if len(kubeconfig) == 0 {
-		return nil, fmt.Errorf("failed to find SKR cluster kubeconfig in secret %s", kubeconfigSecretName)
+		return nil, errors.Errorf("failed to find SKR cluster kubeconfig in secret %s", kubeconfigSecretName)
 	}
 
 	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)

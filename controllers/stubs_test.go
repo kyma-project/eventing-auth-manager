@@ -18,6 +18,9 @@ var (
 	originalNewIasClientFunc    func(iasTenantUrl, user, password string) (eamias.Client, error)
 	originalReadCredentialsFunc func(namespace, name string, k8sClient client.Client) (*eamias.Credentials, error)
 	originalNewSkrClientFunc    func(k8sClient client.Client, targetClusterId string) (skr.Client, error)
+
+	errIASApplicationCreation = errors.New("stubbed IAS application creation error")
+	errSKRSecretCreation      = errors.New("stubbed skr secret creation error")
 )
 
 func stubSuccessfulIasAppCreation() {
@@ -63,7 +66,7 @@ type appCreationFailsIasClientStub struct {
 }
 
 func (i appCreationFailsIasClientStub) CreateApplication(_ context.Context, _ string) (eamias.Application, error) {
-	return eamias.Application{}, errors.New("stubbed IAS application creation error")
+	return eamias.Application{}, errIASApplicationCreation
 }
 
 func replaceIasReadCredentialsWithStub(credentials eamias.Credentials) {
@@ -123,7 +126,7 @@ type secretCreationFailedSkrClientStub struct {
 }
 
 func (s secretCreationFailedSkrClientStub) CreateSecret(_ context.Context, _ eamias.Application) (kcorev1.Secret, error) {
-	return kcorev1.Secret{}, errors.New("stubbed skr secret creation error")
+	return kcorev1.Secret{}, errSKRSecretCreation
 }
 
 func replaceSkrClientWithStub(c skr.Client) {
