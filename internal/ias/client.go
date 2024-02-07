@@ -32,7 +32,7 @@ type Client interface {
 	GetCredentials() *Credentials
 }
 
-var NewClient = func(iasTenantUrl, user, password string) (Client, error) {
+var NewClient = func(iasTenantUrl, user, password string) (Client, error) { //nolint:gochecknoglobals // For mocking purposes.
 	basicAuthProvider, err := securityprovider.NewSecurityProviderBasicAuth(user, password)
 	if err != nil {
 		return nil, err

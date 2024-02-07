@@ -30,7 +30,7 @@ type Credentials struct {
 }
 
 // ReadCredentials fetches ias credentials from secret in the cluster. Reads from env vars if secret is missing.
-var ReadCredentials = func(namespace, name string, k8sClient kpkgclient.Client) (*Credentials, error) {
+var ReadCredentials = func(namespace, name string, k8sClient kpkgclient.Client) (*Credentials, error) { //nolint:gochecknoglobals // For mocking purposes.
 	namespacedName := types.NamespacedName{
 		Namespace: namespace,
 		Name:      name,

@@ -29,7 +29,7 @@ type client struct {
 	k8sClient kpkgclient.Client
 }
 
-var NewClient = func(k8sClient kpkgclient.Client, skrClusterId string) (Client, error) {
+var NewClient = func(k8sClient kpkgclient.Client, skrClusterId string) (Client, error) { //nolint:gochecknoglobals // For mocking purposes.
 	kubeconfigSecretName := fmt.Sprintf("kubeconfig-%s", skrClusterId)
 
 	secret := &kcorev1.Secret{}

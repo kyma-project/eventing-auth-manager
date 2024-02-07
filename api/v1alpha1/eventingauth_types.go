@@ -86,5 +86,5 @@ type EventingAuthList struct {
 }
 
 func init() { //nolint:gochecknoinits // Used on the package level.
-	SchemeBuilder.Register(&EventingAuth{}, &EventingAuthList{})
+	schemeBuilder.Register(&EventingAuth{}, &EventingAuthList{})
 }

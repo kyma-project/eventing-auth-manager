@@ -37,11 +37,9 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-const webhookPort = 9443
-
-var setupLog = kcontrollerruntime.Log.WithName("setup")
-
 func main() {
+	const webhookPort = 9443
+	setupLog := kcontrollerruntime.Log.WithName("setup")
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
