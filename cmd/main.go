@@ -39,9 +39,7 @@ import (
 
 const webhookPort = 9443
 
-var (
-	setupLog = kcontrollerruntime.Log.WithName("setup")
-)
+var setupLog = kcontrollerruntime.Log.WithName("setup")
 
 func main() {
 	var metricsAddr string

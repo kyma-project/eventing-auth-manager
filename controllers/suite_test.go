@@ -154,7 +154,6 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 		defer GinkgoRecover()
 		Expect(mgr.Start(ctx)).Should(Succeed())
 	}()
-
 }, NodeTimeout(60*time.Second))
 
 var _ = AfterSuite(func() {
@@ -178,7 +177,6 @@ var _ = AfterSuite(func() {
 
 func stopTestEnv(env *envtest.Environment) {
 	err := env.Stop()
-
 	// Suggested workaround for timeout issue https://github.com/kubernetes-sigs/controller-runtime/issues/1571#issuecomment-1005575071
 	if err != nil {
 		time.Sleep(3 * time.Second)

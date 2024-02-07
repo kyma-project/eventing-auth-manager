@@ -448,6 +448,7 @@ func createTwoTrueConditions() []kmetav1.Condition {
 		},
 	}
 }
+
 func createTwoFalseConditions() []kmetav1.Condition {
 	return []kmetav1.Condition{
 		{

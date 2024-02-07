@@ -252,6 +252,7 @@ func conditionMatcher(t string, s kmetav1.ConditionStatus, r, m string) onsigome
 		"Message": Equal(m),
 	})
 }
+
 func deleteEventingAuthAndVerify(e *eamapiv1alpha1.EventingAuth) {
 	By(fmt.Sprintf("Deleting EventingAuth %s", e.Name))
 	if err := k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(e), &eamapiv1alpha1.EventingAuth{}); err != nil {

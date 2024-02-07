@@ -40,8 +40,7 @@ func stubIasAppCreation(c eamias.Client) {
 	replaceIasNewIasClientWithStub(c)
 }
 
-type iasClientStub struct {
-}
+type iasClientStub struct{}
 
 func (i iasClientStub) CreateApplication(_ context.Context, name string) (eamias.Application, error) {
 	return eamias.NewApplication(
@@ -80,12 +79,15 @@ func storeOriginalsOfStubbedFunctions() {
 	originalNewIasClientFunc = eamias.NewClient
 	originalNewSkrClientFunc = skr.NewClient
 }
+
 func revertReadCredentialsStub() {
 	eamias.ReadCredentials = originalReadCredentialsFunc
 }
+
 func revertIasNewClientStub() {
 	eamias.NewClient = originalNewIasClientFunc
 }
+
 func revertSkrNewClientStub() {
 	skr.NewClient = originalNewSkrClientFunc
 }
@@ -103,6 +105,7 @@ type skrClientStub struct {
 func (s skrClientStub) CreateSecret(_ context.Context, app eamias.Application) (kcorev1.Secret, error) {
 	return app.ToSecret(skr.ApplicationSecretName, skr.ApplicationSecretNamespace), nil
 }
+
 func (s skrClientStub) HasApplicationSecret(_ context.Context) (bool, error) {
 	return false, nil
 }

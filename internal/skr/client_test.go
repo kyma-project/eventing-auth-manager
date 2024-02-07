@@ -13,9 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-var (
-	errGetSecret = errors.New("error on getting secret")
-)
+var errGetSecret = errors.New("error on getting secret")
 
 func Test_NewClient(t *testing.T) {
 	type args struct {

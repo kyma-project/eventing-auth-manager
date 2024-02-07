@@ -33,7 +33,6 @@ type Client interface {
 }
 
 var NewClient = func(iasTenantUrl, user, password string) (Client, error) {
-
 	basicAuthProvider, err := securityprovider.NewSecurityProviderBasicAuth(user, password)
 	if err != nil {
 		return nil, err
