@@ -85,6 +85,6 @@ type EventingAuthList struct {
 	Items            []EventingAuth `json:"items"`
 }
 
-func init() {
+func init() { //nolint:gochecknoinits // Used on the package level.
 	SchemeBuilder.Register(&EventingAuth{}, &EventingAuthList{})
 }

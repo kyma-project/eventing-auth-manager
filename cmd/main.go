@@ -40,18 +40,8 @@ import (
 const webhookPort = 9443
 
 var (
-	scheme   = runtime.NewScheme()
 	setupLog = kcontrollerruntime.Log.WithName("setup")
 )
-
-func init() {
-	kutilruntime.Must(kscheme.AddToScheme(scheme))
-
-	kutilruntime.Must(klmapiv1beta1.AddToScheme(scheme))
-
-	kutilruntime.Must(eamapiv1alpha1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
-}
 
 func main() {
 	var metricsAddr string
@@ -71,7 +61,7 @@ func main() {
 	kcontrollerruntime.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := kcontrollerruntime.NewManager(kcontrollerruntime.GetConfigOrDie(), kcontrollerruntime.Options{
-		Scheme:                 scheme,
+		Scheme:                 initScheme(),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "210590f8.kyma-project.io",
@@ -126,4 +116,12 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func initScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	kutilruntime.Must(kscheme.AddToScheme(scheme))
+	kutilruntime.Must(klmapiv1beta1.AddToScheme(scheme))
+	kutilruntime.Must(eamapiv1alpha1.AddToScheme(scheme))
+	return scheme
 }
