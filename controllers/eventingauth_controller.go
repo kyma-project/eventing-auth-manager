@@ -22,6 +22,7 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/go-logr/logr"
 	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
@@ -92,6 +93,10 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req kcontrollerr
 		return kcontrollerruntime.Result{}, nil
 	}
 
+	return r.handleApplicationSecret(ctx, logger, cr)
+}
+
+func (r *eventingAuthReconciler) handleApplicationSecret(ctx context.Context, logger logr.Logger, cr eamapiv1alpha1.EventingAuth) (kcontrollerruntime.Result, error) {
 	skrClient, err := skr.NewClient(r.Client, cr.Name)
 	if err != nil {
 		logger.Error(err, "Failed to retrieve client of target cluster")
