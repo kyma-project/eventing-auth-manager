@@ -6,16 +6,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	kcorev1 "k8s.io/api/core/v1"
+	kapierrors "k8s.io/apimachinery/pkg/api/errors"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func Test_NewClient(t *testing.T) {
 	type args struct {
-		k8sClient    ctrlclient.Client
+		k8sClient    kpkgclient.Client
 		skrClusterId string
 	}
 	tests := []struct {
@@ -34,7 +34,7 @@ func Test_NewClient(t *testing.T) {
 		{
 			name: "should return error when secret doesn't contain config key",
 			args: args{
-				k8sClient:    fake.NewClientBuilder().WithObjects(&v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubeconfig-test", Namespace: KcpNamespace}}).Build(),
+				k8sClient:    fake.NewClientBuilder().WithObjects(&kcorev1.Secret{ObjectMeta: kmetav1.ObjectMeta{Name: "kubeconfig-test", Namespace: KcpNamespace}}).Build(),
 				skrClusterId: "test",
 			},
 			wantError: errors.New("failed to find SKR cluster kubeconfig in secret kubeconfig-test"),
@@ -54,7 +54,7 @@ func Test_NewClient(t *testing.T) {
 
 func Test_client_DeleteSecret(t *testing.T) {
 	type fields struct {
-		k8sClient ctrlclient.Client
+		k8sClient kpkgclient.Client
 	}
 	tests := []struct {
 		name    string
@@ -65,8 +65,8 @@ func Test_client_DeleteSecret(t *testing.T) {
 			name: "should return no error when secret exists",
 			fields: fields{
 				k8sClient: fake.NewClientBuilder().WithObjects(
-					&v1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
+					&kcorev1.Secret{
+						ObjectMeta: kmetav1.ObjectMeta{
 							Name:      ApplicationSecretName,
 							Namespace: ApplicationSecretNamespace,
 						},
@@ -94,7 +94,7 @@ func Test_client_DeleteSecret(t *testing.T) {
 			fields: fields{
 				k8sClient: errorFakeClient{
 					Client:     fake.NewClientBuilder().Build(),
-					errorOnGet: apierrors.NewNotFound(v1.Resource("secret"), ApplicationSecretName),
+					errorOnGet: kapierrors.NewNotFound(kcorev1.Resource("secret"), ApplicationSecretName),
 				},
 			},
 		},
@@ -119,7 +119,7 @@ func Test_client_DeleteSecret(t *testing.T) {
 
 func Test_client_HasApplicationSecret(t *testing.T) {
 	type fields struct {
-		k8sClient ctrlclient.Client
+		k8sClient kpkgclient.Client
 	}
 	tests := []struct {
 		name    string
@@ -138,8 +138,8 @@ func Test_client_HasApplicationSecret(t *testing.T) {
 			name: "should return true when secret is found",
 			fields: fields{
 				k8sClient: fake.NewClientBuilder().WithObjects(
-					&v1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
+					&kcorev1.Secret{
+						ObjectMeta: kmetav1.ObjectMeta{
 							Name:      ApplicationSecretName,
 							Namespace: ApplicationSecretNamespace,
 						},
@@ -163,7 +163,7 @@ func Test_client_HasApplicationSecret(t *testing.T) {
 			fields: fields{
 				k8sClient: errorFakeClient{
 					Client:     fake.NewClientBuilder().Build(),
-					errorOnGet: apierrors.NewNotFound(v1.Resource("secret"), ApplicationSecretName),
+					errorOnGet: kapierrors.NewNotFound(kcorev1.Resource("secret"), ApplicationSecretName),
 				},
 			},
 			want: false,
@@ -190,11 +190,11 @@ func Test_client_HasApplicationSecret(t *testing.T) {
 }
 
 type errorFakeClient struct {
-	ctrlclient.Client
+	kpkgclient.Client
 	errorOnGet error
 }
 
-func (e errorFakeClient) Get(ctx context.Context, key ctrlclient.ObjectKey, obj ctrlclient.Object, opts ...ctrlclient.GetOption) error {
+func (e errorFakeClient) Get(ctx context.Context, key kpkgclient.ObjectKey, obj kpkgclient.Object, opts ...kpkgclient.GetOption) error {
 	if e.errorOnGet == nil {
 		return e.Client.Get(ctx, key, obj, opts...)
 	}

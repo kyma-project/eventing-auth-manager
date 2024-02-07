@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
-	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
-	kymav1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	klmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	klmapiv1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
+	kcorev1 "k8s.io/api/core/v1"
+	kapierrors "k8s.io/apimachinery/pkg/api/errors"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
+	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -22,7 +22,7 @@ import (
 
 // Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially.
 var _ = Describe("Kyma Controller", Serial, Ordered, func() {
-	var kyma *kymav1beta1.Kyma
+	var kyma *klmapiv1beta1.Kyma
 	var crName string
 
 	BeforeAll(func() {
@@ -62,11 +62,11 @@ func verifyEventingAuth(namespace, name string) {
 	nsName := types.NamespacedName{Namespace: namespace, Name: name}
 	By(fmt.Sprintf("Verifying Kyma CR %s", nsName.String()))
 	Eventually(func(g Gomega) {
-		eventingAuth := &v1alpha1.EventingAuth{}
+		eventingAuth := &eamapiv1alpha1.EventingAuth{}
 		g.Expect(k8sClient.Get(context.TODO(), nsName, eventingAuth)).Should(Succeed())
 		g.Expect(eventingAuth.Name).To(Equal(name))
 		g.Expect(eventingAuth.Namespace).To(Equal(namespace))
-		g.Expect(eventingAuth.Status.State).To(Equal(v1alpha1.StateReady))
+		g.Expect(eventingAuth.Status.State).To(Equal(eamapiv1alpha1.StateReady))
 		g.Expect(eventingAuth.Status.Application).ShouldNot(BeNil())
 		g.Expect(eventingAuth.Status.Application.Name).To(Equal(name))
 		g.Expect(eventingAuth.Status.Application.UUID).ShouldNot(BeEmpty())
@@ -76,14 +76,14 @@ func verifyEventingAuth(namespace, name string) {
 	}, defaultTimeout).Should(Succeed())
 }
 
-func createKymaResource(name string) *kymav1beta1.Kyma {
-	kyma := kymav1beta1.Kyma{
-		ObjectMeta: metav1.ObjectMeta{
+func createKymaResource(name string) *klmapiv1beta1.Kyma {
+	kyma := klmapiv1beta1.Kyma{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      name,
 			Namespace: skr.KcpNamespace,
 		},
-		Spec: kymav1beta1.KymaSpec{
-			Modules: []kymav1beta2.Module{{Name: "nats"}},
+		Spec: klmapiv1beta1.KymaSpec{
+			Modules: []klmapiv1beta2.Module{{Name: "nats"}},
 			Channel: "alpha",
 		},
 	}
@@ -94,17 +94,17 @@ func createKymaResource(name string) *kymav1beta1.Kyma {
 	return &kyma
 }
 
-func deleteKymaResource(kyma *kymav1beta1.Kyma) {
+func deleteKymaResource(kyma *klmapiv1beta1.Kyma) {
 	By(fmt.Sprintf("Deleting Kyma %s", kyma.Name))
 	Expect(k8sClient.Delete(context.TODO(), kyma)).Should(Succeed())
 	Eventually(func(g Gomega) {
-		err := k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(kyma), &kymav1beta1.Kyma{})
-		g.Expect(errors.IsNotFound(err)).To(BeTrue())
-		eventingAuth := &v1alpha1.EventingAuth{}
+		err := k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(kyma), &klmapiv1beta1.Kyma{})
+		g.Expect(kapierrors.IsNotFound(err)).To(BeTrue())
+		eventingAuth := &eamapiv1alpha1.EventingAuth{}
 		err = k8sClient.Get(context.TODO(), types.NamespacedName{Namespace: skr.KcpNamespace, Name: kyma.Name}, eventingAuth)
 		if useExistingCluster {
 			g.Expect(err).Should(HaveOccurred())
-			g.Expect(errors.IsNotFound(err)).To(BeTrue())
+			g.Expect(kapierrors.IsNotFound(err)).To(BeTrue())
 		} else {
 			// clean up EventingAuth for not real cluster
 			deleteEventingAuthAndVerify(eventingAuth)
@@ -112,10 +112,10 @@ func deleteKymaResource(kyma *kymav1beta1.Kyma) {
 	}, defaultTimeout).Should(Succeed())
 }
 
-func createIasCredsSecret(url, username, password string) *corev1.Secret {
+func createIasCredsSecret(url, username, password string) *kcorev1.Secret {
 	By("Creating IAS credentials secret")
-	kubeconfigSecret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+	kubeconfigSecret := kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      controllers.DefaultIasCredsSecretName,
 			Namespace: skr.KcpNamespace,
 		},
@@ -130,13 +130,13 @@ func createIasCredsSecret(url, username, password string) *corev1.Secret {
 }
 
 func deleteIasCredsSecret() {
-	s := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+	s := &kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      controllers.DefaultIasCredsSecretName,
 			Namespace: skr.KcpNamespace,
 		},
 	}
-	if err := k8sClient.Delete(context.TODO(), s); err != nil && !errors.IsNotFound(err) {
+	if err := k8sClient.Delete(context.TODO(), s); err != nil && !kapierrors.IsNotFound(err) {
 		Fail("Cannot clean up" + s.Namespace + "/" + s.Name + " secret properly")
 	}
 }

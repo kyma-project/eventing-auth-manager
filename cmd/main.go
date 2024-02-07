@@ -20,13 +20,13 @@ import (
 	"flag"
 	"os"
 
-	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
-	"github.com/kyma-project/eventing-auth-manager/controllers"
-	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	eamcontrollers "github.com/kyma-project/eventing-auth-manager/controllers"
+	klmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
+	kutilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
+	kcontrollerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -41,15 +41,15 @@ const webhookPort = 9443
 
 var (
 	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	setupLog = kcontrollerruntime.Log.WithName("setup")
 )
 
 func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	kutilruntime.Must(kscheme.AddToScheme(scheme))
 
-	utilruntime.Must(kymav1beta1.AddToScheme(scheme))
+	kutilruntime.Must(klmapiv1beta1.AddToScheme(scheme))
 
-	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
+	kutilruntime.Must(eamapiv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -68,9 +68,9 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	kcontrollerruntime.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgr, err := kcontrollerruntime.NewManager(kcontrollerruntime.GetConfigOrDie(), kcontrollerruntime.Options{
 		Scheme:                 scheme,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
@@ -99,13 +99,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme())
+	kymaReconciler := eamcontrollers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme())
 	if err = kymaReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Kyma")
 		os.Exit(1)
 	}
 
-	eventingAuthReconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme())
+	eventingAuthReconciler := eamcontrollers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme())
 	if err = eventingAuthReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EventingAuth")
 		os.Exit(1)
@@ -122,7 +122,7 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(kcontrollerruntime.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

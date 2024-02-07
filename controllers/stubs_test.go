@@ -6,17 +6,17 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias"
+	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
-	v1 "k8s.io/api/core/v1"
+	kcorev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
 )
 
 var (
-	originalNewIasClientFunc    func(iasTenantUrl, user, password string) (ias.Client, error)
-	originalReadCredentialsFunc func(namespace, name string, k8sClient client.Client) (*ias.Credentials, error)
+	originalNewIasClientFunc    func(iasTenantUrl, user, password string) (eamias.Client, error)
+	originalReadCredentialsFunc func(namespace, name string, k8sClient client.Client) (*eamias.Credentials, error)
 	originalNewSkrClientFunc    func(k8sClient client.Client, targetClusterId string) (skr.Client, error)
 )
 
@@ -30,18 +30,18 @@ func stubFailedIasAppCreation() {
 	stubIasAppCreation(appCreationFailsIasClientStub{})
 }
 
-func stubIasAppCreation(c ias.Client) {
+func stubIasAppCreation(c eamias.Client) {
 	// The IAS client is initialized once in the "Reconcile" method of the controller. To update the IAS client stub by forcing a replacement, we need to
 	// update the IAS credentials stub so that the implemented logic assumes that the IAS credentials have been rotated and forces a reinitialization of the IAS client.
-	replaceIasReadCredentialsWithStub(ias.Credentials{URL: iasUrl, Username: uuid.New().String(), Password: iasPassword})
+	replaceIasReadCredentialsWithStub(eamias.Credentials{URL: iasUrl, Username: uuid.New().String(), Password: iasPassword})
 	replaceIasNewIasClientWithStub(c)
 }
 
 type iasClientStub struct {
 }
 
-func (i iasClientStub) CreateApplication(_ context.Context, name string) (ias.Application, error) {
-	return ias.NewApplication(
+func (i iasClientStub) CreateApplication(_ context.Context, name string) (eamias.Application, error) {
+	return eamias.NewApplication(
 		fmt.Sprintf("id-for-%s", name),
 		fmt.Sprintf("client-id-for-%s", name),
 		"test-client-secret",
@@ -54,41 +54,41 @@ func (i iasClientStub) DeleteApplication(_ context.Context, _ string) error {
 	return nil
 }
 
-func (i iasClientStub) GetCredentials() *ias.Credentials {
-	return &ias.Credentials{}
+func (i iasClientStub) GetCredentials() *eamias.Credentials {
+	return &eamias.Credentials{}
 }
 
 type appCreationFailsIasClientStub struct {
 	iasClientStub
 }
 
-func (i appCreationFailsIasClientStub) CreateApplication(_ context.Context, _ string) (ias.Application, error) {
-	return ias.Application{}, errors.New("stubbed IAS application creation error")
+func (i appCreationFailsIasClientStub) CreateApplication(_ context.Context, _ string) (eamias.Application, error) {
+	return eamias.Application{}, errors.New("stubbed IAS application creation error")
 }
 
-func replaceIasReadCredentialsWithStub(credentials ias.Credentials) {
-	ias.ReadCredentials = func(namespace, name string, k8sClient client.Client) (*ias.Credentials, error) {
+func replaceIasReadCredentialsWithStub(credentials eamias.Credentials) {
+	eamias.ReadCredentials = func(namespace, name string, k8sClient client.Client) (*eamias.Credentials, error) {
 		return &credentials, nil
 	}
 }
 
 func storeOriginalsOfStubbedFunctions() {
-	originalReadCredentialsFunc = ias.ReadCredentials
-	originalNewIasClientFunc = ias.NewClient
+	originalReadCredentialsFunc = eamias.ReadCredentials
+	originalNewIasClientFunc = eamias.NewClient
 	originalNewSkrClientFunc = skr.NewClient
 }
 func revertReadCredentialsStub() {
-	ias.ReadCredentials = originalReadCredentialsFunc
+	eamias.ReadCredentials = originalReadCredentialsFunc
 }
 func revertIasNewClientStub() {
-	ias.NewClient = originalNewIasClientFunc
+	eamias.NewClient = originalNewIasClientFunc
 }
 func revertSkrNewClientStub() {
 	skr.NewClient = originalNewSkrClientFunc
 }
 
-func replaceIasNewIasClientWithStub(c ias.Client) {
-	ias.NewClient = func(iasTenantUrl, user, password string) (ias.Client, error) {
+func replaceIasNewIasClientWithStub(c eamias.Client) {
+	eamias.NewClient = func(iasTenantUrl, user, password string) (eamias.Client, error) {
 		return c, nil
 	}
 }
@@ -97,7 +97,7 @@ type skrClientStub struct {
 	skr.Client
 }
 
-func (s skrClientStub) CreateSecret(_ context.Context, app ias.Application) (v1.Secret, error) {
+func (s skrClientStub) CreateSecret(_ context.Context, app eamias.Application) (kcorev1.Secret, error) {
 	return app.ToSecret(skr.ApplicationSecretName, skr.ApplicationSecretNamespace), nil
 }
 func (s skrClientStub) HasApplicationSecret(_ context.Context) (bool, error) {
@@ -122,8 +122,8 @@ type secretCreationFailedSkrClientStub struct {
 	skrClientStub
 }
 
-func (s secretCreationFailedSkrClientStub) CreateSecret(_ context.Context, _ ias.Application) (v1.Secret, error) {
-	return v1.Secret{}, errors.New("stubbed skr secret creation error")
+func (s secretCreationFailedSkrClientStub) CreateSecret(_ context.Context, _ eamias.Application) (kcorev1.Secret, error) {
+	return kcorev1.Secret{}, errors.New("stubbed skr secret creation error")
 }
 
 func replaceSkrClientWithStub(c skr.Client) {

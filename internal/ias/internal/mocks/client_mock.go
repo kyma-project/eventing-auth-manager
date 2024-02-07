@@ -4,54 +4,54 @@ import (
 	"context"
 	"reflect"
 
-	corev1 "k8s.io/api/core/v1"
+	kcorev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	ctlrClient "sigs.k8s.io/controller-runtime/pkg/client"
+	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type MockClient struct {
 	MockFunction func() error
-	MockSecret   *corev1.Secret
+	MockSecret   *kcorev1.Secret
 }
 
-func (m MockClient) Get(ctx context.Context, key ctlrClient.ObjectKey, out ctlrClient.Object, opts ...ctlrClient.GetOption) error {
+func (m MockClient) Get(ctx context.Context, key kpkgclient.ObjectKey, out kpkgclient.Object, opts ...kpkgclient.GetOption) error {
 	outVal := reflect.ValueOf(out)
 	objVal := reflect.ValueOf(m.MockSecret)
 	reflect.Indirect(outVal).Set(reflect.Indirect(objVal))
 	return m.MockFunction()
 }
 
-func (m MockClient) List(ctx context.Context, list ctlrClient.ObjectList, opts ...ctlrClient.ListOption) error {
+func (m MockClient) List(ctx context.Context, list kpkgclient.ObjectList, opts ...kpkgclient.ListOption) error {
 	return nil
 }
 
-func (m MockClient) Create(ctx context.Context, obj ctlrClient.Object, opts ...ctlrClient.CreateOption) error {
+func (m MockClient) Create(ctx context.Context, obj kpkgclient.Object, opts ...kpkgclient.CreateOption) error {
 	return nil
 }
 
-func (m MockClient) Delete(ctx context.Context, obj ctlrClient.Object, opts ...ctlrClient.DeleteOption) error {
+func (m MockClient) Delete(ctx context.Context, obj kpkgclient.Object, opts ...kpkgclient.DeleteOption) error {
 	return nil
 }
 
-func (m MockClient) Update(ctx context.Context, obj ctlrClient.Object, opts ...ctlrClient.UpdateOption) error {
+func (m MockClient) Update(ctx context.Context, obj kpkgclient.Object, opts ...kpkgclient.UpdateOption) error {
 	return nil
 }
 
-func (m MockClient) Patch(ctx context.Context, obj ctlrClient.Object, patch ctlrClient.Patch, opts ...ctlrClient.PatchOption) error {
+func (m MockClient) Patch(ctx context.Context, obj kpkgclient.Object, patch kpkgclient.Patch, opts ...kpkgclient.PatchOption) error {
 	return nil
 }
 
-func (m MockClient) DeleteAllOf(ctx context.Context, obj ctlrClient.Object, opts ...ctlrClient.DeleteAllOfOption) error {
+func (m MockClient) DeleteAllOf(ctx context.Context, obj kpkgclient.Object, opts ...kpkgclient.DeleteAllOfOption) error {
 	return nil
 }
 
-func (m MockClient) Status() ctlrClient.SubResourceWriter {
+func (m MockClient) Status() kpkgclient.SubResourceWriter {
 	return nil
 }
 
-func (m MockClient) SubResource(subResource string) ctlrClient.SubResourceClient {
+func (m MockClient) SubResource(subResource string) kpkgclient.SubResourceClient {
 	return nil
 }
 

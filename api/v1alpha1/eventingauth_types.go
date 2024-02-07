@@ -16,9 +16,7 @@ limitations under the License.
 
 package v1alpha1
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
+import kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 type State string
 
@@ -48,7 +46,7 @@ type EventingAuthStatus struct {
 	AuthSecret *AuthSecret `json:"secret,omitempty"`
 
 	//  Conditions associated with EventingAuthStatus.
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions []kmetav1.Condition `json:"conditions,omitempty"`
 }
 
 type IASApplication struct {
@@ -71,8 +69,8 @@ type AuthSecret struct {
 
 // EventingAuth is the Schema for the eventingauths API.
 type EventingAuth struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	kmetav1.TypeMeta   `json:",inline"`
+	kmetav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   EventingAuthSpec   `json:"spec,omitempty"`
 	Status EventingAuthStatus `json:"status,omitempty"`
@@ -82,9 +80,9 @@ type EventingAuth struct {
 
 // EventingAuthList contains a list of EventingAuth.
 type EventingAuthList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []EventingAuth `json:"items"`
+	kmetav1.TypeMeta `json:",inline"`
+	kmetav1.ListMeta `json:"metadata,omitempty"`
+	Items            []EventingAuth `json:"items"`
 }
 
 func init() {

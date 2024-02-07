@@ -6,20 +6,20 @@ import (
 	"log"
 
 	"github.com/google/uuid"
-	"github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
-	gtypes "github.com/onsi/gomega/types"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
+	onsigomegatypes "github.com/onsi/gomega/types"
+	kcorev1 "k8s.io/api/core/v1"
+	kapierrors "k8s.io/apimachinery/pkg/api/errors"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 )
 
-var appSecretObjectKey = ctrlClient.ObjectKey{Name: skr.ApplicationSecretName, Namespace: skr.ApplicationSecretNamespace}
+var appSecretObjectKey = kpkgclient.ObjectKey{Name: skr.ApplicationSecretName, Namespace: skr.ApplicationSecretNamespace}
 
 // Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially.
 var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() {
@@ -38,7 +38,7 @@ var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() 
 
 	Context("Creating and Deleting EventingAuth CR", func() {
 		var (
-			eventingAuth *v1alpha1.EventingAuth
+			eventingAuth *eamapiv1alpha1.EventingAuth
 			crName       string
 		)
 		BeforeEach(func() {
@@ -84,7 +84,7 @@ var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() 
 
 var _ = Describe("EventingAuth Controller unhappy tests", Serial, Ordered, func() {
 	var (
-		eventingAuth *v1alpha1.EventingAuth
+		eventingAuth *eamapiv1alpha1.EventingAuth
 		crName       string
 	)
 
@@ -136,14 +136,14 @@ var _ = Describe("EventingAuth Controller unhappy tests", Serial, Ordered, func(
 	})
 })
 
-func deleteSecretOnTargetCluster(secret *corev1.Secret) {
+func deleteSecretOnTargetCluster(secret *kcorev1.Secret) {
 	By("Deleting secret on target cluster")
 	Expect(targetClusterK8sClient.Delete(context.TODO(), secret)).Should(Succeed())
 }
 
-func createEventingAuth(name string) *v1alpha1.EventingAuth {
-	e := v1alpha1.EventingAuth{
-		ObjectMeta: metav1.ObjectMeta{
+func createEventingAuth(name string) *eamapiv1alpha1.EventingAuth {
+	e := eamapiv1alpha1.EventingAuth{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      name,
 			Namespace: skr.KcpNamespace,
 		},
@@ -158,14 +158,14 @@ func createEventingAuth(name string) *v1alpha1.EventingAuth {
 func verifySecretDoesNotExistOnTargetCluster() {
 	By("Verifying that IAS application secret does not exist on target cluster")
 	Eventually(func(g Gomega) {
-		err := targetClusterK8sClient.Get(context.TODO(), appSecretObjectKey, &corev1.Secret{})
-		g.Expect(errors.IsNotFound(err)).To(BeTrue())
+		err := targetClusterK8sClient.Get(context.TODO(), appSecretObjectKey, &kcorev1.Secret{})
+		g.Expect(kapierrors.IsNotFound(err)).To(BeTrue())
 	}, defaultTimeout).Should(Succeed())
 }
 
-func verifySecretExistsOnTargetCluster() *corev1.Secret {
+func verifySecretExistsOnTargetCluster() *kcorev1.Secret {
 	By("Verifying that IAS application secret exists on target cluster")
-	s := corev1.Secret{}
+	s := kcorev1.Secret{}
 	Eventually(func(g Gomega) {
 		g.Expect(targetClusterK8sClient.Get(context.TODO(), appSecretObjectKey, &s)).Should(Succeed())
 		g.Expect(s.Data).To(HaveKey("client_id"))
@@ -185,66 +185,66 @@ func generateCrName() string {
 	return uuid.New().String()
 }
 
-func verifyEventingAuthStatusReady(cr *v1alpha1.EventingAuth) {
-	By(fmt.Sprintf("Verifying that EventingAuth %s has status %s", cr.Name, v1alpha1.StateReady))
+func verifyEventingAuthStatusReady(cr *eamapiv1alpha1.EventingAuth) {
+	By(fmt.Sprintf("Verifying that EventingAuth %s has status %s", cr.Name, eamapiv1alpha1.StateReady))
 	Eventually(func(g Gomega) {
-		e := v1alpha1.EventingAuth{}
-		g.Expect(k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(cr), &e)).Should(Succeed())
+		e := eamapiv1alpha1.EventingAuth{}
+		g.Expect(k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(cr), &e)).Should(Succeed())
 		g.Expect(e.Status.State).NotTo(BeNil())
-		g.Expect(e.Status.State).To(Equal(v1alpha1.StateReady))
+		g.Expect(e.Status.State).To(Equal(eamapiv1alpha1.StateReady))
 
 		g.Expect(e.Status.Conditions).To(ContainElements(
 			conditionMatcher(
-				string(v1alpha1.ConditionApplicationReady),
-				metav1.ConditionTrue,
-				v1alpha1.ConditionReasonApplicationCreated,
-				v1alpha1.ConditionMessageApplicationCreated),
+				string(eamapiv1alpha1.ConditionApplicationReady),
+				kmetav1.ConditionTrue,
+				eamapiv1alpha1.ConditionReasonApplicationCreated,
+				eamapiv1alpha1.ConditionMessageApplicationCreated),
 			conditionMatcher(
-				string(v1alpha1.ConditionSecretReady),
-				metav1.ConditionTrue,
-				v1alpha1.ConditionReasonSecretCreated,
-				v1alpha1.ConditionMessageSecretCreated),
+				string(eamapiv1alpha1.ConditionSecretReady),
+				kmetav1.ConditionTrue,
+				eamapiv1alpha1.ConditionReasonSecretCreated,
+				eamapiv1alpha1.ConditionMessageSecretCreated),
 		))
 	}, defaultTimeout).Should(Succeed())
 }
 
-func verifyEventingAuthStatusNotReadyAppCreationFailed(cr *v1alpha1.EventingAuth) {
-	By(fmt.Sprintf("Verifying that EventingAuth %s has status %s", cr.Name, v1alpha1.StateNotReady))
+func verifyEventingAuthStatusNotReadyAppCreationFailed(cr *eamapiv1alpha1.EventingAuth) {
+	By(fmt.Sprintf("Verifying that EventingAuth %s has status %s", cr.Name, eamapiv1alpha1.StateNotReady))
 	Eventually(func(g Gomega) {
-		e := v1alpha1.EventingAuth{}
-		g.Expect(k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(cr), &e)).Should(Succeed())
+		e := eamapiv1alpha1.EventingAuth{}
+		g.Expect(k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(cr), &e)).Should(Succeed())
 		g.Expect(e.Status.State).NotTo(BeNil())
-		g.Expect(e.Status.State).To(Equal(v1alpha1.StateNotReady))
+		g.Expect(e.Status.State).To(Equal(eamapiv1alpha1.StateNotReady))
 
 		g.Expect(e.Status.Conditions).To(ContainElements(
 			conditionMatcher(
-				string(v1alpha1.ConditionApplicationReady),
-				metav1.ConditionFalse,
-				v1alpha1.ConditionReasonApplicationCreationFailed,
+				string(eamapiv1alpha1.ConditionApplicationReady),
+				kmetav1.ConditionFalse,
+				eamapiv1alpha1.ConditionReasonApplicationCreationFailed,
 				"stubbed IAS application creation error"),
 		))
 	}, defaultTimeout).Should(Succeed())
 }
 
-func verifyEventingAuthStatusNotReadySecretCreationFailed(cr *v1alpha1.EventingAuth) {
-	By(fmt.Sprintf("Verifying that EventingAuth %s has status %s", cr.Name, v1alpha1.StateNotReady))
+func verifyEventingAuthStatusNotReadySecretCreationFailed(cr *eamapiv1alpha1.EventingAuth) {
+	By(fmt.Sprintf("Verifying that EventingAuth %s has status %s", cr.Name, eamapiv1alpha1.StateNotReady))
 	Eventually(func(g Gomega) {
-		e := v1alpha1.EventingAuth{}
-		g.Expect(k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(cr), &e)).Should(Succeed())
+		e := eamapiv1alpha1.EventingAuth{}
+		g.Expect(k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(cr), &e)).Should(Succeed())
 		g.Expect(e.Status.State).NotTo(BeNil())
-		g.Expect(e.Status.State).To(Equal(v1alpha1.StateNotReady))
+		g.Expect(e.Status.State).To(Equal(eamapiv1alpha1.StateNotReady))
 
 		g.Expect(e.Status.Conditions).To(ContainElements(
 			conditionMatcher(
-				string(v1alpha1.ConditionSecretReady),
-				metav1.ConditionFalse,
-				v1alpha1.ConditionReasonSecretCreationFailed,
+				string(eamapiv1alpha1.ConditionSecretReady),
+				kmetav1.ConditionFalse,
+				eamapiv1alpha1.ConditionReasonSecretCreationFailed,
 				"stubbed skr secret creation error"),
 		))
 	}, defaultTimeout).Should(Succeed())
 }
 
-func conditionMatcher(t string, s metav1.ConditionStatus, r, m string) gtypes.GomegaMatcher {
+func conditionMatcher(t string, s kmetav1.ConditionStatus, r, m string) onsigomegatypes.GomegaMatcher {
 	return MatchFields(IgnoreExtras, Fields{
 		"Type":    Equal(t),
 		"Status":  Equal(s),
@@ -252,38 +252,38 @@ func conditionMatcher(t string, s metav1.ConditionStatus, r, m string) gtypes.Go
 		"Message": Equal(m),
 	})
 }
-func deleteEventingAuthAndVerify(e *v1alpha1.EventingAuth) {
+func deleteEventingAuthAndVerify(e *eamapiv1alpha1.EventingAuth) {
 	By(fmt.Sprintf("Deleting EventingAuth %s", e.Name))
-	if err := k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(e), &v1alpha1.EventingAuth{}); err != nil {
-		Expect(errors.IsNotFound(err)).Should(BeTrue())
+	if err := k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(e), &eamapiv1alpha1.EventingAuth{}); err != nil {
+		Expect(kapierrors.IsNotFound(err)).Should(BeTrue())
 		return
 	}
 	Expect(k8sClient.Delete(context.TODO(), e)).Should(Succeed())
 	Eventually(func(g Gomega) {
-		latestEAuth := &v1alpha1.EventingAuth{}
-		err := k8sClient.Get(context.TODO(), ctrlClient.ObjectKeyFromObject(e), latestEAuth)
+		latestEAuth := &eamapiv1alpha1.EventingAuth{}
+		err := k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(e), latestEAuth)
 		g.Expect(err).Should(HaveOccurred())
-		g.Expect(errors.IsNotFound(err)).Should(BeTrue())
+		g.Expect(kapierrors.IsNotFound(err)).Should(BeTrue())
 	}, defaultTimeout).Should(Succeed())
 }
 
 func deleteApplicationSecretOnTargetCluster() {
-	secret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+	secret := kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      appSecretObjectKey.Name,
 			Namespace: appSecretObjectKey.Namespace,
 		},
 	}
 
 	if err := targetClusterK8sClient.Delete(context.TODO(), &secret); err != nil {
-		Expect(errors.IsNotFound(err)).To(BeTrue())
+		Expect(kapierrors.IsNotFound(err)).To(BeTrue())
 	}
 }
 
 func createKubeconfigSecret(crName string) {
 	By("Creating secret with kubeconfig of target cluster")
-	kubeconfigSecret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+	kubeconfigSecret := kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      fmt.Sprintf("kubeconfig-%s", crName),
 			Namespace: skr.KcpNamespace,
 		},
@@ -296,8 +296,8 @@ func createKubeconfigSecret(crName string) {
 
 func deleteKubeconfigSecret(crName string) {
 	By("Deleting secret with kubeconfig of target cluster")
-	kubeconfigSecret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+	kubeconfigSecret := kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      fmt.Sprintf("kubeconfig-%s", crName),
 			Namespace: skr.KcpNamespace,
 		},
@@ -305,7 +305,7 @@ func deleteKubeconfigSecret(crName string) {
 	Eventually(func(g Gomega) {
 		err := k8sClient.Delete(context.TODO(), &kubeconfigSecret)
 		if err != nil {
-			g.Expect(errors.IsNotFound(err)).Should(BeTrue())
+			g.Expect(kapierrors.IsNotFound(err)).Should(BeTrue())
 		}
 	}, defaultTimeout).Should(Succeed())
 }

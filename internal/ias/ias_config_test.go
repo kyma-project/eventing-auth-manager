@@ -7,9 +7,9 @@ import (
 
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/mocks"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctlrClient "sigs.k8s.io/controller-runtime/pkg/client"
+	kcorev1 "k8s.io/api/core/v1"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func Test_ReadCredentials(t *testing.T) {
@@ -21,7 +21,7 @@ func Test_ReadCredentials(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		givenK8sClientMock ctlrClient.Client
+		givenK8sClientMock kpkgclient.Client
 		mockEnvVars        func()
 		wantCredentials    Credentials
 		wantError          error
@@ -98,9 +98,9 @@ func Test_ReadCredentials(t *testing.T) {
 	}
 }
 
-func createMockSecret(testNamespace, testName, testUrl, testUsername, testPassword string) *v1.Secret {
-	s := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+func createMockSecret(testNamespace, testName, testUrl, testUsername, testPassword string) *kcorev1.Secret {
+	s := &kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      testNamespace,
 			Namespace: testName,
 		},
@@ -112,9 +112,9 @@ func createMockSecret(testNamespace, testName, testUrl, testUsername, testPasswo
 	return s
 }
 
-func createMockSecretWithoutDataFields(testNamespace, testName string) *v1.Secret {
-	s := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+func createMockSecretWithoutDataFields(testNamespace, testName string) *kcorev1.Secret {
+	s := &kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      testNamespace,
 			Namespace: testName,
 		},
@@ -124,9 +124,9 @@ func createMockSecretWithoutDataFields(testNamespace, testName string) *v1.Secre
 	return s
 }
 
-func createMockSecretWithoutUsernameDataFields(testNamespace, testName, testUrl, testPassword string) *v1.Secret {
-	s := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+func createMockSecretWithoutUsernameDataFields(testNamespace, testName, testUrl, testPassword string) *kcorev1.Secret {
+	s := &kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      testNamespace,
 			Namespace: testName,
 		},
@@ -137,9 +137,9 @@ func createMockSecretWithoutUsernameDataFields(testNamespace, testName, testUrl,
 	return s
 }
 
-func createMockSecretWithoutUsernameAndPasswordDataFields(testNamespace, testName, testUrl string) *v1.Secret {
-	s := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+func createMockSecretWithoutUsernameAndPasswordDataFields(testNamespace, testName, testUrl string) *kcorev1.Secret {
+	s := &kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      testNamespace,
 			Namespace: testName,
 		},

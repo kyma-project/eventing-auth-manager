@@ -25,22 +25,22 @@ import (
 	"testing"
 	"time"
 
-	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
-	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	klmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	kcorev1 "k8s.io/api/core/v1"
+	kapierrors "k8s.io/apimachinery/pkg/api/errors"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/utils/ptr"
-	ctrl "sigs.k8s.io/controller-runtime"
+	kcontrollerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	kpkglog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -68,8 +68,8 @@ var (
 	iasUsername            string
 	iasPassword            string
 	useExistingCluster     bool
-	kcpNs                  *corev1.Namespace
-	kymaNs                 *corev1.Namespace
+	kcpNs                  *kcorev1.Namespace
+	kymaNs                 *kcorev1.Namespace
 )
 
 func TestAPIs(t *testing.T) {
@@ -79,7 +79,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func(specCtx SpecContext) {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	kpkglog.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	iasUrl = os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
@@ -101,10 +101,10 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(err).NotTo(HaveOccurred())
 
 	// In case we are using an existing cluster the namespace of the application secret might already exist, so we need to guard against that.
-	kymaNs = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: skr.ApplicationSecretNamespace}}
-	err = targetClusterK8sClient.Get(context.TODO(), client.ObjectKeyFromObject(kymaNs), &corev1.Namespace{})
+	kymaNs = &kcorev1.Namespace{ObjectMeta: kmetav1.ObjectMeta{Name: skr.ApplicationSecretNamespace}}
+	err = targetClusterK8sClient.Get(context.TODO(), client.ObjectKeyFromObject(kymaNs), &kcorev1.Namespace{})
 	if err != nil {
-		Expect(apierrors.IsNotFound(err)).To(BeTrue())
+		Expect(kapierrors.IsNotFound(err)).To(BeTrue())
 		err := targetClusterK8sClient.Create(context.TODO(), kymaNs)
 		Expect(err).NotTo(HaveOccurred())
 	}
@@ -114,16 +114,16 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	Expect(kymav1beta1.AddToScheme(scheme.Scheme)).Should(Succeed())
-	Expect(operatorv1alpha1.AddToScheme(scheme.Scheme)).Should(Succeed())
+	Expect(klmapiv1beta1.AddToScheme(scheme.Scheme)).Should(Succeed())
+	Expect(eamapiv1alpha1.AddToScheme(scheme.Scheme)).Should(Succeed())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	kcpNs = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: skr.KcpNamespace},
-		Spec:       corev1.NamespaceSpec{},
+	kcpNs = &kcorev1.Namespace{
+		ObjectMeta: kmetav1.ObjectMeta{Name: skr.KcpNamespace},
+		Spec:       kcorev1.NamespaceSpec{},
 	}
 	Expect(k8sClient.Create(context.TODO(), kcpNs)).Should(Succeed())
 
@@ -132,7 +132,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	}
 
 	testSyncPeriod := time.Second * 1
-	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+	mgr, err := kcontrollerruntime.NewManager(cfg, kcontrollerruntime.Options{
 		Scheme: scheme.Scheme,
 		Metrics: server.Options{
 			BindAddress: "0",
