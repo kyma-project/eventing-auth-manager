@@ -108,53 +108,56 @@ func (r *eventingAuthReconciler) handleApplicationSecret(ctx context.Context, lo
 		logger.Error(err, "Failed to retrieve secret state from target cluster")
 		return kcontrollerruntime.Result{}, err
 	}
+	if appSecretExists {
+		logger.Info("Reconciliation done, Application secret already exists")
+		return kcontrollerruntime.Result{}, nil
+	}
 
 	// TODO: check if secret creation condition is also true, otherwise it never updates false secret ready condition
-	if !appSecretExists {
-		var createAppErr error
-		iasApplication, appExists := r.existingIasApplications[cr.Name]
-		if !appExists {
-			logger.Info("Creating application in IAS")
-			iasApplication, createAppErr = r.iasClient.CreateApplication(ctx, cr.Name)
-			if createAppErr != nil {
-				logger.Error(createAppErr, "Failed to create application in IAS")
-				if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
-					return kcontrollerruntime.Result{}, err
-				}
-				return kcontrollerruntime.Result{}, createAppErr
-			}
-			logger.Info("Successfully created application in IAS")
-			r.existingIasApplications[cr.Name] = iasApplication
-		}
-		cr.Status.Application = &eamapiv1alpha1.IASApplication{
-			Name: cr.Name,
-			UUID: iasApplication.GetID(),
-		}
-		if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionApplicationReady, nil); err != nil {
-			return kcontrollerruntime.Result{}, err
-		}
 
-		logger.Info("Creating application secret on SKR")
-		appSecret, createSecretErr := skrClient.CreateSecret(ctx, iasApplication)
-		if createSecretErr != nil {
-			logger.Error(createSecretErr, "Failed to create application secret on SKR")
-			if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionSecretReady, createSecretErr); err != nil {
+	iasApplication, appExists := r.existingIasApplications[cr.Name]
+	if !appExists {
+		var createAppErr error
+		logger.Info("Creating application in IAS")
+		iasApplication, createAppErr = r.iasClient.CreateApplication(ctx, cr.Name)
+		if createAppErr != nil {
+			logger.Error(createAppErr, "Failed to create application in IAS")
+			if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
 				return kcontrollerruntime.Result{}, err
 			}
 			return kcontrollerruntime.Result{}, createAppErr
 		}
-		logger.Info("Successfully created application secret on SKR")
+		logger.Info("Successfully created application in IAS")
+		r.existingIasApplications[cr.Name] = iasApplication
+	}
+	cr.Status.Application = &eamapiv1alpha1.IASApplication{
+		Name: cr.Name,
+		UUID: iasApplication.GetID(),
+	}
+	if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionApplicationReady, nil); err != nil {
+		return kcontrollerruntime.Result{}, err
+	}
 
-		// Because the application secret is created on the SKR, we can delete it from the cache.
-		delete(r.existingIasApplications, cr.Name)
-
-		cr.Status.AuthSecret = &eamapiv1alpha1.AuthSecret{
-			ClusterID:      cr.Name,
-			NamespacedName: fmt.Sprintf("%s/%s", appSecret.Namespace, appSecret.Name),
-		}
-		if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionSecretReady, nil); err != nil {
+	logger.Info("Creating application secret on SKR")
+	appSecret, createSecretErr := skrClient.CreateSecret(ctx, iasApplication)
+	if createSecretErr != nil {
+		logger.Error(createSecretErr, "Failed to create application secret on SKR")
+		if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionSecretReady, createSecretErr); err != nil {
 			return kcontrollerruntime.Result{}, err
 		}
+		return kcontrollerruntime.Result{}, createSecretErr
+	}
+	logger.Info("Successfully created application secret on SKR")
+
+	// Because the application secret is created on the SKR, we can delete it from the cache.
+	delete(r.existingIasApplications, cr.Name)
+
+	cr.Status.AuthSecret = &eamapiv1alpha1.AuthSecret{
+		ClusterID:      cr.Name,
+		NamespacedName: fmt.Sprintf("%s/%s", appSecret.Namespace, appSecret.Name),
+	}
+	if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionSecretReady, nil); err != nil {
+		return kcontrollerruntime.Result{}, err
 	}
 
 	logger.Info("Reconciliation done")
