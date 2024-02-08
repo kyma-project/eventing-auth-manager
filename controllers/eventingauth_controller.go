@@ -60,7 +60,6 @@ func NewEventingAuthReconciler(c kpkgclient.Client, s *runtime.Scheme) ManagedRe
 	}
 }
 
-// TODO: Check if conditions are correctly represented
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=operator.kyma-project.io,resources=eventingauths/finalizers,verbs=update
@@ -112,8 +111,6 @@ func (r *eventingAuthReconciler) handleApplicationSecret(ctx context.Context, lo
 		logger.Info("Reconciliation done, Application secret already exists")
 		return kcontrollerruntime.Result{}, nil
 	}
-
-	// TODO: check if secret creation condition is also true, otherwise it never updates false secret ready condition
 
 	iasApplication, appExists := r.existingIasApplications[cr.Name]
 	if !appExists {
