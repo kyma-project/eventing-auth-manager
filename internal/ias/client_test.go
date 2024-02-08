@@ -17,12 +17,12 @@ import (
 )
 
 func Test_CreateApplication(t *testing.T) {
-	appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+	appID := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
 	tests := []struct {
 		name               string
-		givenApiMock       func() *mocks.ClientWithResponsesInterface
+		givenAPIMock       func() *mocks.ClientWithResponsesInterface
 		oidcClientMock     *eamoidcmocks.Client
-		clientTokenUrlMock *string
+		clientTokenURLMock *string
 		clientJWKSURIMock  *string
 		assertCalls        func(*testing.T, *mocks.ClientWithResponsesInterface)
 		wantApp            Application
@@ -30,13 +30,13 @@ func Test_CreateApplication(t *testing.T) {
 	}{
 		{
 			name: "should create new application when fetching existing applications returns status 200 and no applications",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
 				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
-				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
-				mockCreateApiSecretWithResponseStatusCreated(&clientMock, appId)
-				mockGetApplicationWithResponseStatusOK(&clientMock, appId)
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, appID.String())
+				mockCreateAPISecretWithResponseStatusCreated(&clientMock, appID)
+				mockGetApplicationWithResponseStatusOK(&clientMock, appID)
 
 				return &clientMock
 			},
@@ -46,7 +46,7 @@ func Test_CreateApplication(t *testing.T) {
 				ptr.To("https://test.com/certs"),
 			),
 			wantApp: NewApplication(
-				appId.String(),
+				appID.String(),
 				"clientIdMock",
 				"clientSecretMock",
 				"https://test.com/token",
@@ -55,14 +55,14 @@ func Test_CreateApplication(t *testing.T) {
 		},
 		{
 			name: "should create new application when fetching existing applications returns status 404",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
-				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+				appID := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
 
 				mockGetAllApplicationsWithResponseStatusNotFound(&clientMock)
-				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
-				mockCreateApiSecretWithResponseStatusCreated(&clientMock, appId)
-				mockGetApplicationWithResponseStatusOK(&clientMock, appId)
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, appID.String())
+				mockCreateAPISecretWithResponseStatusCreated(&clientMock, appID)
+				mockGetApplicationWithResponseStatusOK(&clientMock, appID)
 
 				return &clientMock
 			},
@@ -72,7 +72,7 @@ func Test_CreateApplication(t *testing.T) {
 				ptr.To("https://test.com/certs"),
 			),
 			wantApp: NewApplication(
-				appId.String(),
+				appID.String(),
 				"clientIdMock",
 				"clientSecretMock",
 				"https://test.com/token",
@@ -81,17 +81,17 @@ func Test_CreateApplication(t *testing.T) {
 		},
 		{
 			name: "should recreate application when application already exists",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
-				existingAppId := uuid.MustParse("5ab797c0-80a0-4ca4-ad7f-50a0f40231d6")
-				mockGetAllApplicationsWithResponseStatusOk(&clientMock, existingAppId)
-				mockDeleteApplicationWithResponseStatusOk(&clientMock, existingAppId)
+				existingAppID := uuid.MustParse("5ab797c0-80a0-4ca4-ad7f-50a0f40231d6")
+				mockGetAllApplicationsWithResponseStatusOk(&clientMock, existingAppID)
+				mockDeleteApplicationWithResponseStatusOk(&clientMock, existingAppID)
 
-				newAppId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
-				mockCreateApplicationWithResponseStatusCreated(&clientMock, newAppId.String())
-				mockCreateApiSecretWithResponseStatusCreated(&clientMock, newAppId)
-				mockGetApplicationWithResponseStatusOK(&clientMock, newAppId)
+				newAppID := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, newAppID.String())
+				mockCreateAPISecretWithResponseStatusCreated(&clientMock, newAppID)
+				mockGetApplicationWithResponseStatusOK(&clientMock, newAppID)
 
 				return &clientMock
 			},
@@ -101,7 +101,7 @@ func Test_CreateApplication(t *testing.T) {
 				ptr.To("https://test.com/certs"),
 			),
 			wantApp: NewApplication(
-				appId.String(),
+				appID.String(),
 				"clientIdMock",
 				"clientSecretMock",
 				"https://test.com/token",
@@ -110,20 +110,20 @@ func Test_CreateApplication(t *testing.T) {
 		},
 		{
 			name: "should return an error when multiple applications exist for the given name",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
-				appId2 := uuid.MustParse("41de6fec-e0fc-47d7-b35c-3b19c4927e4f")
-				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appId, appId2)
+				appID2 := uuid.MustParse("41de6fec-e0fc-47d7-b35c-3b19c4927e4f")
+				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appID, appID2)
 
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("found multiple applications with the same name Test-App-Name"),
+			wantError: errors.New("found multiple applications with the same name Test-App-Name"), //nolint:goerr113 // used one time only in tests.
 		},
 		{
 			name: "should return error when application ID can't be retrieved from location header",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
 				mockCreateApplicationWithResponseStatusCreated(&clientMock, "non-uuid-application-id")
@@ -131,36 +131,36 @@ func Test_CreateApplication(t *testing.T) {
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to retrieve application ID from header: invalid UUID length: 23"),
+			wantError: errors.New("failed to retrieve application ID from header: invalid UUID length: 23"), //nolint:goerr113 // used one time only in tests.
 		},
 		{
 			name: "should return error when fetching existing application failed",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 				mockGetAllApplicationsWithResponseStatusInternalServerError(&clientMock)
 
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to fetch existing applications"),
+			wantError: errFetchExistingApplications,
 		},
 		{
 			name: "should return error when application exists and deletion failed",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
-				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
-				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appId)
+				appID := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appID)
 				mockDeleteApplicationWithResponseStatusInternalServerError(&clientMock)
 
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to delete existing application before creation"),
+			wantError: errDeleteExistingApplicationBeforeCreation,
 		},
 		{
 			name: "should return error when application is not created",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
 				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
@@ -169,88 +169,88 @@ func Test_CreateApplication(t *testing.T) {
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to create application"),
+			wantError: errCreateApplication,
 		},
 		{
 			name: "should return error when secret is not created",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
 				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
 
-				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
-				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
-				mockCreateApiSecretWithResponseStatusInternalServerError(&clientMock)
+				appID := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, appID.String())
+				mockCreateAPISecretWithResponseStatusInternalServerError(&clientMock)
 
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to create api secret"),
+			wantError: errCreateAPISecret,
 		},
 		{
 			name: "should return error when client id wasn't fetched",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
-				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+				appID := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
 
 				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
-				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
-				mockCreateApiSecretWithResponseStatusCreated(&clientMock, appId)
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, appID.String())
+				mockCreateAPISecretWithResponseStatusCreated(&clientMock, appID)
 				mockGetApplicationWithResponseStatusInternalServerError(&clientMock)
 
 				return &clientMock
 			},
 			wantApp:   Application{},
-			wantError: errors.New("failed to retrieve client ID"),
+			wantError: errRetrieveClientID,
 		},
 		{
 			name: "should return an error when token URL wasn't fetched",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
 				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
-				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
-				mockCreateApiSecretWithResponseStatusCreated(&clientMock, appId)
-				mockGetApplicationWithResponseStatusOK(&clientMock, appId)
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, appID.String())
+				mockCreateAPISecretWithResponseStatusCreated(&clientMock, appID)
+				mockGetApplicationWithResponseStatusOK(&clientMock, appID)
 
 				return &clientMock
 			},
 			oidcClientMock: mockGetTokenEndpoint(t, nil),
 			wantApp:        Application{},
-			wantError:      errors.New("failed to fetch token url"),
+			wantError:      errFetchTokenURL,
 		},
 		{
 			name: "should return an error when jwks URI wasn't fetched",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
 				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
-				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
-				mockCreateApiSecretWithResponseStatusCreated(&clientMock, appId)
-				mockGetApplicationWithResponseStatusOK(&clientMock, appId)
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, appID.String())
+				mockCreateAPISecretWithResponseStatusCreated(&clientMock, appID)
+				mockGetApplicationWithResponseStatusOK(&clientMock, appID)
 
 				return &clientMock
 			},
 			oidcClientMock: mockClient(t, ptr.To("https://test.com/token"), nil),
 			wantApp:        Application{},
-			wantError:      errors.New("failed to fetch jwks uri"),
+			wantError:      errFetchJWKSURI,
 		},
 		{
 			name: "should create new application without fetching token URL when it is already cached in the client",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
 				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
-				mockCreateApplicationWithResponseStatusCreated(&clientMock, appId.String())
-				mockCreateApiSecretWithResponseStatusCreated(&clientMock, appId)
-				mockGetApplicationWithResponseStatusOK(&clientMock, appId)
+				mockCreateApplicationWithResponseStatusCreated(&clientMock, appID.String())
+				mockCreateAPISecretWithResponseStatusCreated(&clientMock, appID)
+				mockGetApplicationWithResponseStatusOK(&clientMock, appID)
 
 				return &clientMock
 			},
-			clientTokenUrlMock: ptr.To("https://from-cache.com/token"),
+			clientTokenURLMock: ptr.To("https://from-cache.com/token"),
 			clientJWKSURIMock:  ptr.To("https://from-cache.com/certs"),
 			wantApp: NewApplication(
-				appId.String(),
+				appID.String(),
 				"clientIdMock",
 				"clientSecretMock",
 				"https://from-cache.com/token",
@@ -261,13 +261,13 @@ func Test_CreateApplication(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// given
-			apiMock := tt.givenApiMock()
+			apiMock := tt.givenAPIMock()
 			oidcMock := tt.oidcClientMock
 
 			client := client{
 				api:        apiMock,
 				oidcClient: oidcMock,
-				tokenUrl:   tt.clientTokenUrlMock,
+				tokenURL:   tt.clientTokenURLMock,
 				jwksURI:    tt.clientJWKSURIMock,
 			}
 
@@ -300,37 +300,37 @@ func Test_CreateApplication(t *testing.T) {
 func Test_DeleteApplication(t *testing.T) {
 	tests := []struct {
 		name         string
-		givenApiMock func() *mocks.ClientWithResponsesInterface
+		givenAPIMock func() *mocks.ClientWithResponsesInterface
 		wantError    error
 	}{
 		{
 			name: "should delete application",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
-				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
-				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appId)
-				mockDeleteApplicationWithResponseStatusOk(&clientMock, appId)
+				appID := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appID)
+				mockDeleteApplicationWithResponseStatusOk(&clientMock, appID)
 
 				return &clientMock
 			},
 		},
 		{
 			name: "should return error when application is not deleted",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
-				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
-				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appId)
+				appID := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appID)
 				mockDeleteApplicationWithResponseStatusInternalServerError(&clientMock)
 
 				return &clientMock
 			},
-			wantError: errors.New("failed to delete application"),
+			wantError: errDeleteApplication,
 		},
 		{
 			name: "should not return an error when application doesn't exist",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
 				mockGetAllApplicationsWithResponseStatusOkEmptyResponse(&clientMock)
@@ -340,11 +340,11 @@ func Test_DeleteApplication(t *testing.T) {
 		},
 		{
 			name: "should not return an error when app was found, but was already deleted",
-			givenApiMock: func() *mocks.ClientWithResponsesInterface {
+			givenAPIMock: func() *mocks.ClientWithResponsesInterface {
 				clientMock := mocks.ClientWithResponsesInterface{}
 
-				appId := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
-				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appId)
+				appID := uuid.MustParse("90764f89-f041-4ccf-8da9-7a7c2d60d7fc")
+				mockGetAllApplicationsWithResponseStatusOk(&clientMock, appID)
 				mockDeleteApplicationWithResponseStatusNotFound(&clientMock)
 
 				return &clientMock
@@ -355,7 +355,7 @@ func Test_DeleteApplication(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// given
-			apiMock := tt.givenApiMock()
+			apiMock := tt.givenAPIMock()
 
 			client := client{
 				api: apiMock,
@@ -409,8 +409,8 @@ func mockGetAllApplicationsWithResponseStatusOkEmptyResponse(clientMock *mocks.C
 
 func mockGetAllApplicationsWithResponseStatusOk(clientMock *mocks.ClientWithResponsesInterface, appIds ...uuid.UUID) {
 	appResponses := make([]api.ApplicationResponse, 0)
-	for _, appId := range appIds {
-		id := appId
+	for _, appID := range appIds {
+		id := appID
 		appResponses = append(appResponses, api.ApplicationResponse{
 			Id: &id,
 		})
@@ -437,19 +437,19 @@ func mockCreateApplicationWithResponseStatusInternalServerError(clientMock *mock
 		}, nil)
 }
 
-func mockCreateApplicationWithResponseStatusCreated(clientMock *mocks.ClientWithResponsesInterface, appId string) {
+func mockCreateApplicationWithResponseStatusCreated(clientMock *mocks.ClientWithResponsesInterface, appID string) {
 	clientMock.On("CreateApplicationWithResponse", mock.Anything, mock.Anything, newIasApplication("Test-App-Name")).
 		Return(&api.CreateApplicationResponse{
 			HTTPResponse: &http.Response{
 				StatusCode: http.StatusCreated,
 				Header: map[string][]string{
-					"Location": {fmt.Sprintf("https://test.com/v1/Applications/%s", appId)},
+					"Location": {fmt.Sprintf("https://test.com/v1/Applications/%s", appID)},
 				},
 			},
 		}, nil)
 }
 
-func mockCreateApiSecretWithResponseStatusInternalServerError(clientMock *mocks.ClientWithResponsesInterface) {
+func mockCreateAPISecretWithResponseStatusInternalServerError(clientMock *mocks.ClientWithResponsesInterface) {
 	clientMock.On("CreateApiSecretWithResponse", mock.Anything, mock.Anything, mock.Anything).
 		Return(&api.CreateApiSecretResponse{
 			HTTPResponse: &http.Response{
@@ -458,14 +458,14 @@ func mockCreateApiSecretWithResponseStatusInternalServerError(clientMock *mocks.
 		}, nil)
 }
 
-func mockCreateApiSecretWithResponseStatusCreated(clientMock *mocks.ClientWithResponsesInterface, appId uuid.UUID) {
+func mockCreateAPISecretWithResponseStatusCreated(clientMock *mocks.ClientWithResponsesInterface, appID uuid.UUID) {
 	d := "eventing-auth-manager"
 	s := "clientSecretMock"
 	secretRequest := api.CreateApiSecretJSONRequestBody{
 		AuthorizationScopes: &[]api.AuthorizationScope{"oAuth"},
 		Description:         &d,
 	}
-	clientMock.On("CreateApiSecretWithResponse", mock.Anything, appId, secretRequest).
+	clientMock.On("CreateApiSecretWithResponse", mock.Anything, appID, secretRequest).
 		Return(&api.CreateApiSecretResponse{
 			HTTPResponse: &http.Response{
 				StatusCode: http.StatusCreated,
@@ -485,9 +485,9 @@ func mockGetApplicationWithResponseStatusInternalServerError(clientMock *mocks.C
 		}, nil)
 }
 
-func mockGetApplicationWithResponseStatusOK(clientMock *mocks.ClientWithResponsesInterface, appId uuid.UUID) {
+func mockGetApplicationWithResponseStatusOK(clientMock *mocks.ClientWithResponsesInterface, appID uuid.UUID) {
 	cID := "clientIdMock"
-	clientMock.On("GetApplicationWithResponse", mock.Anything, appId, mock.Anything).
+	clientMock.On("GetApplicationWithResponse", mock.Anything, appID, mock.Anything).
 		Return(&api.GetApplicationResponse{
 			HTTPResponse: &http.Response{
 				StatusCode: http.StatusOK,
@@ -500,8 +500,8 @@ func mockGetApplicationWithResponseStatusOK(clientMock *mocks.ClientWithResponse
 		}, nil)
 }
 
-func mockDeleteApplicationWithResponseStatusOk(clientMock *mocks.ClientWithResponsesInterface, appId uuid.UUID) {
-	clientMock.On("DeleteApplicationWithResponse", mock.Anything, appId).
+func mockDeleteApplicationWithResponseStatusOk(clientMock *mocks.ClientWithResponsesInterface, appID uuid.UUID) {
+	clientMock.On("DeleteApplicationWithResponse", mock.Anything, appID).
 		Return(&api.DeleteApplicationResponse{
 			HTTPResponse: &http.Response{
 				StatusCode: http.StatusOK,
@@ -527,17 +527,17 @@ func mockDeleteApplicationWithResponseStatusNotFound(clientMock *mocks.ClientWit
 		}, nil)
 }
 
-func mockClient(t *testing.T, tokenUrl, jwksURI *string) *eamoidcmocks.Client {
+func mockClient(t *testing.T, tokenURL, jwksURI *string) *eamoidcmocks.Client {
 	t.Helper()
 	clientMock := eamoidcmocks.NewClient(t)
-	clientMock.On("GetTokenEndpoint", mock.Anything).Return(tokenUrl, nil)
+	clientMock.On("GetTokenEndpoint", mock.Anything).Return(tokenURL, nil)
 	clientMock.On("GetJWKSURI", mock.Anything).Return(jwksURI, nil)
 	return clientMock
 }
 
-func mockGetTokenEndpoint(t *testing.T, tokenUrl *string) *eamoidcmocks.Client {
+func mockGetTokenEndpoint(t *testing.T, tokenURL *string) *eamoidcmocks.Client {
 	t.Helper()
 	clientMock := eamoidcmocks.NewClient(t)
-	clientMock.On("GetTokenEndpoint", mock.Anything).Return(tokenUrl, nil)
+	clientMock.On("GetTokenEndpoint", mock.Anything).Return(tokenURL, nil)
 	return clientMock
 }

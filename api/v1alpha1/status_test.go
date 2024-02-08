@@ -1,9 +1,9 @@
 package v1alpha1
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -162,7 +162,7 @@ func Test_MakeApplicationReadyCondition(t *testing.T) {
 					Message: ConditionMessageApplicationCreated,
 				},
 			}}),
-			givenErr: fmt.Errorf(mockErrorMessage),
+			givenErr: errors.Errorf(mockErrorMessage),
 			wantConditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
@@ -262,7 +262,7 @@ func Test_MakeSecretReadyCondition(t *testing.T) {
 					Message: ConditionMessageSecretCreated,
 				},
 			}}),
-			givenErr: fmt.Errorf(mockErrorMessage),
+			givenErr: errors.Errorf(mockErrorMessage),
 			wantConditions: []kmetav1.Condition{
 				{
 					Type:    string(ConditionApplicationReady),
@@ -319,7 +319,7 @@ func Test_UpdateConditionAndState(t *testing.T) {
 				State: StateReady,
 			}),
 			conditionType: ConditionSecretReady,
-			givenErr:      fmt.Errorf(mockErrorMessage),
+			givenErr:      errors.Errorf(mockErrorMessage),
 			wantStatus: EventingAuthStatus{
 				Conditions: []kmetav1.Condition{
 					{
@@ -416,7 +416,7 @@ func Test_UpdateConditionAndState(t *testing.T) {
 				State: StateNotReady,
 			}),
 			conditionType: invalidConditionType,
-			wantError:     fmt.Errorf("unsupported condition type: %s", invalidConditionType),
+			wantError:     errors.Errorf("unsupported condition type: %s", invalidConditionType),
 		},
 	}
 
@@ -448,6 +448,7 @@ func createTwoTrueConditions() []kmetav1.Condition {
 		},
 	}
 }
+
 func createTwoFalseConditions() []kmetav1.Condition {
 	return []kmetav1.Condition{
 		{
@@ -492,7 +493,7 @@ func createEventingAuthStatus(secretReadyStatus kmetav1.ConditionStatus, appName
 		},
 		AuthSecret: &AuthSecret{
 			NamespacedName: secretNSName,
-			ClusterId:      "mock-cluster-reference",
+			ClusterID:      "mock-cluster-reference",
 		},
 		State: state,
 	}

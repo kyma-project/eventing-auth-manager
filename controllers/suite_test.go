@@ -64,7 +64,7 @@ var (
 	targetClusterK8sClient client.Client
 	testEnv                *envtest.Environment
 	targetClusterTestEnv   *envtest.Environment
-	iasUrl                 string
+	iasURL                 string
 	iasUsername            string
 	iasPassword            string
 	useExistingCluster     bool
@@ -82,7 +82,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	kpkglog.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	ctx, cancel = context.WithCancel(context.TODO())
 
-	iasUrl = os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
+	iasURL = os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
 	iasUsername = os.Getenv("TEST_EVENTING_AUTH_IAS_USER")
 	iasPassword = os.Getenv("TEST_EVENTING_AUTH_IAS_PASSWORD")
 	useExistingCluster = os.Getenv("USE_EXISTING_CLUSTER") == "true"
@@ -128,7 +128,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(k8sClient.Create(context.TODO(), kcpNs)).Should(Succeed())
 
 	if existIasCreds() {
-		createIasCredsSecret(iasUrl, iasUsername, iasPassword)
+		createIasCredsSecret(iasURL, iasUsername, iasPassword)
 	}
 
 	testSyncPeriod := time.Second * 1
@@ -154,7 +154,6 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 		defer GinkgoRecover()
 		Expect(mgr.Start(ctx)).Should(Succeed())
 	}()
-
 }, NodeTimeout(60*time.Second))
 
 var _ = AfterSuite(func() {
@@ -178,7 +177,6 @@ var _ = AfterSuite(func() {
 
 func stopTestEnv(env *envtest.Environment) {
 	err := env.Stop()
-
 	// Suggested workaround for timeout issue https://github.com/kubernetes-sigs/controller-runtime/issues/1571#issuecomment-1005575071
 	if err != nil {
 		time.Sleep(3 * time.Second)
@@ -187,7 +185,7 @@ func stopTestEnv(env *envtest.Environment) {
 }
 
 func existIasCreds() bool {
-	return iasUrl != "" && iasUsername != "" && iasPassword != ""
+	return iasURL != "" && iasUsername != "" && iasPassword != ""
 }
 
 func initTargetClusterConfig() (client.Client, error) {

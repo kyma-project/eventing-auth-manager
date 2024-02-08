@@ -25,12 +25,12 @@ import (
 )
 
 var (
-	// GroupVersion is group version used to register these objects.
-	GroupVersion = schema.GroupVersion{Group: "operator.kyma-project.io", Version: "v1alpha1"}
+	// groupVersion is group version used to register these objects.
+	groupVersion = schema.GroupVersion{Group: "operator.kyma-project.io", Version: "v1alpha1"} //nolint:gochecknoglobals // Used internally in the package.
 
-	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
-	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+	// schemeBuilder is used to add go types to the GroupVersionKind scheme.
+	schemeBuilder = &scheme.Builder{GroupVersion: groupVersion} //nolint:gochecknoglobals // Used internally in the package.
 
 	// AddToScheme adds the types in this group-version to the given scheme.
-	AddToScheme = SchemeBuilder.AddToScheme
+	AddToScheme = schemeBuilder.AddToScheme //nolint:gochecknoglobals // Used outside the package.
 )

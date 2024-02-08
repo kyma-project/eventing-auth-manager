@@ -13,10 +13,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+var errGetSecret = errors.New("error on getting secret")
+
 func Test_NewClient(t *testing.T) {
 	type args struct {
 		k8sClient    kpkgclient.Client
-		skrClusterId string
+		skrClusterID string
 	}
 	tests := []struct {
 		name      string
@@ -27,23 +29,23 @@ func Test_NewClient(t *testing.T) {
 			name: "should return error when secret with kubeconfig is not found",
 			args: args{
 				k8sClient:    fake.NewClientBuilder().Build(),
-				skrClusterId: "test",
+				skrClusterID: "test",
 			},
-			wantError: errors.New("secrets \"kubeconfig-test\" not found"),
+			wantError: errors.New("secrets \"kubeconfig-test\" not found"), //nolint:goerr113 // used one time only in tests.
 		},
 		{
 			name: "should return error when secret doesn't contain config key",
 			args: args{
 				k8sClient:    fake.NewClientBuilder().WithObjects(&kcorev1.Secret{ObjectMeta: kmetav1.ObjectMeta{Name: "kubeconfig-test", Namespace: KcpNamespace}}).Build(),
-				skrClusterId: "test",
+				skrClusterID: "test",
 			},
-			wantError: errors.New("failed to find SKR cluster kubeconfig in secret kubeconfig-test"),
+			wantError: errors.New("failed to find SKR cluster kubeconfig in secret kubeconfig-test"), //nolint:goerr113 // used one time only in tests.
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// when
-			_, err := NewClient(tt.args.k8sClient, tt.args.skrClusterId)
+			_, err := NewClient(tt.args.k8sClient, tt.args.skrClusterID)
 
 			// then
 			require.Error(t, err)
@@ -84,10 +86,10 @@ func Test_client_DeleteSecret(t *testing.T) {
 			fields: fields{
 				k8sClient: errorFakeClient{
 					Client:     fake.NewClientBuilder().Build(),
-					errorOnGet: errors.New("error on getting secret"),
+					errorOnGet: errGetSecret,
 				},
 			},
-			wantErr: errors.New("error on getting secret"),
+			wantErr: errGetSecret,
 		},
 		{
 			name: "should ignore NotFound error when fetching secret",
@@ -152,11 +154,11 @@ func Test_client_HasApplicationSecret(t *testing.T) {
 			fields: fields{
 				k8sClient: errorFakeClient{
 					Client:     fake.NewClientBuilder().Build(),
-					errorOnGet: errors.New("error on getting secret"),
+					errorOnGet: errGetSecret,
 				},
 			},
 			want:    false,
-			wantErr: errors.New("error on getting secret"),
+			wantErr: errGetSecret,
 		},
 		{
 			name: "should ignore NotFound error when fetching secret",

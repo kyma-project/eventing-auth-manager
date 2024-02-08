@@ -221,7 +221,7 @@ func verifyEventingAuthStatusNotReadyAppCreationFailed(cr *eamapiv1alpha1.Eventi
 				string(eamapiv1alpha1.ConditionApplicationReady),
 				kmetav1.ConditionFalse,
 				eamapiv1alpha1.ConditionReasonApplicationCreationFailed,
-				"stubbed IAS application creation error"),
+				errIASApplicationCreation.Error()),
 		))
 	}, defaultTimeout).Should(Succeed())
 }
@@ -239,7 +239,7 @@ func verifyEventingAuthStatusNotReadySecretCreationFailed(cr *eamapiv1alpha1.Eve
 				string(eamapiv1alpha1.ConditionSecretReady),
 				kmetav1.ConditionFalse,
 				eamapiv1alpha1.ConditionReasonSecretCreationFailed,
-				"stubbed skr secret creation error"),
+				errSKRSecretCreation.Error()),
 		))
 	}, defaultTimeout).Should(Succeed())
 }
@@ -252,6 +252,7 @@ func conditionMatcher(t string, s kmetav1.ConditionStatus, r, m string) onsigome
 		"Message": Equal(m),
 	})
 }
+
 func deleteEventingAuthAndVerify(e *eamapiv1alpha1.EventingAuth) {
 	By(fmt.Sprintf("Deleting EventingAuth %s", e.Name))
 	if err := k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(e), &eamapiv1alpha1.EventingAuth{}); err != nil {

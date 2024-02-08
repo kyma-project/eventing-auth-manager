@@ -22,9 +22,11 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/go-logr/logr"
 	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kcontrollerruntime "sigs.k8s.io/controller-runtime"
@@ -91,6 +93,10 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req kcontrollerr
 		return kcontrollerruntime.Result{}, nil
 	}
 
+	return r.handleApplicationSecret(ctx, logger, cr)
+}
+
+func (r *eventingAuthReconciler) handleApplicationSecret(ctx context.Context, logger logr.Logger, cr eamapiv1alpha1.EventingAuth) (kcontrollerruntime.Result, error) {
 	skrClient, err := skr.NewClient(r.Client, cr.Name)
 	if err != nil {
 		logger.Error(err, "Failed to retrieve client of target cluster")
@@ -102,53 +108,56 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req kcontrollerr
 		logger.Error(err, "Failed to retrieve secret state from target cluster")
 		return kcontrollerruntime.Result{}, err
 	}
+	if appSecretExists {
+		logger.Info("Reconciliation done, Application secret already exists")
+		return kcontrollerruntime.Result{}, nil
+	}
 
 	// TODO: check if secret creation condition is also true, otherwise it never updates false secret ready condition
-	if !appSecretExists {
-		var createAppErr error
-		iasApplication, appExists := r.existingIasApplications[cr.Name]
-		if !appExists {
-			logger.Info("Creating application in IAS")
-			iasApplication, createAppErr = r.iasClient.CreateApplication(ctx, cr.Name)
-			if createAppErr != nil {
-				logger.Error(createAppErr, "Failed to create application in IAS")
-				if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
-					return kcontrollerruntime.Result{}, err
-				}
-				return kcontrollerruntime.Result{}, createAppErr
-			}
-			logger.Info("Successfully created application in IAS")
-			r.existingIasApplications[cr.Name] = iasApplication
-		}
-		cr.Status.Application = &eamapiv1alpha1.IASApplication{
-			Name: cr.Name,
-			UUID: iasApplication.GetId(),
-		}
-		if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionApplicationReady, nil); err != nil {
-			return kcontrollerruntime.Result{}, err
-		}
 
-		logger.Info("Creating application secret on SKR")
-		appSecret, createSecretErr := skrClient.CreateSecret(ctx, iasApplication)
-		if createSecretErr != nil {
-			logger.Error(createSecretErr, "Failed to create application secret on SKR")
-			if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionSecretReady, createSecretErr); err != nil {
+	iasApplication, appExists := r.existingIasApplications[cr.Name]
+	if !appExists {
+		var createAppErr error
+		logger.Info("Creating application in IAS")
+		iasApplication, createAppErr = r.iasClient.CreateApplication(ctx, cr.Name)
+		if createAppErr != nil {
+			logger.Error(createAppErr, "Failed to create application in IAS")
+			if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
 				return kcontrollerruntime.Result{}, err
 			}
 			return kcontrollerruntime.Result{}, createAppErr
 		}
-		logger.Info("Successfully created application secret on SKR")
+		logger.Info("Successfully created application in IAS")
+		r.existingIasApplications[cr.Name] = iasApplication
+	}
+	cr.Status.Application = &eamapiv1alpha1.IASApplication{
+		Name: cr.Name,
+		UUID: iasApplication.GetID(),
+	}
+	if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionApplicationReady, nil); err != nil {
+		return kcontrollerruntime.Result{}, err
+	}
 
-		// Because the application secret is created on the SKR, we can delete it from the cache.
-		delete(r.existingIasApplications, cr.Name)
-
-		cr.Status.AuthSecret = &eamapiv1alpha1.AuthSecret{
-			ClusterId:      cr.Name,
-			NamespacedName: fmt.Sprintf("%s/%s", appSecret.Namespace, appSecret.Name),
-		}
-		if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionSecretReady, nil); err != nil {
+	logger.Info("Creating application secret on SKR")
+	appSecret, createSecretErr := skrClient.CreateSecret(ctx, iasApplication)
+	if createSecretErr != nil {
+		logger.Error(createSecretErr, "Failed to create application secret on SKR")
+		if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionSecretReady, createSecretErr); err != nil {
 			return kcontrollerruntime.Result{}, err
 		}
+		return kcontrollerruntime.Result{}, createSecretErr
+	}
+	logger.Info("Successfully created application secret on SKR")
+
+	// Because the application secret is created on the SKR, we can delete it from the cache.
+	delete(r.existingIasApplications, cr.Name)
+
+	cr.Status.AuthSecret = &eamapiv1alpha1.AuthSecret{
+		ClusterID:      cr.Name,
+		NamespacedName: fmt.Sprintf("%s/%s", appSecret.Namespace, appSecret.Name),
+	}
+	if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionSecretReady, nil); err != nil {
+		return kcontrollerruntime.Result{}, err
 	}
 
 	logger.Info("Reconciliation done")
@@ -168,7 +177,7 @@ func (r *eventingAuthReconciler) getIasClient() (eamias.Client, error) {
 	// update IAS client if credentials are changed
 	iasClient, err := eamias.NewClient(newIasCredentials.URL, newIasCredentials.Username, newIasCredentials.Password)
 	if err != nil {
-		return nil, fmt.Errorf("failed to createa a new IAS client: %w", err)
+		return nil, errors.Wrap(err, "failed to create a new IAS client")
 	}
 	return iasClient, nil
 }
@@ -191,7 +200,7 @@ func (r *eventingAuthReconciler) addFinalizer(ctx context.Context, cr *eamapiv1a
 		kcontrollerruntime.Log.Info("Adding finalizer", "eventingAuth", cr.Name, "eventingAuthNamespace", cr.Namespace)
 		controllerutil.AddFinalizer(cr, eventingAuthFinalizerName)
 		if err := r.Update(ctx, cr); err != nil {
-			return fmt.Errorf("failed to add finalizer: %w", err)
+			return errors.Wrap(err, "failed to add finalizer")
 		}
 	}
 	return nil
@@ -203,7 +212,7 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient e
 	if controllerutil.ContainsFinalizer(cr, eventingAuthFinalizerName) {
 		// delete IAS application clean-up
 		if err := iasClient.DeleteApplication(ctx, cr.Name); err != nil {
-			return fmt.Errorf("failed to delete IAS Application: %w", err)
+			return errors.Wrap(err, "failed to delete IAS Application")
 		}
 		kcontrollerruntime.Log.Info("Deleted IAS application",
 			"eventingAuth", cr.Name, "namespace", cr.Namespace)
@@ -218,7 +227,7 @@ func (r *eventingAuthReconciler) handleDeletion(ctx context.Context, iasClient e
 		// remove our finalizer from the list and update it.
 		controllerutil.RemoveFinalizer(cr, eventingAuthFinalizerName)
 		if err := r.Update(ctx, cr); err != nil {
-			return fmt.Errorf("failed to remove finalizer: %w", err)
+			return errors.Wrap(err, "failed to remove finalizer")
 		}
 	}
 	return nil
@@ -263,7 +272,7 @@ func (r *eventingAuthReconciler) updateEventingAuthStatus(ctx context.Context, c
 
 	// sync EventingAuth status with k8s
 	if err = r.updateStatus(ctx, actualEventingAuth, desiredEventingAuth); err != nil {
-		return fmt.Errorf("failed to update EventingAuth status: %w", err)
+		return errors.Wrap(err, "failed to update EventingAuth status")
 	}
 
 	return nil

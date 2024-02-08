@@ -18,6 +18,9 @@ var (
 	originalNewIasClientFunc    func(iasTenantUrl, user, password string) (eamias.Client, error)
 	originalReadCredentialsFunc func(namespace, name string, k8sClient client.Client) (*eamias.Credentials, error)
 	originalNewSkrClientFunc    func(k8sClient client.Client, targetClusterId string) (skr.Client, error)
+
+	errIASApplicationCreation = errors.New("stubbed IAS application creation error")
+	errSKRSecretCreation      = errors.New("stubbed skr secret creation error")
 )
 
 func stubSuccessfulIasAppCreation() {
@@ -33,12 +36,11 @@ func stubFailedIasAppCreation() {
 func stubIasAppCreation(c eamias.Client) {
 	// The IAS client is initialized once in the "Reconcile" method of the controller. To update the IAS client stub by forcing a replacement, we need to
 	// update the IAS credentials stub so that the implemented logic assumes that the IAS credentials have been rotated and forces a reinitialization of the IAS client.
-	replaceIasReadCredentialsWithStub(eamias.Credentials{URL: iasUrl, Username: uuid.New().String(), Password: iasPassword})
+	replaceIasReadCredentialsWithStub(eamias.Credentials{URL: iasURL, Username: uuid.New().String(), Password: iasPassword})
 	replaceIasNewIasClientWithStub(c)
 }
 
-type iasClientStub struct {
-}
+type iasClientStub struct{}
 
 func (i iasClientStub) CreateApplication(_ context.Context, name string) (eamias.Application, error) {
 	return eamias.NewApplication(
@@ -63,7 +65,7 @@ type appCreationFailsIasClientStub struct {
 }
 
 func (i appCreationFailsIasClientStub) CreateApplication(_ context.Context, _ string) (eamias.Application, error) {
-	return eamias.Application{}, errors.New("stubbed IAS application creation error")
+	return eamias.Application{}, errIASApplicationCreation
 }
 
 func replaceIasReadCredentialsWithStub(credentials eamias.Credentials) {
@@ -77,12 +79,15 @@ func storeOriginalsOfStubbedFunctions() {
 	originalNewIasClientFunc = eamias.NewClient
 	originalNewSkrClientFunc = skr.NewClient
 }
+
 func revertReadCredentialsStub() {
 	eamias.ReadCredentials = originalReadCredentialsFunc
 }
+
 func revertIasNewClientStub() {
 	eamias.NewClient = originalNewIasClientFunc
 }
+
 func revertSkrNewClientStub() {
 	skr.NewClient = originalNewSkrClientFunc
 }
@@ -100,6 +105,7 @@ type skrClientStub struct {
 func (s skrClientStub) CreateSecret(_ context.Context, app eamias.Application) (kcorev1.Secret, error) {
 	return app.ToSecret(skr.ApplicationSecretName, skr.ApplicationSecretNamespace), nil
 }
+
 func (s skrClientStub) HasApplicationSecret(_ context.Context) (bool, error) {
 	return false, nil
 }
@@ -123,7 +129,7 @@ type secretCreationFailedSkrClientStub struct {
 }
 
 func (s secretCreationFailedSkrClientStub) CreateSecret(_ context.Context, _ eamias.Application) (kcorev1.Secret, error) {
-	return kcorev1.Secret{}, errors.New("stubbed skr secret creation error")
+	return kcorev1.Secret{}, errSKRSecretCreation
 }
 
 func replaceSkrClientWithStub(c skr.Client) {

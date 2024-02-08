@@ -450,11 +450,11 @@ paths:
               * name
             
             ### Authentication Schema
-              * clientId
+              * clientID
           required: false
           examples:
-            clientId:
-              value: clientId eq b92c95c0-42ea-45c0-9cbb-aa49c1020e42
+            clientID:
+              value: clientID eq b92c95c0-42ea-45c0-9cbb-aa49c1020e42
             name:
               value: name eq SFSF
             parentApplicationId:
@@ -806,11 +806,11 @@ components:
           maxLength: 255
           pattern: ^[a-zA-Z0-9_]+$
           example: global
-        clientId:
+        clientID:
           type: string
           maxLength: 36
           example: eac15e81-6703-4c67-8719-ae5c6c865ad3
-          description: it's the same for clientId in OIDC flows
+          description: it's the same for clientID in OIDC flows
         apiCertificates:
           type: array
           maxItems: 20
@@ -898,8 +898,8 @@ components:
             $ref: '#/components/schemas/ConsumedService'
           example:
             - serviceInstanceId: service-instance-id
-              appId: app-id
-              clientId: client-id
+              appID: app-id
+              clientID: client-id
               planName: plan-name
               inherit: true
         providedApis:
@@ -916,7 +916,7 @@ components:
           items:
             $ref: '#/components/schemas/ConsumedApi'
           example:
-            - appId: app-id
+            - appID: app-id
               apiName: read
               name: S4
         riskBasedAuthentication:
@@ -1384,17 +1384,17 @@ components:
     ConsumedService:
       type: object
       required:
-        - appId
-        - clientId
+        - appID
+        - clientID
         - inherit
       properties:
         serviceInstanceId:
           type: string
           maxLength: 255
-        appId:
+        appID:
           type: string
           format: uuid
-        clientId:
+        clientID:
           type: string
           maxLength: 255
         planName:
@@ -1414,14 +1414,14 @@ components:
     ConsumedApi:
       type: object
       required:
-        - appId
+        - appID
         - apiName
         - name
       properties:
-        appId:
+        appID:
           type: string
           format: uuid
-        clientId:
+        clientID:
           type: string
           maxLength: 255
         apiName:
