@@ -16,9 +16,7 @@ limitations under the License.
 
 package v1alpha1
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
+import kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 type State string
 
@@ -28,13 +26,13 @@ const (
 	StateNotReady State = "NotReady"
 )
 
-// EventingAuthSpec defines the desired state of EventingAuth
+// EventingAuthSpec defines the desired state of EventingAuth.
 type EventingAuthSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-// EventingAuthStatus defines the observed state of EventingAuth
+// EventingAuthStatus defines the observed state of EventingAuth.
 type EventingAuthStatus struct {
 	// State signifies current state of CustomObject. Value
 	// can be one of ("Ready", "NotReady").
@@ -48,7 +46,7 @@ type EventingAuthStatus struct {
 	AuthSecret *AuthSecret `json:"secret,omitempty"`
 
 	//  Conditions associated with EventingAuthStatus.
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions []kmetav1.Condition `json:"conditions,omitempty"`
 }
 
 type IASApplication struct {
@@ -62,17 +60,17 @@ type AuthSecret struct {
 	// NamespacedName of the secret on the managed runtime cluster
 	NamespacedName string `json:"namespacedName"`
 	// Runtime ID of the cluster where the secret is created
-	ClusterId string `json:"clusterId"`
+	ClusterID string `json:"clusterId"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state"
 
-// EventingAuth is the Schema for the eventingauths API
+// EventingAuth is the Schema for the eventingauths API.
 type EventingAuth struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	kmetav1.TypeMeta   `json:",inline"`
+	kmetav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   EventingAuthSpec   `json:"spec,omitempty"`
 	Status EventingAuthStatus `json:"status,omitempty"`
@@ -80,13 +78,13 @@ type EventingAuth struct {
 
 //+kubebuilder:object:root=true
 
-// EventingAuthList contains a list of EventingAuth
+// EventingAuthList contains a list of EventingAuth.
 type EventingAuthList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []EventingAuth `json:"items"`
+	kmetav1.TypeMeta `json:",inline"`
+	kmetav1.ListMeta `json:"metadata,omitempty"`
+	Items            []EventingAuth `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&EventingAuth{}, &EventingAuthList{})
+func init() { //nolint:gochecknoinits // Used on the package level.
+	schemeBuilder.Register(&EventingAuth{}, &EventingAuthList{})
 }

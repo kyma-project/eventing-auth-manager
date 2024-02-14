@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc"
-	"github.com/stretchr/testify/require"
 	"io"
-	"k8s.io/client-go/rest/fake"
-	"k8s.io/utils/pointer"
 	"net/http"
 	"testing"
+
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc"
+	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/rest/fake"
+	"k8s.io/utils/ptr"
 )
 
 const oidcConfigMock = `{"token_endpoint":"https://domain-url.com/token"}`
@@ -28,9 +29,9 @@ func Test_oidcClient_getTokenUrl(t *testing.T) {
 		{
 			name: "should return token endpoint",
 			fields: fields{
-				httpClient: mockHttpClientResponseOk([]byte(oidcConfigMock)),
+				httpClient: mockHTTPClientResponseOk([]byte(oidcConfigMock)),
 			},
-			want: pointer.String("https://domain-url.com/token"),
+			want: ptr.To("https://domain-url.com/token"),
 		},
 		{
 			name: "should return token URL by using base url from client and well-known OIDC config path for request",
@@ -46,12 +47,12 @@ func Test_oidcClient_getTokenUrl(t *testing.T) {
 					}, nil
 				}),
 			},
-			want: pointer.String("https://domain-url.com/token"),
+			want: ptr.To("https://domain-url.com/token"),
 		},
 		{
 			name: "should return nil when well known contains no token endpoint",
 			fields: fields{
-				httpClient: mockHttpClientResponseOk([]byte("{}")),
+				httpClient: mockHTTPClientResponseOk([]byte("{}")),
 			},
 		},
 		{
@@ -63,21 +64,21 @@ func Test_oidcClient_getTokenUrl(t *testing.T) {
 					}, nil
 				}),
 			},
-			wantErr: errors.New("unexpected status code 500"),
+			wantErr: errors.New("unexpected status code 500"), //nolint:goerr113 // used one time only in tests.
 		},
 		{
 			name: "should return error when response body is nil",
 			fields: fields{
-				httpClient: mockHttpClientResponseOk(nil),
+				httpClient: mockHTTPClientResponseOk(nil),
 			},
-			wantErr: errors.New("unexpected end of JSON input"),
+			wantErr: errors.New("unexpected end of JSON input"), //nolint:goerr113 // used one time only in tests.
 		},
 		{
 			name: "should return error when response body is no json",
 			fields: fields{
-				httpClient: mockHttpClientResponseOk([]byte("invalid json")),
+				httpClient: mockHTTPClientResponseOk([]byte("invalid json")),
 			},
-			wantErr: errors.New("invalid character 'i' looking for beginning of value"),
+			wantErr: errors.New("invalid character 'i' looking for beginning of value"), //nolint:goerr113 // used one time only in tests.
 		},
 	}
 	for _, tt := range tests {
@@ -101,7 +102,7 @@ func Test_oidcClient_getTokenUrl(t *testing.T) {
 	}
 }
 
-func mockHttpClientResponseOk(body []byte) *http.Client {
+func mockHTTPClientResponseOk(body []byte) *http.Client {
 	return fake.CreateHTTPClient(func(request *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,

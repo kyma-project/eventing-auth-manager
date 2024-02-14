@@ -18,40 +18,28 @@ package main
 
 import (
 	"flag"
-	"github.com/kyma-project/eventing-auth-manager/controllers"
-	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
 	"os"
+
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	eamcontrollers "github.com/kyma-project/eventing-auth-manager/controllers"
+	klmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
+	kutilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
+	kcontrollerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
-	//+kubebuilder:scaffold:imports
 )
-
-var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
-)
-
-func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
-	utilruntime.Must(kymav1beta1.AddToScheme(scheme))
-
-	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
-}
 
 func main() {
+	const webhookPort = 9443
+	setupLog := kcontrollerruntime.Log.WithName("setup")
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -66,12 +54,10 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	kcontrollerruntime.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+	mgr, err := kcontrollerruntime.NewManager(kcontrollerruntime.GetConfigOrDie(), kcontrollerruntime.Options{
+		Scheme:                 initScheme(),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "210590f8.kyma-project.io",
@@ -86,19 +72,26 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
+		Metrics: server.Options{
+			BindAddress: metricsAddr,
+		},
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port: webhookPort,
+		},
+		),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme())
+	kymaReconciler := eamcontrollers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme())
 	if err = kymaReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Kyma")
 		os.Exit(1)
 	}
 
-	eventingAuthReconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme())
+	eventingAuthReconciler := eamcontrollers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme())
 	if err = eventingAuthReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EventingAuth")
 		os.Exit(1)
@@ -115,8 +108,16 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(kcontrollerruntime.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func initScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	kutilruntime.Must(kscheme.AddToScheme(scheme))
+	kutilruntime.Must(klmapiv1beta1.AddToScheme(scheme))
+	kutilruntime.Must(eamapiv1alpha1.AddToScheme(scheme))
+	return scheme
 }

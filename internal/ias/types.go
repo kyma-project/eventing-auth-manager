@@ -1,43 +1,43 @@
 package ias
 
 import (
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kcorev1 "k8s.io/api/core/v1"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Application struct {
 	id           string
-	clientId     string
+	clientID     string
 	clientSecret string
-	tokenUrl     string
-	certsUrl     string
+	tokenURL     string
+	certsURL     string
 }
 
-func NewApplication(id, clientId, clientSecret, tokenUrl, certsUrl string) Application {
+func NewApplication(id, clientID, clientSecret, tokenURL, certsURL string) Application {
 	return Application{
 		id:           id,
-		clientId:     clientId,
+		clientID:     clientID,
 		clientSecret: clientSecret,
-		tokenUrl:     tokenUrl,
-		certsUrl:     certsUrl,
+		tokenURL:     tokenURL,
+		certsURL:     certsURL,
 	}
 }
 
-func (a Application) ToSecret(name, ns string) v1.Secret {
-	return v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+func (a Application) ToSecret(name, ns string) kcorev1.Secret {
+	return kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
 		},
 		Data: map[string][]byte{
-			"client_id":     []byte(a.clientId),
+			"client_id":     []byte(a.clientID),
 			"client_secret": []byte(a.clientSecret),
-			"token_url":     []byte(a.tokenUrl),
-			"certs_url":     []byte(a.certsUrl),
+			"token_url":     []byte(a.tokenURL),
+			"certs_url":     []byte(a.certsURL),
 		},
 	}
 }
 
-func (a Application) GetId() string {
+func (a Application) GetID() string {
 	return a.id
 }

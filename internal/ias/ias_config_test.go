@@ -1,27 +1,26 @@
 package ias
 
 import (
-	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/mocks"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctlrClient "sigs.k8s.io/controller-runtime/pkg/client"
+	kcorev1 "k8s.io/api/core/v1"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func Test_ReadCredentials(t *testing.T) {
 	testNamespace := "mock-namespace"
 	testName := "mock-name"
-	testUrl := "https://test.url.com"
+	testURL := "https://test.url.com"
 	testUsername := "test-username"
 	testPassword := "test-password"
 
 	tests := []struct {
 		name               string
-		givenK8sClientMock ctlrClient.Client
+		givenK8sClientMock kpkgclient.Client
 		mockEnvVars        func()
 		wantCredentials    Credentials
 		wantError          error
@@ -32,10 +31,10 @@ func Test_ReadCredentials(t *testing.T) {
 				MockFunction: func() error {
 					return nil
 				},
-				MockSecret: createMockSecret(testNamespace, testName, testUrl, testUsername, testPassword),
+				MockSecret: createMockSecret(testNamespace, testName, testURL, testUsername, testPassword),
 			},
 			wantCredentials: Credentials{
-				URL:      testUrl,
+				URL:      testURL,
 				Username: testUsername,
 				Password: testPassword,
 			},
@@ -46,7 +45,7 @@ func Test_ReadCredentials(t *testing.T) {
 				MockFunction: func() error {
 					return errors.New("mock error")
 				},
-				MockSecret: createMockSecret(testNamespace, testName, testUrl, testUsername, testPassword),
+				MockSecret: createMockSecret(testNamespace, testName, testURL, testUsername, testPassword),
 			},
 			wantError: errors.New("mock error"),
 		},
@@ -58,8 +57,8 @@ func Test_ReadCredentials(t *testing.T) {
 				},
 				MockSecret: createMockSecretWithoutDataFields(testNamespace, testPassword),
 			},
-			wantError: fmt.Errorf("key %s is not found in ias secret: key %s is not found in ias secret: key %s is not found in ias secret",
-				urlString, usernameString, passwordString),
+			wantError: errors.Errorf("key %s is not found in ias secret: key %s is not found in ias secret: key %s is not found in ias secret",
+				passwordString, usernameString, urlString),
 		},
 		{
 			name: "Fails with missing username data fields error",
@@ -67,9 +66,9 @@ func Test_ReadCredentials(t *testing.T) {
 				MockFunction: func() error {
 					return nil
 				},
-				MockSecret: createMockSecretWithoutUsernameDataFields(testNamespace, testName, testUrl, testPassword),
+				MockSecret: createMockSecretWithoutUsernameDataFields(testNamespace, testName, testURL, testPassword),
 			},
-			wantError: fmt.Errorf("key %s is not found in ias secret", usernameString),
+			wantError: errors.Errorf("key %s is not found in ias secret", usernameString),
 		},
 		{
 			name: "Fails with missing username and password data fields error",
@@ -77,9 +76,9 @@ func Test_ReadCredentials(t *testing.T) {
 				MockFunction: func() error {
 					return nil
 				},
-				MockSecret: createMockSecretWithoutUsernameAndPasswordDataFields(testNamespace, testName, testUrl),
+				MockSecret: createMockSecretWithoutUsernameAndPasswordDataFields(testNamespace, testName, testURL),
 			},
-			wantError: fmt.Errorf("key %s is not found in ias secret: key %s is not found in ias secret", usernameString, passwordString),
+			wantError: errors.Errorf("key %s is not found in ias secret: key %s is not found in ias secret", passwordString, usernameString),
 		},
 	}
 
@@ -98,23 +97,23 @@ func Test_ReadCredentials(t *testing.T) {
 	}
 }
 
-func createMockSecret(testNamespace, testName, testUrl, testUsername, testPassword string) *v1.Secret {
-	s := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+func createMockSecret(testNamespace, testName, testURL, testUsername, testPassword string) *kcorev1.Secret {
+	s := &kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      testNamespace,
 			Namespace: testName,
 		},
 		Data: map[string][]byte{},
 	}
-	s.Data[urlString] = []byte(testUrl)
+	s.Data[urlString] = []byte(testURL)
 	s.Data[usernameString] = []byte(testUsername)
 	s.Data[passwordString] = []byte(testPassword)
 	return s
 }
 
-func createMockSecretWithoutDataFields(testNamespace, testName string) *v1.Secret {
-	s := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+func createMockSecretWithoutDataFields(testNamespace, testName string) *kcorev1.Secret {
+	s := &kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      testNamespace,
 			Namespace: testName,
 		},
@@ -124,27 +123,27 @@ func createMockSecretWithoutDataFields(testNamespace, testName string) *v1.Secre
 	return s
 }
 
-func createMockSecretWithoutUsernameDataFields(testNamespace, testName, testUrl, testPassword string) *v1.Secret {
-	s := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+func createMockSecretWithoutUsernameDataFields(testNamespace, testName, testURL, testPassword string) *kcorev1.Secret {
+	s := &kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      testNamespace,
 			Namespace: testName,
 		},
 		Data: map[string][]byte{},
 	}
-	s.Data[urlString] = []byte(testUrl)
+	s.Data[urlString] = []byte(testURL)
 	s.Data[passwordString] = []byte(testPassword)
 	return s
 }
 
-func createMockSecretWithoutUsernameAndPasswordDataFields(testNamespace, testName, testUrl string) *v1.Secret {
-	s := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+func createMockSecretWithoutUsernameAndPasswordDataFields(testNamespace, testName, testURL string) *kcorev1.Secret {
+	s := &kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      testNamespace,
 			Namespace: testName,
 		},
 		Data: map[string][]byte{},
 	}
-	s.Data[urlString] = []byte(testUrl)
+	s.Data[urlString] = []byte(testURL)
 	return s
 }

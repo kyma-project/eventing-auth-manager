@@ -25,28 +25,27 @@ import (
 	"testing"
 	"time"
 
-	kymav1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/utils/pointer"
-	ctrl "sigs.k8s.io/controller-runtime"
-
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/eventing-auth-manager/controllers"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
+	klmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	kcorev1 "k8s.io/api/core/v1"
+	kapierrors "k8s.io/apimachinery/pkg/api/errors"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/utils/ptr"
+	kcontrollerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	kpkglog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	operatorv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -65,12 +64,12 @@ var (
 	targetClusterK8sClient client.Client
 	testEnv                *envtest.Environment
 	targetClusterTestEnv   *envtest.Environment
-	iasUrl                 string
+	iasURL                 string
 	iasUsername            string
 	iasPassword            string
 	useExistingCluster     bool
-	kcpNs                  *corev1.Namespace
-	kymaNs                 *corev1.Namespace
+	kcpNs                  *kcorev1.Namespace
+	kymaNs                 *kcorev1.Namespace
 )
 
 func TestAPIs(t *testing.T) {
@@ -80,10 +79,10 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func(specCtx SpecContext) {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	kpkglog.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	ctx, cancel = context.WithCancel(context.TODO())
 
-	iasUrl = os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
+	iasURL = os.Getenv("TEST_EVENTING_AUTH_IAS_URL")
 	iasUsername = os.Getenv("TEST_EVENTING_AUTH_IAS_USER")
 	iasPassword = os.Getenv("TEST_EVENTING_AUTH_IAS_PASSWORD")
 	useExistingCluster = os.Getenv("USE_EXISTING_CLUSTER") == "true"
@@ -102,10 +101,10 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(err).NotTo(HaveOccurred())
 
 	// In case we are using an existing cluster the namespace of the application secret might already exist, so we need to guard against that.
-	kymaNs = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: skr.ApplicationSecretNamespace}}
-	err = targetClusterK8sClient.Get(context.TODO(), client.ObjectKeyFromObject(kymaNs), &corev1.Namespace{})
+	kymaNs = &kcorev1.Namespace{ObjectMeta: kmetav1.ObjectMeta{Name: skr.ApplicationSecretNamespace}}
+	err = targetClusterK8sClient.Get(context.TODO(), client.ObjectKeyFromObject(kymaNs), &kcorev1.Namespace{})
 	if err != nil {
-		Expect(apierrors.IsNotFound(err)).To(BeTrue())
+		Expect(kapierrors.IsNotFound(err)).To(BeTrue())
 		err := targetClusterK8sClient.Create(context.TODO(), kymaNs)
 		Expect(err).NotTo(HaveOccurred())
 	}
@@ -115,28 +114,30 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	Expect(kymav1beta1.AddToScheme(scheme.Scheme)).Should(Succeed())
-	Expect(operatorv1alpha1.AddToScheme(scheme.Scheme)).Should(Succeed())
+	Expect(klmapiv1beta1.AddToScheme(scheme.Scheme)).Should(Succeed())
+	Expect(eamapiv1alpha1.AddToScheme(scheme.Scheme)).Should(Succeed())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	kcpNs = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: skr.KcpNamespace},
-		Spec:       corev1.NamespaceSpec{},
+	kcpNs = &kcorev1.Namespace{
+		ObjectMeta: kmetav1.ObjectMeta{Name: skr.KcpNamespace},
+		Spec:       kcorev1.NamespaceSpec{},
 	}
 	Expect(k8sClient.Create(context.TODO(), kcpNs)).Should(Succeed())
 
 	if existIasCreds() {
-		createIasCredsSecret(iasUrl, iasUsername, iasPassword)
+		createIasCredsSecret(iasURL, iasUsername, iasPassword)
 	}
 
 	testSyncPeriod := time.Second * 1
-	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme.Scheme,
-		MetricsBindAddress: "0",
-		SyncPeriod:         &testSyncPeriod,
+	mgr, err := kcontrollerruntime.NewManager(cfg, kcontrollerruntime.Options{
+		Scheme: scheme.Scheme,
+		Metrics: server.Options{
+			BindAddress: "0",
+		},
+		Cache: cache.Options{SyncPeriod: &testSyncPeriod},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
@@ -153,7 +154,6 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 		defer GinkgoRecover()
 		Expect(mgr.Start(ctx)).Should(Succeed())
 	}()
-
 }, NodeTimeout(60*time.Second))
 
 var _ = AfterSuite(func() {
@@ -177,7 +177,6 @@ var _ = AfterSuite(func() {
 
 func stopTestEnv(env *envtest.Environment) {
 	err := env.Stop()
-
 	// Suggested workaround for timeout issue https://github.com/kubernetes-sigs/controller-runtime/issues/1571#issuecomment-1005575071
 	if err != nil {
 		time.Sleep(3 * time.Second)
@@ -186,7 +185,7 @@ func stopTestEnv(env *envtest.Environment) {
 }
 
 func existIasCreds() bool {
-	return iasUrl != "" && iasUsername != "" && iasPassword != ""
+	return iasURL != "" && iasUsername != "" && iasPassword != ""
 }
 
 func initTargetClusterConfig() (client.Client, error) {
@@ -224,7 +223,7 @@ func initTargetClusterConfig() (client.Client, error) {
 
 		targetClusterTestEnv = &envtest.Environment{
 			Config:             config,
-			UseExistingCluster: pointer.Bool(true),
+			UseExistingCluster: ptr.To(true),
 		}
 
 		clientConfig, err = targetClusterTestEnv.Start()
