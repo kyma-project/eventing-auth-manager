@@ -22,7 +22,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: EventingAuth is the Schema for the eventingauths API
+        description: EventingAuth is the Schema for the eventingauths API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -37,10 +37,10 @@ spec:
           metadata:
             type: object
           spec:
-            description: EventingAuthSpec defines the desired state of EventingAuth
+            description: EventingAuthSpec defines the desired state of EventingAuth.
             type: object
           status:
-            description: EventingAuthStatus defines the observed state of EventingAuth
+            description: EventingAuthStatus defines the observed state of EventingAuth.
             properties:
               conditions:
                 description: Conditions associated with EventingAuthStatus.
