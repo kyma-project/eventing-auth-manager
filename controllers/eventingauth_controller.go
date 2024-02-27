@@ -23,16 +23,19 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
-	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
-	"github.com/kyma-project/eventing-auth-manager/internal/skr"
+	klmapiv1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	"github.com/pkg/errors"
+	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kcontrollerruntime "sigs.k8s.io/controller-runtime"
 	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 )
 
 const (
@@ -98,6 +101,13 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req kcontrollerr
 func (r *eventingAuthReconciler) handleApplicationSecret(ctx context.Context, logger logr.Logger, cr eamapiv1alpha1.EventingAuth) (kcontrollerruntime.Result, error) {
 	skrClient, err := skr.NewClient(r.Client, cr.Name)
 	if err != nil {
+		if errors.Is(err, skr.ErrSecretNotFound) {
+			logger.Error(err, "Failed to load kubeconfig for cluster", "clusterID", cr.Name)
+			if !r.kymaCRExists(ctx, cr.Name) {
+				r.Client.Delete(ctx, &cr)
+				return kcontrollerruntime.Result{}, nil
+			}
+		}
 		logger.Error(err, "Failed to retrieve client of target cluster")
 		return kcontrollerruntime.Result{}, err
 	}
@@ -159,6 +169,15 @@ func (r *eventingAuthReconciler) handleApplicationSecret(ctx context.Context, lo
 
 	logger.Info("Reconciliation done")
 	return kcontrollerruntime.Result{}, nil
+}
+
+func (r *eventingAuthReconciler) kymaCRExists(ctx context.Context, clusterID string) bool {
+	var kyma klmapiv1beta2.Kyma
+	err := r.Get(ctx, types.NamespacedName{Namespace: skr.KcpNamespace, Name: clusterID}, &kyma)
+	if kapierrors.IsNotFound(err) {
+		return false
+	}
+	return true
 }
 
 func (r *eventingAuthReconciler) getIasClient() (eamias.Client, error) {

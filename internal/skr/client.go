@@ -4,19 +4,25 @@ import (
 	"context"
 	"fmt"
 
-	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/pkg/errors"
 	kcorev1 "k8s.io/api/core/v1"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
 )
 
 const (
 	ApplicationSecretName      = "eventing-webhook-auth"
 	ApplicationSecretNamespace = "kyma-system"
 	KcpNamespace               = "kcp-system"
+)
+
+var (
+	ErrSecretNotFound    = errors.New("kubeconfig secret not found")
+	ErrConfigKeyNotFound = errors.New("kubeconfig data not found in secret")
 )
 
 type Client interface {
@@ -34,12 +40,15 @@ var NewClient = func(k8sClient kpkgclient.Client, skrClusterID string) (Client, 
 
 	secret := &kcorev1.Secret{}
 	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: kubeconfigSecretName, Namespace: KcpNamespace}, secret); err != nil {
+		if kapierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("for clusterID: %s errors: %w, %w", skrClusterID, ErrSecretNotFound, err)
+		}
 		return nil, err
 	}
 
 	kubeconfig := secret.Data["config"]
 	if len(kubeconfig) == 0 {
-		return nil, errors.Errorf("failed to find SKR cluster kubeconfig in secret %s", kubeconfigSecretName)
+		return nil, fmt.Errorf("failed to find SKR cluster kubeconfig in secret %s, err: %w", kubeconfigSecretName, ErrConfigKeyNotFound)
 	}
 
 	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)

@@ -31,7 +31,7 @@ func Test_NewClient(t *testing.T) {
 				k8sClient:    fake.NewClientBuilder().Build(),
 				skrClusterID: "test",
 			},
-			wantError: errors.New("secrets \"kubeconfig-test\" not found"), //nolint:goerr113 // used one time only in tests.
+			wantError: ErrSecretNotFound,
 		},
 		{
 			name: "should return error when secret doesn't contain config key",
@@ -39,7 +39,7 @@ func Test_NewClient(t *testing.T) {
 				k8sClient:    fake.NewClientBuilder().WithObjects(&kcorev1.Secret{ObjectMeta: kmetav1.ObjectMeta{Name: "kubeconfig-test", Namespace: KcpNamespace}}).Build(),
 				skrClusterID: "test",
 			},
-			wantError: errors.New("failed to find SKR cluster kubeconfig in secret kubeconfig-test"), //nolint:goerr113 // used one time only in tests.
+			wantError: ErrConfigKeyNotFound,
 		},
 	}
 	for _, tt := range tests {
@@ -49,7 +49,7 @@ func Test_NewClient(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			require.EqualError(t, tt.wantError, err.Error())
+			require.ErrorIs(t, err, tt.wantError)
 		})
 	}
 }

@@ -6,13 +6,14 @@ import (
 	"log"
 
 	"github.com/google/uuid"
-	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
-	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	onsigomegatypes "github.com/onsi/gomega/types"
 	kcorev1 "k8s.io/api/core/v1"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -134,6 +135,15 @@ var _ = Describe("EventingAuth Controller unhappy tests", Serial, Ordered, func(
 		stubSuccessfulSkrSecretCreation()
 		verifyEventingAuthStatusReady(eventingAuth)
 	})
+
+	It("should cleanup if no kyma cr exists", func() {
+		stubSuccessfulIasAppCreation()
+		stubSuccessfulSkrSecretCreation()
+		eventingAuth = createEventingAuth(crName)
+		reconcileEventingAuth(eventingAuth)
+		stubFailedSkrSecretCreationSecretNotFound()
+		verifyEventingAuthNotAvailable(eventingAuth)
+	})
 })
 
 func deleteSecretOnTargetCluster(secret *kcorev1.Secret) {
@@ -205,6 +215,15 @@ func verifyEventingAuthStatusReady(cr *eamapiv1alpha1.EventingAuth) {
 				eamapiv1alpha1.ConditionReasonSecretCreated,
 				eamapiv1alpha1.ConditionMessageSecretCreated),
 		))
+	}, defaultTimeout).Should(Succeed())
+}
+
+func verifyEventingAuthNotAvailable(cr *eamapiv1alpha1.EventingAuth) {
+	By(fmt.Sprintf("Verifying that EventingAuth %s does not exist", cr.Name))
+	Eventually(func(g Gomega) {
+		e := eamapiv1alpha1.EventingAuth{}
+		err := k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(cr), &e)
+		g.Expect(kapierrors.IsNotFound(err)).Should(BeTrue())
 	}, defaultTimeout).Should(Succeed())
 }
 
@@ -305,8 +324,18 @@ func deleteKubeconfigSecret(crName string) {
 	}
 	Eventually(func(g Gomega) {
 		err := k8sClient.Delete(context.TODO(), &kubeconfigSecret)
-		if err != nil {
-			g.Expect(kapierrors.IsNotFound(err)).Should(BeTrue())
-		}
+		g.Expect(kapierrors.IsNotFound(err)).Should(BeTrue())
+	}, defaultTimeout).Should(Succeed())
+}
+
+func reconcileEventingAuth(cr *eamapiv1alpha1.EventingAuth) {
+	By("Labelling EA to force reconcilation")
+	Eventually(func(g Gomega) {
+		var ea eamapiv1alpha1.EventingAuth
+		err := k8sClient.Get(context.TODO(), kpkgclient.ObjectKeyFromObject(cr), &ea)
+		g.Expect(err).To(BeNil())
+		ea.ObjectMeta.Labels = map[string]string{"reconcile": "now"}
+		err = k8sClient.Update(ctx, &ea)
+		g.Expect(err).To(BeNil())
 	}, defaultTimeout).Should(Succeed())
 }

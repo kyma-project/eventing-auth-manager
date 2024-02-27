@@ -6,10 +6,13 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	kcorev1 "k8s.io/api/core/v1"
+	kapierrors "k8s.io/apimachinery/pkg/api/errors"
+	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/kyma-project/eventing-auth-manager/internal/skr"
-	kcorev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
 )
@@ -116,12 +119,20 @@ func (s skrClientStub) DeleteSecret(_ context.Context) error {
 
 func stubSuccessfulSkrSecretCreation() {
 	By("Stubbing SKR secret creation to succeed")
-	replaceSkrClientWithStub(skrClientStub{})
+	replaceSkrClientWithStub(skrClientStub{}, nil)
+}
+
+func stubFailedSkrSecretCreationSecretNotFound() {
+	By("Stubbing SKR secret creation to fail with skr.ErrSecretNotFound")
+	replaceSkrClientWithStub(skrClientStub{}, fmt.Errorf("%w, %w", skr.ErrSecretNotFound, kapierrors.NewNotFound(controllerruntime.GroupResource{
+		Group:    "bla",
+		Resource: "bla",
+	}, "horst")))
 }
 
 func stubFailedSkrSecretCreation() {
 	By("Stubbing SKR secret creation to fail")
-	replaceSkrClientWithStub(secretCreationFailedSkrClientStub{})
+	replaceSkrClientWithStub(secretCreationFailedSkrClientStub{}, nil)
 }
 
 type secretCreationFailedSkrClientStub struct {
@@ -132,8 +143,8 @@ func (s secretCreationFailedSkrClientStub) CreateSecret(_ context.Context, _ eam
 	return kcorev1.Secret{}, errSKRSecretCreation
 }
 
-func replaceSkrClientWithStub(c skr.Client) {
+func replaceSkrClientWithStub(c skr.Client, err error) {
 	skr.NewClient = func(k8sClient client.Client, targetClusterId string) (skr.Client, error) {
-		return c, nil
+		return c, err
 	}
 }
