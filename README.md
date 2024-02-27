@@ -172,7 +172,7 @@ kubectl create ns kyma-system
 make install
 ```
 
-2. Update name of Custom Resource in `config/samples/operator_v1beta1_kyma.yaml` to contain the name of the kubeconfig secret created in [Preparing the clusters](#preparing-the-clusters).
+2. Update name of Custom Resource in `config/samples/operator_v1beta2_kyma.yaml` to contain the name of the kubeconfig secret created in [Preparing the clusters](#preparing-the-clusters).
 The Kyma CR name is equal to target K8s cluster name too.
 
 3. Install Instances of Custom Resources:
