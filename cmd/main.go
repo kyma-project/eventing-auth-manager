@@ -22,7 +22,7 @@ import (
 
 	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	eamcontrollers "github.com/kyma-project/eventing-auth-manager/controllers"
-	klmapiv1beta1 "github.com/kyma-project/lifecycle-manager/api/v1beta1"
+	klmapiv1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	"k8s.io/apimachinery/pkg/runtime"
 	kutilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
@@ -117,7 +117,7 @@ func main() {
 func initScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	kutilruntime.Must(kscheme.AddToScheme(scheme))
-	kutilruntime.Must(klmapiv1beta1.AddToScheme(scheme))
+	kutilruntime.Must(klmapiv1beta2.AddToScheme(scheme))
 	kutilruntime.Must(eamapiv1alpha1.AddToScheme(scheme))
 	return scheme
 }
