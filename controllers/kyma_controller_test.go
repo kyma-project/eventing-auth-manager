@@ -12,8 +12,11 @@ import (
 	kcorev1 "k8s.io/api/core/v1"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -47,27 +50,49 @@ var _ = Describe("Kyma Controller", Serial, Ordered, func() {
 	})
 
 	Context("Creating Kyma CR", func() {
-		It("should create Kyma CR", func() {
+		It("should create EA CR", func() {
 			kyma = createKymaResource(crName)
 
-			verifyEventingAuth(kyma.Namespace, kyma.Name)
+			verifyEventingAuth(*kyma)
+
+			deleteKymaResource(kyma)
+		})
+	})
+	Context("Reconciling Kyma CR", func() {
+		It("should update EA CR", func() {
+			createEventingAuthWithWrongOwnerRef(crName)
+			kyma = createKymaResource(crName)
+
+			verifyEventingAuth(*kyma)
 
 			deleteKymaResource(kyma)
 		})
 	})
 })
 
-func verifyEventingAuth(namespace, name string) {
-	nsName := types.NamespacedName{Namespace: namespace, Name: name}
+func verifyEventingAuth(kyma klmapiv1beta2.Kyma) {
+	nsName := types.NamespacedName{Namespace: kyma.Namespace, Name: kyma.Name}
 	By(fmt.Sprintf("Verifying Kyma CR %s", nsName.String()))
 	Eventually(func(g Gomega) {
 		eventingAuth := &eamapiv1alpha1.EventingAuth{}
 		g.Expect(k8sClient.Get(context.TODO(), nsName, eventingAuth)).Should(Succeed())
-		g.Expect(eventingAuth.Name).To(Equal(name))
-		g.Expect(eventingAuth.Namespace).To(Equal(namespace))
+		scheme := runtime.NewScheme()
+		g.Expect(klmapiv1beta2.AddToScheme(scheme)).To(Succeed())
+		gvk, err := apiutil.GVKForObject(&kyma, scheme)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(eventingAuth.OwnerReferences).To(ContainElement(kmetav1.OwnerReference{
+			APIVersion:         gvk.GroupVersion().String(),
+			Kind:               gvk.Kind,
+			Name:               kyma.Name,
+			UID:                kyma.UID,
+			Controller:         ptr.To(true),
+			BlockOwnerDeletion: ptr.To(true),
+		}))
+		g.Expect(eventingAuth.Name).To(Equal(kyma.Name))
+		g.Expect(eventingAuth.Namespace).To(Equal(kyma.Namespace))
 		g.Expect(eventingAuth.Status.State).To(Equal(eamapiv1alpha1.StateReady))
 		g.Expect(eventingAuth.Status.Application).ShouldNot(BeNil())
-		g.Expect(eventingAuth.Status.Application.Name).To(Equal(name))
+		g.Expect(eventingAuth.Status.Application.Name).To(Equal(kyma.Name))
 		g.Expect(eventingAuth.Status.Application.UUID).ShouldNot(BeEmpty())
 		g.Expect(eventingAuth.Status.AuthSecret).ShouldNot(BeNil())
 		g.Expect(eventingAuth.Status.AuthSecret.NamespacedName).To(Equal((skr.ApplicationSecretNamespace + "/" + skr.ApplicationSecretName)))
