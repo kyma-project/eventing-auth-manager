@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"time"
 
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	klmapiv1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	"github.com/pkg/errors"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -16,11 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 )
-
-const fieldManager = "eventing-auth-manager"
 
 // KymaReconciler reconciles a Kyma resource.
 type KymaReconciler struct {

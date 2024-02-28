@@ -77,9 +77,9 @@ func verifyEventingAuth(kyma klmapiv1beta2.Kyma) {
 		eventingAuth := &eamapiv1alpha1.EventingAuth{}
 		g.Expect(k8sClient.Get(context.TODO(), nsName, eventingAuth)).Should(Succeed())
 		scheme := runtime.NewScheme()
-		g.Expect(klmapiv1beta2.AddToScheme(scheme)).To(BeNil())
+		g.Expect(klmapiv1beta2.AddToScheme(scheme)).To(Succeed())
 		gvk, err := apiutil.GVKForObject(&kyma, scheme)
-		g.Expect(err).To(BeNil())
+		g.Expect(err).ToNot(HaveOccurred())
 		g.Expect(eventingAuth.OwnerReferences).To(ContainElement(kmetav1.OwnerReference{
 			APIVersion:         gvk.GroupVersion().String(),
 			Kind:               gvk.Kind,
