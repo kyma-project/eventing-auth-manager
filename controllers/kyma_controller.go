@@ -2,9 +2,10 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"time"
 
-	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	klmapiv1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	"github.com/pkg/errors"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,7 +16,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 )
+
+const fieldManager = "eventing-auth-manager"
 
 // KymaReconciler reconciles a Kyma resource.
 type KymaReconciler struct {
@@ -52,27 +57,56 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req kcontrollerruntime.R
 }
 
 func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *klmapiv1beta2.Kyma) error {
-	eventingAuth := &eamapiv1alpha1.EventingAuth{
-		ObjectMeta: kmetav1.ObjectMeta{
-			Namespace: kyma.Namespace,
-			Name:      kyma.Name,
-		},
-	}
-
-	err := r.Client.Get(ctx, types.NamespacedName{Namespace: eventingAuth.Namespace, Name: eventingAuth.Name}, eventingAuth)
+	actual := &eamapiv1alpha1.EventingAuth{}
+	err := r.Client.Get(ctx, types.NamespacedName{Namespace: kyma.Namespace, Name: kyma.Name}, actual)
 	if err != nil {
 		if kapierrors.IsNotFound(err) {
-			if err = controllerutil.SetControllerReference(kyma, eventingAuth, r.Scheme); err != nil {
+			desired := &eamapiv1alpha1.EventingAuth{
+				ObjectMeta: kmetav1.ObjectMeta{
+					Namespace: kyma.Namespace,
+					Name:      kyma.Name,
+				},
+			}
+			if err = controllerutil.SetControllerReference(kyma, desired, r.Scheme); err != nil {
 				return err
 			}
-			err = r.Client.Create(ctx, eventingAuth)
+			err = r.Client.Create(ctx, desired)
 			if err != nil {
-				return errors.Wrap(err, "failed to create EventingAuth resource")
+				return fmt.Errorf("failed to create EventingAuth resource: %w", err)
 			}
 			return nil
 		}
 		return errors.Wrap(err, "failed to retrieve EventingAuth resource")
 	}
+
+	desired := actual.DeepCopy()
+	// remove previous controller ref regardless of currently specified api-version of the controller ref
+	if controllerutil.HasControllerReference(desired) {
+		ownerRefs := desired.GetOwnerReferences()
+		controllerIndex := -1
+		for i, ref := range ownerRefs {
+			isTrue := ref.Controller
+			if ref.Controller != nil && *isTrue {
+				controllerIndex = i
+				break
+			}
+		}
+		if controllerIndex > -1 {
+			ownerRefs = append(ownerRefs[:controllerIndex], ownerRefs[controllerIndex+1:]...)
+		}
+		desired.SetOwnerReferences(ownerRefs)
+	}
+
+	if err = controllerutil.SetControllerReference(kyma, desired, r.Scheme); err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(desired, actual) {
+		err = r.Client.Update(ctx, desired, &client.UpdateOptions{})
+		if err != nil {
+			return errors.Wrap(err, "failed to patch EventingAuth resource")
+		}
+	}
+
 	return nil
 }
 
