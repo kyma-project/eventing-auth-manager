@@ -120,7 +120,7 @@ func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *kmetav1.P
 func reactToCreateOnlyPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			// Deleting a kyma Cr will automatically create a delete event for the EAM resource using the kubernetes garbage collection
+			// Deleting a kyma CR will automatically create a delete event for the EAM resource using the kubernetes garbage collection
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
