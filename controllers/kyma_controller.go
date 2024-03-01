@@ -7,16 +7,21 @@ import (
 	"time"
 
 	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	"github.com/kyma-project/lifecycle-manager/api/shared"
 	klmapiv1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	"github.com/pkg/errors"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kcontrollerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 // KymaReconciler reconciles a Kyma resource.
@@ -40,20 +45,25 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req kcontrollerruntime.R
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciling Kyma resource")
 
-	kyma := &klmapiv1beta2.Kyma{}
-	err := r.Client.Get(ctx, req.NamespacedName, kyma)
+	metadata := &kmetav1.PartialObjectMetadata{}
+	metadata.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   klmapiv1beta2.GroupVersion.Group,
+		Version: klmapiv1beta2.GroupVersion.Version,
+		Kind:    string(shared.KymaKind),
+	})
+	err := r.Client.Get(ctx, req.NamespacedName, metadata)
 	if err != nil {
 		return kcontrollerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if err = r.createEventingAuth(ctx, kyma); err != nil {
+	if err = r.createEventingAuth(ctx, metadata); err != nil {
 		return kcontrollerruntime.Result{}, err
 	}
 
 	return kcontrollerruntime.Result{}, nil
 }
 
-func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *klmapiv1beta2.Kyma) error {
+func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *kmetav1.PartialObjectMetadata) error {
 	actual := &eamapiv1alpha1.EventingAuth{}
 	err := r.Client.Get(ctx, types.NamespacedName{Namespace: kyma.Namespace, Name: kyma.Name}, actual)
 	if err != nil {
@@ -107,10 +117,26 @@ func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *klmapiv1b
 	return nil
 }
 
+func reactToCreateOnlyPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			// Deleting a kyma CR will automatically create a delete event for the EAM resource using the kubernetes garbage collection
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Updating a kyma CR is not relevant as the only information required for EAM is the name of the CR
+			return false
+		},
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KymaReconciler) SetupWithManager(mgr kcontrollerruntime.Manager) error {
 	return kcontrollerruntime.NewControllerManagedBy(mgr).
-		For(&klmapiv1beta2.Kyma{}).
-		Owns(&eamapiv1alpha1.EventingAuth{}).
+		Named("eam-reconciler").
+		WatchesMetadata(&klmapiv1beta2.Kyma{}, &handler.EnqueueRequestForObject{}).
+		// For(&klmapiv1beta2.Kyma{}).
+		WithEventFilter(reactToCreateOnlyPredicate()).
+		// Owns(&eamapiv1alpha1.EventingAuth{}).
 		Complete(r)
 }
