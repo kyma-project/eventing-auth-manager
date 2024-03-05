@@ -51,7 +51,7 @@ gen-ias-client: ## Generate IAS client and client mocks from OpenAPI spec
 manifests: manifests-eam manifests-external
 
 .PHONY: manifests-eam
-manifests-eam: manifests-external controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests-eam: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: manifests-external
