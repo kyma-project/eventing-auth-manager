@@ -18,7 +18,7 @@ package controllers_test
 
 import (
 	"context"
-	//+kubebuilder:scaffold:imports
+	// +kubebuilder:scaffold:imports
 	"log"
 	"os"
 	"path/filepath"
@@ -52,7 +52,7 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 const (
-	defaultTimeout = time.Second * 60
+	defaultTimeout = time.Second * 30
 )
 
 var (

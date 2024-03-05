@@ -12,6 +12,7 @@ import (
 	kcorev1 "k8s.io/api/core/v1"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -146,6 +147,30 @@ func createEventingAuth(name string) *eamapiv1alpha1.EventingAuth {
 		ObjectMeta: kmetav1.ObjectMeta{
 			Name:      name,
 			Namespace: skr.KcpNamespace,
+		},
+	}
+
+	By("Creating EventingAuth CR")
+	Expect(k8sClient.Create(context.TODO(), &e)).Should(Succeed())
+
+	return &e
+}
+
+func createEventingAuthWithWrongOwnerRef(name string) *eamapiv1alpha1.EventingAuth {
+	e := eamapiv1alpha1.EventingAuth{
+		ObjectMeta: kmetav1.ObjectMeta{
+			Name:      name,
+			Namespace: skr.KcpNamespace,
+			OwnerReferences: []kmetav1.OwnerReference{
+				{
+					APIVersion:         "test",
+					Kind:               "test",
+					Name:               "test",
+					UID:                "test",
+					Controller:         ptr.To(true),
+					BlockOwnerDeletion: ptr.To(true),
+				},
+			},
 		},
 	}
 
