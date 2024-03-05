@@ -29,7 +29,7 @@ jobs:
     - name: Test
       run: |
         bin/k3d kubeconfig get kyma > $PWD/k3d_kubeconfig
-        KUBECONFIG=$PWD/k3d_kubeconfig TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH=$PWD/k3d_kubeconfig make test
+        KUBECONFIG=$PWD/k3d_kubeconfig TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH=$PWD/k3d_kubeconfig make test-ci
       env:
         USE_EXISTING_CLUSTER: "true" 
         TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH: k3d_kubeconfig

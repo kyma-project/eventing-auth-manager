@@ -47,8 +47,11 @@ gen-ias-client: ## Generate IAS client and client mocks from OpenAPI spec
 	mockery --name=ClientWithResponsesInterface --dir=./internal/ias/internal/api --output=./internal/ias/internal/api/mocks --outpkg=mocks --case=underscore
 
 
-.PHONY: manifests
-manifests: manifests-external controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+.PHONY: manifest
+manifests: manifests-eam manifests-external
+
+.PHONY: manifests-eam
+manifests-eam: manifests-external controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: manifests-external
@@ -71,10 +74,22 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
+.PHONY: repoclean
+repoclean: manifests-eam
+	git diff --exit-code
+
+.PHONY: test-ci
+test-ci: repoclean envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+
 ##@ Build
 
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
+	go build -o bin/manager cmd/main.go
+
+.PHONY: build-ci
+build-ci: repoclean ## Build manager binary.
 	go build -o bin/manager cmd/main.go
 
 .PHONY: run
