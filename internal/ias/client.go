@@ -9,10 +9,12 @@ import (
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
+	"k8s.io/utils/ptr"
+	kcontrollerruntime "sigs.k8s.io/controller-runtime"
+
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc"
-	"github.com/pkg/errors"
-	kcontrollerruntime "sigs.k8s.io/controller-runtime"
 )
 
 var (
@@ -282,7 +284,8 @@ func extractApplicationID(createAppResponse *api.CreateApplicationResponse) (uui
 func newIasApplication(name string) api.Application {
 	ssoType := api.OpenIdConnect
 	return api.Application{
-		Name: &name,
+		Name:          &name,
+		GlobalAccount: ptr.To("e92e2c9c-ea09-4c43-a061-a136a7cfcca0"),
 		Branding: &api.Branding{
 			DisplayName: &name,
 		},
