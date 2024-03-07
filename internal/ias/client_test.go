@@ -8,12 +8,13 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api/mocks"
-	eamoidcmocks "github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
+
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api/mocks"
+	eamoidcmocks "github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc/mocks"
 )
 
 func Test_CreateApplication(t *testing.T) {
@@ -272,7 +273,7 @@ func Test_CreateApplication(t *testing.T) {
 			}
 
 			// when
-			app, err := client.CreateApplication(context.TODO(), "Test-App-Name")
+			app, err := client.CreateApplication(context.TODO(), "Test-App-Name", "GAID")
 
 			// then
 			require.Equal(t, tt.wantApp, app)
@@ -429,7 +430,7 @@ func mockGetAllApplicationsWithResponseStatusOk(clientMock *mocks.ClientWithResp
 }
 
 func mockCreateApplicationWithResponseStatusInternalServerError(clientMock *mocks.ClientWithResponsesInterface) {
-	clientMock.On("CreateApplicationWithResponse", mock.Anything, mock.Anything, newIasApplication("Test-App-Name")).
+	clientMock.On("CreateApplicationWithResponse", mock.Anything, mock.Anything, newIasApplication("Test-App-Name", "GAID")).
 		Return(&api.CreateApplicationResponse{
 			HTTPResponse: &http.Response{
 				StatusCode: http.StatusInternalServerError,
@@ -438,7 +439,7 @@ func mockCreateApplicationWithResponseStatusInternalServerError(clientMock *mock
 }
 
 func mockCreateApplicationWithResponseStatusCreated(clientMock *mocks.ClientWithResponsesInterface, appID string) {
-	clientMock.On("CreateApplicationWithResponse", mock.Anything, mock.Anything, newIasApplication("Test-App-Name")).
+	clientMock.On("CreateApplicationWithResponse", mock.Anything, mock.Anything, newIasApplication("Test-App-Name", "GAID")).
 		Return(&api.CreateApplicationResponse{
 			HTTPResponse: &http.Response{
 				StatusCode: http.StatusCreated,

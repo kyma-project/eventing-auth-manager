@@ -23,9 +23,6 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
-	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
-	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,6 +30,10 @@ import (
 	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 )
 
 const (
@@ -46,16 +47,18 @@ const (
 // eventingAuthReconciler reconciles a EventingAuth object.
 type eventingAuthReconciler struct {
 	kpkgclient.Client
-	Scheme    *runtime.Scheme
-	iasClient eamias.Client
+	Scheme          *runtime.Scheme
+	iasClient       eamias.Client
+	globalAccountID string
 	// existingIasApplications stores existing IAS apps in memory not to recreate again if exists
 	existingIasApplications map[string]eamias.Application
 }
 
-func NewEventingAuthReconciler(c kpkgclient.Client, s *runtime.Scheme) ManagedReconciler {
+func NewEventingAuthReconciler(c kpkgclient.Client, s *runtime.Scheme, globalAccountID string) ManagedReconciler {
 	return &eventingAuthReconciler{
 		Client:                  c,
 		Scheme:                  s,
+		globalAccountID:         globalAccountID,
 		existingIasApplications: map[string]eamias.Application{},
 	}
 }
@@ -116,7 +119,7 @@ func (r *eventingAuthReconciler) handleApplicationSecret(ctx context.Context, lo
 	if !appExists {
 		var createAppErr error
 		logger.Info("Creating application in IAS")
-		iasApplication, createAppErr = r.iasClient.CreateApplication(ctx, cr.Name)
+		iasApplication, createAppErr = r.iasClient.CreateApplication(ctx, cr.Name, r.globalAccountID)
 		if createAppErr != nil {
 			logger.Error(createAppErr, "Failed to create application in IAS")
 			if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionApplicationReady, createAppErr); err != nil {

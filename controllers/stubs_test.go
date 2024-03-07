@@ -6,10 +6,11 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
-	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	kcorev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 
 	. "github.com/onsi/ginkgo/v2"
 )
@@ -42,7 +43,7 @@ func stubIasAppCreation(c eamias.Client) {
 
 type iasClientStub struct{}
 
-func (i iasClientStub) CreateApplication(_ context.Context, name string) (eamias.Application, error) {
+func (i iasClientStub) CreateApplication(_ context.Context, name, _ string) (eamias.Application, error) {
 	return eamias.NewApplication(
 		fmt.Sprintf("id-for-%s", name),
 		fmt.Sprintf("client-id-for-%s", name),
@@ -64,7 +65,7 @@ type appCreationFailsIasClientStub struct {
 	iasClientStub
 }
 
-func (i appCreationFailsIasClientStub) CreateApplication(_ context.Context, _ string) (eamias.Application, error) {
+func (i appCreationFailsIasClientStub) CreateApplication(_ context.Context, _, _ string) (eamias.Application, error) {
 	return eamias.Application{}, errIASApplicationCreation
 }
 

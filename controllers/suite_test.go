@@ -25,9 +25,6 @@ import (
 	"testing"
 	"time"
 
-	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
-	"github.com/kyma-project/eventing-auth-manager/controllers"
-	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	klmapiv1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	kcorev1 "k8s.io/api/core/v1"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +40,10 @@ import (
 	kpkglog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	"github.com/kyma-project/eventing-auth-manager/controllers"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -147,7 +148,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme())
 	Expect(kymaReconciler.SetupWithManager(mgr)).Should(Succeed())
 
-	eventingAuthReconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme())
+	eventingAuthReconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), "GAID")
 	Expect(eventingAuthReconciler.SetupWithManager(mgr)).Should(Succeed())
 
 	go func() {
