@@ -9,10 +9,11 @@ import (
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/google/uuid"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc"
 	"github.com/pkg/errors"
 	kcontrollerruntime "sigs.k8s.io/controller-runtime"
+
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc"
 )
 
 var (

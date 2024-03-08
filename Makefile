@@ -2,7 +2,8 @@
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.26.0
+ENVTEST_K8S_VERSION = 1.28.0
+K3D_K8S_VERSION = 1.28.4
 
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -149,7 +150,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 .PHONY: provision-k3d
 provision-k3d: k3d
-	K8S_VERSION=$(ENVTEST_K8S_VERSION) hack/provision-k3d.sh
+	K8S_VERSION=$(K3D_K8S_VERSION) hack/provision-k3d.sh
 
 ##@ Build Dependencies
 
@@ -200,33 +201,38 @@ envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
+
+GOLANG_CI_LINT_VERSION ?= v1.55.2
+.PHONY: golangci-lint
+golangci-lint:
+	test -s $(LOCALBIN)/golangci-lint && $(LOCALBIN)/golangci-lint version | grep -q $(GOLANG_CI_LINT_VERSION) || \
+		GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
+
 # Lint issue category
 CATEGORY = "default"
 
 .PHONY: lint
-lint: ## Check lint issues using `golangci-lint`
-	golangci-lint run --timeout 5m --config=./.golangci.yaml
+lint: golangci-lint## Check lint issues using `golangci-lint`
+	$(LOCALBIN)/golangci-lint run --timeout 5m
 
 .PHONY: lint-compact
-lint-compact: ## Check lint issues using `golangci-lint` in compact result format
-	golangci-lint run --timeout 5m --config=./.golangci.yaml --print-issued-lines=false
+lint-compact: golangci-lint## Check lint issues using `golangci-lint` in compact result format
+	$(LOCALBIN)/golangci-lint run --timeout 5m --print-issued-lines=false
 
 .PHONY: lint-fix
-lint-fix: ## Check and fix lint issues using `golangci-lint`
-	golangci-lint run --fix --timeout 5m --config=./.golangci.yaml
+lint-fix: golangci-lint## Check and fix lint issues using `golangci-lint`
+	$(LOCALBIN)/golangci-lint run --fix --timeout 5m
 
 .PHONY: lint-report
-lint-report: ## Check lint issues using `golangci-lint` then export them to a file, then print the list of linters used
-	golangci-lint run --timeout 5m --config=./.golangci.yaml --issues-exit-code 0 --out-format json > ./lint-report.json
+lint-report: lint-report-clean golangci-lint## Check lint issues using `golangci-lint` then export them to a file, then print the list of linters used
+	$(LOCALBIN)/golangci-lint run --timeout 5m --issues-exit-code 0 --out-format json > ./lint-report.json
 
 .PHONY: lint-report-issue-category
-lint-report-issue-category: ## Get lint issues categories
-	make lint-report-clean
-	make lint-report
+lint-report-issue-category: lint-report golangci-lint## Get lint issues categories
 	cat ./lint-report.json | jq '.Issues[].FromLinter' | jq -s 'map({(.):1})|add|keys_unsorted'
 
 .PHONY: lint-report-get-category
-lint-report-get-category: ## Get lint issues by category
+lint-report-get-category: lint-report golangci-lint## Get lint issues by category
 	cat ./lint-report.json | jq --arg CATEGORY $$CATEGORY '.Issues[] | select(.FromLinter==$$CATEGORY)'
 
 .PHONY: lint-report-clean

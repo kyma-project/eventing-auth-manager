@@ -23,9 +23,6 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
-	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
-	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,6 +30,10 @@ import (
 	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
+	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 )
 
 const (
