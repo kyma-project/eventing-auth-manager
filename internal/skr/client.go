@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
 	"github.com/pkg/errors"
 	kcorev1 "k8s.io/api/core/v1"
 	kapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
 )
 
 const (

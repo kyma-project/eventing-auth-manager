@@ -6,10 +6,11 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
-	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 	kcorev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	eamias "github.com/kyma-project/eventing-auth-manager/internal/ias"
+	"github.com/kyma-project/eventing-auth-manager/internal/skr"
 
 	. "github.com/onsi/ginkgo/v2"
 )
