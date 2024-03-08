@@ -183,7 +183,8 @@ $(ENVTEST): $(LOCALBIN)
 
 
 GOLANG_CI_LINT_VERSION ?= v1.55.2
-golangci_lint:
+.PHONY: golangci-lint
+golangci-lint:
 	test -s $(LOCALBIN)/golangci-lint && $(LOCALBIN)/golangci-lint version | grep -q $(GOLANG_CI_LINT_VERSION) || \
 		GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANG_CI_LINT_VERSION)
 
@@ -191,27 +192,27 @@ golangci_lint:
 CATEGORY = "default"
 
 .PHONY: lint
-lint: golangci_lint## Check lint issues using `golangci-lint`
+lint: golangci-lint## Check lint issues using `golangci-lint`
 	$(LOCALBIN)/golangci-lint run --timeout 5m
 
 .PHONY: lint-compact
-lint-compact: golangci_lint## Check lint issues using `golangci-lint` in compact result format
+lint-compact: golangci-lint## Check lint issues using `golangci-lint` in compact result format
 	$(LOCALBIN)/golangci-lint run --timeout 5m --print-issued-lines=false
 
 .PHONY: lint-fix
-lint-fix: golangci_lint## Check and fix lint issues using `golangci-lint`
+lint-fix: golangci-lint## Check and fix lint issues using `golangci-lint`
 	$(LOCALBIN)/golangci-lint run --fix --timeout 5m
 
 .PHONY: lint-report
-lint-report: lint-report-clean golangci_lint## Check lint issues using `golangci-lint` then export them to a file, then print the list of linters used
+lint-report: lint-report-clean golangci-lint## Check lint issues using `golangci-lint` then export them to a file, then print the list of linters used
 	$(LOCALBIN)/golangci-lint run --timeout 5m --issues-exit-code 0 --out-format json > ./lint-report.json
 
 .PHONY: lint-report-issue-category
-lint-report-issue-category: lint-report golangci_lint## Get lint issues categories
+lint-report-issue-category: lint-report golangci-lint## Get lint issues categories
 	cat ./lint-report.json | jq '.Issues[].FromLinter' | jq -s 'map({(.):1})|add|keys_unsorted'
 
 .PHONY: lint-report-get-category
-lint-report-get-category: lint-report golangci_lint## Get lint issues by category
+lint-report-get-category: lint-report golangci-lint## Get lint issues by category
 	cat ./lint-report.json | jq --arg CATEGORY $$CATEGORY '.Issues[] | select(.FromLinter==$$CATEGORY)'
 
 .PHONY: lint-report-clean
