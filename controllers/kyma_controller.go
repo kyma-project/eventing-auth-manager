@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"time"
 
-	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 	"github.com/kyma-project/lifecycle-manager/api/shared"
 	klmapiv1beta2 "github.com/kyma-project/lifecycle-manager/api/v1beta2"
 	"github.com/pkg/errors"
@@ -22,6 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	eamapiv1alpha1 "github.com/kyma-project/eventing-auth-manager/api/v1alpha1"
 )
 
 // KymaReconciler reconciles a Kyma resource.

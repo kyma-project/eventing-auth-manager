@@ -3,12 +3,13 @@ package ias
 import (
 	"testing"
 
-	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/mocks"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	kcorev1 "k8s.io/api/core/v1"
 	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kpkgclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/mocks"
 )
 
 func Test_ReadCredentials(t *testing.T) {

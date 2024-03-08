@@ -8,12 +8,13 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
-	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api/mocks"
-	eamoidcmocks "github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
+
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
+	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api/mocks"
+	eamoidcmocks "github.com/kyma-project/eventing-auth-manager/internal/ias/internal/oidc/mocks"
 )
 
 func Test_CreateApplication(t *testing.T) {
