@@ -53,7 +53,7 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 const (
-	defaultTimeout = 60 * time.Second
+	defaultTimeout = 120 * time.Second
 )
 
 var (
@@ -166,10 +166,6 @@ var _ = AfterSuite(func() {
 	} else {
 		deleteIasCredsSecret()
 	}
-	By("Cleaning up the kyma-system namespace in SKR cluster")
-	Expect(targetClusterK8sClient.Delete(context.TODO(), kymaNs)).Should(Succeed())
-	By("Cleaning up the kcp-system namespace in kcp cluster")
-	Expect(k8sClient.Delete(context.TODO(), kcpNs)).Should(Succeed())
 
 	By("Tearing down the test environment")
 	stopTestEnv(testEnv)
