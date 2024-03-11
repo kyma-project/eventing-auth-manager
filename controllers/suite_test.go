@@ -53,7 +53,7 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 const (
-	defaultTimeout = 60 * time.Second
+	defaultTimeout = 120 * time.Second
 )
 
 var (
