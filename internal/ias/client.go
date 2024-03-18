@@ -10,6 +10,7 @@ import (
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"k8s.io/utils/ptr"
 	kcontrollerruntime "sigs.k8s.io/controller-runtime"
 
 	"github.com/kyma-project/eventing-auth-manager/internal/ias/internal/api"
@@ -28,7 +29,7 @@ var (
 )
 
 type Client interface {
-	CreateApplication(ctx context.Context, name string) (Application, error)
+	CreateApplication(ctx context.Context, name, globalAccountID string) (Application, error)
 	DeleteApplication(ctx context.Context, name string) error
 	GetCredentials() *Credentials
 }
@@ -78,7 +79,7 @@ func (c *client) GetCredentials() *Credentials {
 
 // CreateApplication creates an application in IAS. This function is not idempotent, because if an application with the specified
 // name already exists, it will be deleted and recreated.
-func (c *client) CreateApplication(ctx context.Context, name string) (Application, error) {
+func (c *client) CreateApplication(ctx context.Context, name, globalAccountID string) (Application, error) {
 	existingApp, err := c.getApplicationByName(ctx, name)
 	if err != nil {
 		return Application{}, err
@@ -97,7 +98,7 @@ func (c *client) CreateApplication(ctx context.Context, name string) (Applicatio
 		}
 	}
 
-	appID, err := c.createNewApplication(ctx, name)
+	appID, err := c.createNewApplication(ctx, name, globalAccountID)
 	if err != nil {
 		return Application{}, err
 	}
@@ -205,8 +206,8 @@ func (c *client) getApplicationByName(ctx context.Context, name string) (*api.Ap
 	return nil, nil //nolint:nilnil
 }
 
-func (c *client) createNewApplication(ctx context.Context, name string) (uuid.UUID, error) {
-	newApplication := newIasApplication(name)
+func (c *client) createNewApplication(ctx context.Context, name, globalAccountID string) (uuid.UUID, error) {
+	newApplication := newIasApplication(name, globalAccountID)
 	res, err := c.api.CreateApplicationWithResponse(ctx, &api.CreateApplicationParams{}, newApplication)
 	if err != nil {
 		return uuid.UUID{}, err
@@ -280,10 +281,11 @@ func extractApplicationID(createAppResponse *api.CreateApplicationResponse) (uui
 	return parsedAppID, nil
 }
 
-func newIasApplication(name string) api.Application {
+func newIasApplication(name, globalAccountID string) api.Application {
 	ssoType := api.OpenIdConnect
 	return api.Application{
-		Name: &name,
+		Name:          &name,
+		GlobalAccount: ptr.To(globalAccountID),
 		Branding: &api.Branding{
 			DisplayName: &name,
 		},

@@ -43,7 +43,7 @@ func stubIasAppCreation(c eamias.Client) {
 
 type iasClientStub struct{}
 
-func (i iasClientStub) CreateApplication(_ context.Context, name string) (eamias.Application, error) {
+func (i iasClientStub) CreateApplication(_ context.Context, name, _ string) (eamias.Application, error) {
 	return eamias.NewApplication(
 		fmt.Sprintf("id-for-%s", name),
 		fmt.Sprintf("client-id-for-%s", name),
@@ -65,7 +65,7 @@ type appCreationFailsIasClientStub struct {
 	iasClientStub
 }
 
-func (i appCreationFailsIasClientStub) CreateApplication(_ context.Context, _ string) (eamias.Application, error) {
+func (i appCreationFailsIasClientStub) CreateApplication(_ context.Context, _, _ string) (eamias.Application, error) {
 	return eamias.Application{}, errIASApplicationCreation
 }
 

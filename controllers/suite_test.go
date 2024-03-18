@@ -148,7 +148,7 @@ var _ = BeforeSuite(func(specCtx SpecContext) {
 	kymaReconciler := controllers.NewKymaReconciler(mgr.GetClient(), mgr.GetScheme())
 	Expect(kymaReconciler.SetupWithManager(mgr)).Should(Succeed())
 
-	eventingAuthReconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme())
+	eventingAuthReconciler := controllers.NewEventingAuthReconciler(mgr.GetClient(), mgr.GetScheme(), "GAID")
 	Expect(eventingAuthReconciler.SetupWithManager(mgr)).Should(Succeed())
 
 	go func() {

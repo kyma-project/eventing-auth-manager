@@ -47,16 +47,18 @@ const (
 // eventingAuthReconciler reconciles a EventingAuth object.
 type eventingAuthReconciler struct {
 	kpkgclient.Client
-	Scheme    *runtime.Scheme
-	iasClient eamias.Client
+	Scheme          *runtime.Scheme
+	iasClient       eamias.Client
+	globalAccountID string
 	// existingIasApplications stores existing IAS apps in memory not to recreate again if exists
 	existingIasApplications map[string]eamias.Application
 }
 
-func NewEventingAuthReconciler(c kpkgclient.Client, s *runtime.Scheme) ManagedReconciler {
+func NewEventingAuthReconciler(c kpkgclient.Client, s *runtime.Scheme, globalAccountID string) ManagedReconciler {
 	return &eventingAuthReconciler{
 		Client:                  c,
 		Scheme:                  s,
+		globalAccountID:         globalAccountID,
 		existingIasApplications: map[string]eamias.Application{},
 	}
 }
@@ -117,7 +119,7 @@ func (r *eventingAuthReconciler) handleApplicationSecret(ctx context.Context, lo
 	if !appExists {
 		var createAppErr error
 		logger.Info("Creating application in IAS")
-		iasApplication, createAppErr = r.iasClient.CreateApplication(ctx, cr.Name)
+		iasApplication, createAppErr = r.iasClient.CreateApplication(ctx, cr.Name, r.globalAccountID)
 		if createAppErr != nil {
 			logger.Error(createAppErr, "Failed to create application in IAS")
 			if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionApplicationReady, createAppErr); err != nil {
