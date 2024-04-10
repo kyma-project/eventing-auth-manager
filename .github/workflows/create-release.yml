@@ -1,0 +1,203 @@
+name: "Create release"
+run-name: Create release ${{ inputs.name }}
+
+env:
+  IMAGE_REPO: europe-docker.pkg.dev/kyma-project/prod/eventing-auth-manager
+  EVENTING_AUTH_MANAGER_REPO: ${{ github.repository_owner }}/eventing-auth-manager
+  GIT_EMAIL: kyma-eventing-bot@sap.com
+  GIT_NAME: kyma-eventing-bot
+  BUMP_SEC_SCANNERS_BRANCH_NAME: sec-scanners-config-${{ inputs.name }}
+  BUMP_EAM_BRANCH_NAME: bump-eam-${{ inputs.name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      name: # release tag
+        description: 'Release tag (i.e. x.y.z)'
+        default: ""
+        required: true
+      sec-scanners-config:
+        type: boolean
+        description: 'Create PR with sec-scanners-config bump'
+        default: true
+      dry-run:
+        type: boolean
+        description: 'Do not publish'
+        default: false
+
+# Required secrets:
+# - GITHUB_TOKEN
+# - BOT_TOKEN
+
+jobs:
+  validate-release:
+    name: Validate release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Check if that release tag is correctly formatted
+        run: "./hack/scripts/check_release_tag.sh ${{ inputs.name }}"
+
+      - name: Check if release tag already exists
+        run: |
+          if [ $(git tag -l ${{ inputs.name }}) ]; then
+            echo "::error ::Tag ${{ inputs.name }} already exists"
+            exit 1
+          fi
+
+      - name: Check for existing artifacts from previous release runs
+        run: "./hack/scripts/check_artifacts_existence.sh ${{ inputs.name }}"
+# Note: This step will be enabled after first release of EAM.
+#      - name: Setup python
+#        uses: actions/setup-python@v4
+#        with:
+#          python-version: '3.9'
+#          cache: 'pip'
+#
+#      - name: Install requirements
+#        run: pip install -r hack/scripts/releaselabelvalidator/requirements.txt
+#
+#      - name: Validate labels
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#          REPOSITORY: ${{ env.EVENTING_AUTH_MANAGER_REPO }}
+#          NAME: ${{ inputs.name }}
+#        run: python3 hack/scripts/releaselabelvalidator/release_label_validator.py
+
+  run-unit-tests:
+    name: Unit tests
+    needs: validate-release
+    uses: kyma-project/eventing-tools/.github/workflows/unit-test-reusable.yml@main
+
+  bump-sec-scanners-config:
+    name: Bump sec-scanners-config
+    needs: validate-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Update sec-scanners-config.yaml
+        if: ${{ inputs.sec-scanners-config }}
+        run: ./hack/scripts/create_scan_config.sh "sec-scanners-config.yaml" ${{ inputs.name }}
+
+      - name: Create PR if anything changed
+        if: ${{ inputs.sec-scanners-config }}
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          prs=$(gh pr list -A ${{ env.GIT_NAME }} --state open --json headRefName | jq -r '.[] | .headRefName')
+          if echo $prs | tr " " '\n' | grep -F -q -x ${{ env.BUMP_SEC_SCANNERS_BRANCH_NAME }}; then
+            echo "PR already exists, no need to create a new one"
+            echo "PR_NUMBER=$(gh pr list --search "base:main head:${{ env.BUMP_SEC_SCANNERS_BRANCH_NAME }}" --json number | jq -r '.[] | .number')" >> $GITHUB_ENV
+          elif [ -z "$(git status --porcelain)" ]; then
+            echo "Nothing changed, no need to create PR"
+            echo "PR_NUMBER=-1" >> $GITHUB_ENV
+          else
+            PR_STATUS=$(./hack/scripts/create_sec_scanner_bump_pr.sh ${{ inputs.name }})
+            echo "PR_NUMBER=$(echo "$PR_STATUS" | tail -n 1)" >> $GITHUB_ENV
+          fi
+
+      - name: Await PR merge
+        if: ${{ inputs.sec-scanners-config }}
+        timeout-minutes: 45
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$PR_NUMBER" -gt 0 ]; then
+            ./hack/scripts/await_pr_merge.sh
+          else
+            echo "Step skipped"
+          fi
+
+  create-draft:
+    name: Create draft release
+    needs: [ bump-sec-scanners-config, validate-release ]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Create draft release
+        id: create-draft
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository_owner }}/eventing-auth-manager
+        run: |
+          RELEASE_ID=$(./hack/scripts/create_draft_release.sh ${{ github.event.inputs.name }})
+          echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
+
+      - name: Create lightweight tag
+        run: |
+          git tag ${{ github.event.inputs.name }}
+          git push origin ${{ github.event.inputs.name }}
+
+    outputs:
+      release_id: ${{ steps.create-draft.outputs.release_id }}
+
+  wait-for-prow-jobs:
+    name: Wait for prow jobs
+    needs: [ create-draft, bump-sec-scanners-config ]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for release-eventing-auth-manager-build status
+        uses: autotelic/action-wait-for-status-check@6556cf50c8fb6608412945382eae73581f56cbb4
+        id: wait-for-post-eam-release-build
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          statusName: "release-eventing-auth-manager-build"
+          timeoutSeconds: "600"
+          ref: main
+
+      - name: Check if release-eventing-auth-manager-build status is not success
+        if: steps.wait-for-post-eam-release-build.outputs.state != 'success'
+        run: |
+          echo 'release-eventing-auth-manager-build failed.'
+          exit 1
+
+  check-prerequisites:
+    name: Check release pre-requisites
+    needs: [ create-draft, run-unit-tests, wait-for-prow-jobs]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Check pre-requisites before publishing release
+        run: ./hack/scripts/check_publish_release_prerequisites.sh ${{ inputs.name }}
+
+  publish-release:
+    name: Publish release
+    needs: [ create-draft, check-prerequisites ]
+    if: ${{ !inputs.dry-run }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git checkout main
+          ./hack/scripts/publish_release.sh ${{ needs.create-draft.outputs.release_id }}
