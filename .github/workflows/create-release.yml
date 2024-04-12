@@ -72,7 +72,51 @@ jobs:
   run-unit-tests:
     name: Unit tests
     needs: validate-release
-    uses: kyma-project/eventing-tools/.github/workflows/unit-test-reusable.yml@main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Cache Go dependencies
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Execute unit test
+        run: make test-ci
+
+  ias-integration-test:
+    name: Integration tests
+    needs: run-unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Golang
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Install Kyma CLI & setup k3d cluster using Kyma CLI
+        run: |
+          make provision-k3d
+
+      - name: Test
+        run: |
+          bin/k3d kubeconfig get kyma > $PWD/k3d_kubeconfig
+          KUBECONFIG=$PWD/k3d_kubeconfig TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH=$PWD/k3d_kubeconfig make test-ci
+        env:
+          USE_EXISTING_CLUSTER: "true"
+          TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH: k3d_kubeconfig
+          TEST_EVENTING_AUTH_IAS_URL: ${{ secrets.TEST_EVENTING_AUTH_IAS_URL }}
+          TEST_EVENTING_AUTH_IAS_USER: ${{ secrets.TEST_EVENTING_AUTH_IAS_USER }}
+          TEST_EVENTING_AUTH_IAS_PASSWORD: ${{ secrets.TEST_EVENTING_AUTH_IAS_PASSWORD }}
 
   bump-sec-scanners-config:
     name: Bump sec-scanners-config
@@ -171,7 +215,7 @@ jobs:
 
   check-prerequisites:
     name: Check release pre-requisites
-    needs: [ create-draft, run-unit-tests, wait-for-prow-jobs]
+    needs: [ create-draft, ias-integration-test, wait-for-prow-jobs]
     runs-on: ubuntu-latest
 
     steps:
