@@ -1,7 +1,7 @@
 module-name: eventing-auth-manager
-rc-tag: 0.0.1
+rc-tag: 1.0.0
 protecode:
-  - europe-docker.pkg.dev/kyma-project/prod/eventing-auth-manager:0.0.1
+  - europe-docker.pkg.dev/kyma-project/prod/eventing-auth-manager:1.0.0
 whitesource:
   language: golang-mod
   subprojects: false
