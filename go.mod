@@ -1,6 +1,6 @@
 module github.com/kyma-project/eventing-auth-manager
 
-go 1.22.0
+go 1.22.2
 
 require (
 	github.com/deepmap/oapi-codegen v1.16.2
