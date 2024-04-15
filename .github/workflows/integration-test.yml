@@ -19,7 +19,7 @@ jobs:
     - name: Setup Golang
       uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.22'
         cache: true
 
     - name: Install Kyma CLI & setup k3d cluster using Kyma CLI
@@ -31,7 +31,7 @@ jobs:
         bin/k3d kubeconfig get kyma > $PWD/k3d_kubeconfig
         KUBECONFIG=$PWD/k3d_kubeconfig TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH=$PWD/k3d_kubeconfig make test-ci
       env:
-        USE_EXISTING_CLUSTER: "true" 
+        USE_EXISTING_CLUSTER: "true"
         TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH: k3d_kubeconfig
         TEST_EVENTING_AUTH_IAS_URL: ${{ secrets.TEST_EVENTING_AUTH_IAS_URL }}
         TEST_EVENTING_AUTH_IAS_USER: ${{ secrets.TEST_EVENTING_AUTH_IAS_USER }}
