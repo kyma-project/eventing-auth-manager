@@ -100,7 +100,7 @@ jobs:
       - name: Setup Golang
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: "go.mod" # This uses the Go version defined in the mod file, in contrast to setting a defined version.
           cache: true
 
       - name: Install Kyma CLI & setup k3d cluster using Kyma CLI
