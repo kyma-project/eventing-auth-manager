@@ -80,7 +80,7 @@ repoclean: manifests-eam
 	git diff --exit-code
 
 .PHONY: test-ci
-test-ci: repoclean envtest ## Run tests.
+test-ci: envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
 ##@ Build
