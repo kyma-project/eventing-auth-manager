@@ -81,6 +81,22 @@ var _ = Describe("EventingAuth Controller happy tests", Serial, Ordered, func() 
 			secret := verifySecretExistsOnTargetCluster()
 			deleteSecretOnTargetCluster(secret)
 		})
+		It("should update CR status when application secret already exists", func() {
+			// given
+			// create application secret before creating EventingAuth CR.
+			createApplicationSecretOnTargetCluster()
+
+			// when
+			// create EventingAuth CR.
+			eventingAuth = createEventingAuth(crName)
+
+			// then
+			verifyEventingAuthStatusReady(eventingAuth)
+
+			// Testing deletion
+			deleteEventingAuthAndVerify(eventingAuth)
+			verifySecretDoesNotExistOnTargetCluster()
+		})
 	})
 })
 
@@ -305,6 +321,23 @@ func deleteApplicationSecretOnTargetCluster() {
 	if err := targetClusterK8sClient.Delete(context.TODO(), &secret); err != nil {
 		Expect(kapierrors.IsNotFound(err)).To(BeTrue())
 	}
+}
+
+func createApplicationSecretOnTargetCluster() {
+	By("Creating dummy application secret on target cluster")
+	appSecret := kcorev1.Secret{
+		ObjectMeta: kmetav1.ObjectMeta{
+			Name:      appSecretObjectKey.Name,
+			Namespace: appSecretObjectKey.Namespace,
+		},
+		Data: map[string][]byte{
+			"client_id":     []byte(uuid.New().String()),
+			"client_secret": []byte(uuid.New().String()),
+			"token_url":     []byte(uuid.New().String()),
+			"certs_url":     []byte(uuid.New().String()),
+		},
+	}
+	Expect(targetClusterK8sClient.Create(context.TODO(), &appSecret)).Should(Succeed())
 }
 
 func createKubeconfigSecret(crName string) {

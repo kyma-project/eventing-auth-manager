@@ -112,6 +112,24 @@ func (r *eventingAuthReconciler) handleApplicationSecret(ctx context.Context, lo
 	}
 	if appSecretExists {
 		logger.Info("Reconciliation done, Application secret already exists")
+
+		// sync CR status.
+		cr.Status.AuthSecret = &eamapiv1alpha1.AuthSecret{
+			ClusterID:      cr.Name,
+			NamespacedName: fmt.Sprintf("%s/%s", skr.ApplicationSecretNamespace, skr.ApplicationSecretName),
+		}
+
+		// update ConditionApplicationReady.
+		_, err := eamapiv1alpha1.UpdateConditionAndState(&cr, eamapiv1alpha1.ConditionApplicationReady, nil)
+		if err != nil {
+			return kcontrollerruntime.Result{}, err
+		}
+
+		// update ConditionSecretReady and sync status.
+		if err := r.updateEventingAuthStatus(ctx, &cr, eamapiv1alpha1.ConditionSecretReady, nil); err != nil {
+			return kcontrollerruntime.Result{}, err
+		}
+
 		return kcontrollerruntime.Result{}, nil
 	}
 
