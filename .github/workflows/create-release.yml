@@ -82,7 +82,7 @@ jobs:
       - name: Cache Go dependencies
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version-file: "go.mod" # This uses the Go version defined in the mod file, in contrast to setting a defined version.
 
       - name: Execute unit test
         run: make test-ci
@@ -100,7 +100,7 @@ jobs:
       - name: Setup Golang
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version-file: "go.mod" # This uses the Go version defined in the mod file, in contrast to setting a defined version.
           cache: true
 
       - name: Install Kyma CLI & setup k3d cluster using Kyma CLI

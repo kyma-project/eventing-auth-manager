@@ -24,7 +24,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.21 # This can be a specific version. E.g. 1.19 or 1.21.x
+          go-version-file: "go.mod" # This uses the Go version defined in the mod file, in contrast to setting a defined version.
 
       - name: Checkout code
         uses: actions/checkout@v4
