@@ -52,22 +52,22 @@ jobs:
 
       - name: Check for existing artifacts from previous release runs
         run: "./hack/scripts/check_artifacts_existence.sh ${{ inputs.name }}"
-# Note: This step will be enabled after first release of EAM.
-#      - name: Setup python
-#        uses: actions/setup-python@v4
-#        with:
-#          python-version: '3.9'
-#          cache: 'pip'
-#
-#      - name: Install requirements
-#        run: pip install -r hack/scripts/releaselabelvalidator/requirements.txt
-#
-#      - name: Validate labels
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          REPOSITORY: ${{ env.EVENTING_AUTH_MANAGER_REPO }}
-#          NAME: ${{ inputs.name }}
-#        run: python3 hack/scripts/releaselabelvalidator/release_label_validator.py
+
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+
+      - name: Install requirements
+        run: pip install -r hack/scripts/releaselabelvalidator/requirements.txt
+
+      - name: Validate labels
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ env.EVENTING_AUTH_MANAGER_REPO }}
+          NAME: ${{ inputs.name }}
+        run: python3 hack/scripts/releaselabelvalidator/release_label_validator.py
 
   run-unit-tests:
     name: Unit tests
