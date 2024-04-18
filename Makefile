@@ -202,7 +202,7 @@ $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 
-GOLANG_CI_LINT_VERSION ?= v1.55.2
+GOLANG_CI_LINT_VERSION ?= v1.57
 .PHONY: golangci-lint
 golangci-lint:
 	test -s $(LOCALBIN)/golangci-lint && $(LOCALBIN)/golangci-lint version | grep -q $(GOLANG_CI_LINT_VERSION) || \
@@ -213,19 +213,19 @@ CATEGORY = "default"
 
 .PHONY: lint
 lint: golangci-lint## Check lint issues using `golangci-lint`
-	$(LOCALBIN)/golangci-lint run --timeout 5m
+	$(LOCALBIN)/golangci-lint run
 
 .PHONY: lint-compact
 lint-compact: golangci-lint## Check lint issues using `golangci-lint` in compact result format
-	$(LOCALBIN)/golangci-lint run --timeout 5m --print-issued-lines=false
+	$(LOCALBIN)/golangci-lint run --print-issued-lines=false
 
 .PHONY: lint-fix
 lint-fix: golangci-lint## Check and fix lint issues using `golangci-lint`
-	$(LOCALBIN)/golangci-lint run --fix --timeout 5m
+	$(LOCALBIN)/golangci-lint run --fix
 
 .PHONY: lint-report
 lint-report: lint-report-clean golangci-lint## Check lint issues using `golangci-lint` then export them to a file, then print the list of linters used
-	$(LOCALBIN)/golangci-lint run --timeout 5m --issues-exit-code 0 --out-format json > ./lint-report.json
+	$(LOCALBIN)/golangci-lint run --issues-exit-code 0 --out-format json > ./lint-report.json
 
 .PHONY: lint-report-issue-category
 lint-report-issue-category: lint-report golangci-lint## Get lint issues categories

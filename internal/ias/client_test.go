@@ -411,9 +411,9 @@ func mockGetAllApplicationsWithResponseStatusOkEmptyResponse(clientMock *mocks.C
 func mockGetAllApplicationsWithResponseStatusOk(clientMock *mocks.ClientWithResponsesInterface, appIds ...uuid.UUID) {
 	appResponses := make([]api.ApplicationResponse, 0)
 	for _, appID := range appIds {
-		id := appID
+		id := &appID
 		appResponses = append(appResponses, api.ApplicationResponse{
-			Id: &id,
+			Id: id,
 		})
 	}
 

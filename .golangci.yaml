@@ -38,6 +38,7 @@ linters:
     - tagliatelle
     - errchkjson
     - noctx
+    - perfsprint
 
 linters-settings:
   gomoddirectives:
