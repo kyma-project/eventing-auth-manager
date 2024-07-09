@@ -4,7 +4,7 @@ go 1.22.2
 
 require (
 	github.com/deepmap/oapi-codegen v1.16.3
-	github.com/go-logr/logr v1.4.1
+	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20240227081321-008f36d2d3c8
 	github.com/oapi-codegen/runtime v1.1.1
