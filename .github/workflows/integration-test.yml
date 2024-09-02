@@ -38,7 +38,7 @@ jobs:
         TEST_EVENTING_AUTH_IAS_PASSWORD: ${{ secrets.TEST_EVENTING_AUTH_IAS_PASSWORD }}
 
     - name: Send slack message on failure
-      uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117
+      uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0
       if: failure()
       with:
         payload-file-path: ".github/workflows/slack-failure-message.json"
