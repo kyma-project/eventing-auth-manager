@@ -15,6 +15,8 @@ SAP Cloud Identity Services - Identity Authentication (IAS) by creating and dele
 * [Generating the SAP Cloud Identity Services API client](#generating-the-sap-cloud-identity-services-api-client)
 * [Getting Started](#getting-started)
 * [Contributing](#contributing)
+* [Code of Conduct](#code-of-conduct)
+* [Licensing](#licensing)
 
 
 ## Description
@@ -235,6 +237,8 @@ export TEST_EVENTING_AUTH_TARGET_KUBECONFIG_PATH=/some/path/.kube/config
 
 ## Contributing
 
+See the [Contributing Rules](CONTRIBUTING.md).
+
 ### How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
 
@@ -266,3 +270,11 @@ make manifests
 **NOTE:** Run `make --help` for more information on all potential `make` targets
 
 More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+
+## Code of Conduct
+
+See the [Code of Conduct](CODE_OF_CONDUCT.md) document.
+
+## Licensing
+
+See the [license](./LICENSE) file.
