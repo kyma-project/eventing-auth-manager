@@ -192,30 +192,45 @@ jobs:
     outputs:
       release_id: ${{ steps.create-draft.outputs.release_id }}
 
-  wait-for-prow-jobs:
+  wait-for-build-job:
     name: Wait for prow jobs
     needs: [ create-draft, bump-sec-scanners-config ]
     runs-on: ubuntu-latest
 
     steps:
-      - name: Wait for release-eventing-auth-manager-build status
-        uses: autotelic/action-wait-for-status-check@6556cf50c8fb6608412945382eae73581f56cbb4
-        id: wait-for-post-eam-release-build
+      - name: Checkout eventing-tools
+        uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          statusName: "release-eventing-auth-manager-build"
-          timeoutSeconds: "600"
+          repository: 'kyma-project/eventing-tools'
+          path: 'kyma-project/eventing-tools'
           ref: main
+          sparse-checkout: 'scripts/wait-for-commit-check'
 
-      - name: Check if release-eventing-auth-manager-build status is not success
-        if: steps.wait-for-post-eam-release-build.outputs.state != 'success'
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install requirements
         run: |
-          echo 'release-eventing-auth-manager-build failed.'
-          exit 1
+          pip install -r $GITHUB_WORKSPACE/kyma-project/eventing-tools/scripts/wait-for-commit-check/requirements.txt
+
+      - name: wait for build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY_FULL_NAME: ${{ github.repository_owner }}/eventing-auth-manager
+          GIT_REF: ${{ inputs.name }}
+          # The re-usable image-builder workflow from neighbors appends the "Build image" suffix to the check run name.
+          GIT_CHECK_RUN_NAME: "build-${{ inputs.name }} / Build image"
+          INTERVAL: 60
+          TIMEOUT: 900
+        run: |
+          python $GITHUB_WORKSPACE/kyma-project/eventing-tools/scripts/wait-for-commit-check/run.py
 
   check-prerequisites:
     name: Check release pre-requisites
-    needs: [ create-draft, ias-integration-test, wait-for-prow-jobs]
+    needs: [ create-draft, ias-integration-test, wait-for-build-job]
     runs-on: ubuntu-latest
 
     steps:
