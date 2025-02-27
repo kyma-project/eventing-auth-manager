@@ -18,12 +18,17 @@ echo "Creating security scan configuration file:"
 
 cat <<EOF | tee ${FILENAME}
 module-name: eventing-auth-manager
+kind: kcp
 rc-tag: ${TAG}
-protecode:
+bdba:
   - europe-docker.pkg.dev/kyma-project/prod/eventing-auth-manager:${TAG}
-whitesource:
+mend:
   language: golang-mod
-  subprojects: false
+  exclude:
+    - "**/test/**"
+    - "**/*_test.go"
+checkmarx-one:
+  preset: go-default
   exclude:
     - "**/test/**"
     - "**/*_test.go"
