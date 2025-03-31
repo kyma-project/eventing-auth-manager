@@ -1,7 +1,6 @@
 module github.com/kyma-project/eventing-auth-manager
 
 go 1.24.0
-
 require (
 	github.com/deepmap/oapi-codegen v1.16.3
 	github.com/go-logr/logr v1.4.2
@@ -16,7 +15,7 @@ require (
 	k8s.io/apimachinery v0.32.2
 	k8s.io/client-go v0.32.2
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
-	sigs.k8s.io/controller-runtime v0.20.2
+	sigs.k8s.io/controller-runtime v0.20.4
 )
 
 require (
