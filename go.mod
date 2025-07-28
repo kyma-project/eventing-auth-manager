@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/google/uuid v1.6.0
 	github.com/kyma-project/lifecycle-manager/api v0.0.0-20250612093436-c4b4ac4eb7a8
-	github.com/oapi-codegen/runtime v1.1.1
+	github.com/oapi-codegen/runtime v1.1.2
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/pkg/errors v0.9.1
