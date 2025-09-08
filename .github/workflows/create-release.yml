@@ -80,7 +80,7 @@ jobs:
           ref: main
 
       - name: Cache Go dependencies
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod" # This uses the Go version defined in the mod file, in contrast to setting a defined version.
 
@@ -98,7 +98,7 @@ jobs:
           ref: main
 
       - name: Setup Golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod" # This uses the Go version defined in the mod file, in contrast to setting a defined version.
           cache: true
