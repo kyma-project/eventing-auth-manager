@@ -6,27 +6,28 @@ Eventing Auth Manager is a central component that is deployed in Kyma Control Pl
 
 For more information, see the [`/contributor`](./docs/contributor) folder.
 
-
 ## Getting Started
 
-You need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
+### Prerequisites
+ 
+You must have a Kubernetes cluster. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing purposes, or use a remote one.
 
 > ### Note 
-> Your controller automatically uses the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+> Your controller automatically uses the current context in your kubeconfig file. To check your current context, run `kubectl cluster-info`.
 
 ### Preparing the Clusters for Local Development
 
-To run the controller locally, you need to have two clusters available. One cluster is used to run the controller, and the other cluster is used as a target for the created secret.
+To run the controller locally, you need to have two clusters available. One cluster is used to run the controller, and the other cluster is used as a target for the created Secret.
 
 #### Prepare the Cluster that Is Used to Run the Controller
 
-1. Create the namespace to deploy the manager and the IAS credential secret:
+1. Create the namespace to deploy the manager and the IAS credential Secret:
 
    ```sh
    kubectl create ns kcp-system
    ```
 
-2. Create the secret for the IAS credentials specified by: 
+2. Create the Secret for the IAS credentials specified by: 
 
 - `TEST_EVENTING_AUTH_IAS_USER`
 - `TEST_EVENTING_AUTH_IAS_PASSWORD`
@@ -36,19 +37,19 @@ To run the controller locally, you need to have two clusters available. One clus
    kubectl create secret generic eventing-auth-ias-creds -n kcp-system --from-literal=username=$TEST_EVENTING_AUTH_IAS_USER --from-literal=password=$TEST_EVENTING_AUTH_IAS_PASSWORD --from-literal=url=$TEST_EVENTING_AUTH_IAS_URL
    ```
 
-3. Create the secret containing the kubeconfig of the cluster on which the "eventing-webhook-auth" secret is created by specifying `PATH_TO_TARGET_CLUSTER_KUBECONFIG` and `KYMA_CR_NAME`.
+3. Create the Secret containing the kubeconfig of the cluster on which the `eventing-webhook-auth` Secret is created by specifying `PATH_TO_TARGET_CLUSTER_KUBECONFIG` and `KYMA_CR_NAME`.
 
    ```sh
    kubectl create secret generic kubeconfig-$KYMA_CR_NAME -n kcp-system --from-file=config=$PATH_TO_TARGET_CLUSTER_KUBECONFIG
    ```
 
-#### Prepare the target cluster
+#### Prepare the Target Cluster
 
-Create the namespace in which the "eventing-webhook-auth" secret is created on the target cluster:
+Create the namespace in which the `eventing-webhook-auth` Secret is created in the target cluster:
 
-   ```sh
-   kubectl create ns kyma-system
-   ```
+```sh
+kubectl create ns kyma-system
+```
 
 ### Running in the Cluster
 
