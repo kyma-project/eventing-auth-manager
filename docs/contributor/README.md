@@ -1,6 +1,6 @@
 # Eventing Auth Manager
 
-Eventing Auth Manager is a central component that is deployed in Kyma Control Plane. The component manages applications in the SAP Cloud Identity Services - Identity Authentication (IAS) by creating and deleting them based on the creation or deletion of a managed Kyma runtime.
+Eventing Auth Manager is a central component that is deployed in Kyma Control Plane (KCP). The component manages applications in the SAP Cloud Identity Services - Identity Authentication by creating and deleting them based on the creation or deletion of a managed Kyma runtime.
 
 ## Architecture
 
@@ -23,18 +23,18 @@ For more information, see the [specification file](https://github.com/kyma-proje
 <!-- EventingAuth v1alpha1 operator.kyma-project.io -->
 | Parameter                        | Description                                                                                                                               |
 |----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| **status.conditions**            | Conditions associated with EventingAuthStatus. There are conditions for the creation of IAS application and the Secret of the managed runtime |
-| **status.iasApplication**        | Application contains information about a created IAS application                                                                          |
-| **status.iasApplication.name**   | Name of the application in IAS                                                                                                            |
-| **status.iasApplication.uuid**   | Application ID in IAS                                                                                                                     |
-| **status.secret**                | AuthSecret contains information about created K8s secret                                                                                  |
-| **status.secret.clusterId**      | Runtime ID of the cluster where the Secret is created                                                                                     |
-| **status.secret.namespacedName** | NamespacedName of the Secret on the managed runtime                                                                                       |
-| **status.state**                 | State signifies the current state of CustomObject. Value can be one of (`Ready`, `NotReady`).                                                 |
+| **status.conditions**            | Conditions associated with EventingAuthStatus. There are conditions for the creation of SAP Cloud Identity Services - Identity Authentication application and the Secret of the managed runtime. |
+| **status.iasApplication**        | Application contains information about a created SAP Cloud Identity Services - Identity Authentication application.                                                                          |
+| **status.iasApplication.name**   | Name of the application in SAP Cloud Identity Services - Identity Authentication.                                                                                                            |
+| **status.iasApplication.uuid**   | Application ID in SAP Cloud Identity Services - Identity Authentication.                                                                                                                     |
+| **status.secret**                | AuthSecret contains information about the created Kubernetes Secret.                                                                                  |
+| **status.secret.clusterId**      | Runtime ID of the cluster where the Secret is created.                                                                                     |
+| **status.secret.namespacedName** | NamespacedName of the Secret in the managed runtime.                                                                                       |
+| **status.state**                 | State signifies the current state of CustomObject. The value is either `Ready`, or `NotReady`.                                                 |
 
 ### `eventing-webhook-auth` Secret
 
-The Secret created on the managed runtime looks following:
+The Secret created in the managed runtime looks as follows:
 
 ```yaml
 apiVersion: v1

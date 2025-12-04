@@ -2,7 +2,7 @@
 
 # Eventing Auth Manager
 
-Eventing Auth Manager is a central component that is deployed in Kyma Control Plane. The component manages applications in the SAP Cloud Identity Services - Identity Authentication (IAS) by creating and deleting them based on the creation or deletion of a managed Kyma runtime.
+Eventing Auth Manager is a central component that is deployed in Kyma Control Plane (KCP). The component manages applications in the SAP Cloud Identity Services - Identity Authentication by creating and deleting them based on the creation or deletion of a managed Kyma runtime.
 
 For more information, see the [`/contributor`](./docs/contributor) folder.
 
@@ -59,7 +59,7 @@ kubectl create ns kyma-system
    make install
    ```
 
-2. Update the name of the custom resource (CR) in `config/samples/operator_v1beta2_kyma.yaml` to contain the name of the kubeconfig secret created in [Preparing the clusters](#preparing-the-clusters). The Kyma CR name is the same as the target K8s cluster name.
+2. Update the name of the custom resource (CR) in `config/samples/operator_v1beta2_kyma.yaml` to contain the name of the kubeconfig secret created in [Preparing the clusters](#preparing-the-clusters). The Kyma CR name is the same as the target Kubernetes cluster name.
 
 3. Install the CRs instances:
 
@@ -151,7 +151,7 @@ For general contributing guidelines, see the [Contributing Rules](CONTRIBUTING.m
 
 ### Modify the API definitions
 
-If you are editing the API definitions, generate the manifests, such as CRs or CRDs, using:
+If you are editing the API definitions, generate the manifests, such as CRs or CRDs, using the following command:
 
 ```sh
 make manifests
