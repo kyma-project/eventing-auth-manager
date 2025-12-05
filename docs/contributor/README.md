@@ -4,7 +4,7 @@ Eventing Auth Manager is a central component that is deployed in Kyma Control Pl
 
 ## Architecture
 
-Eventing Auth Manager manages the credentials for IAS applications used by webhooks in the `eventing` component. When a new managed Kyma runtime is provisioned, the component creates a new [OIDC](https://openid.net/connect/) SAP Cloud Identity Services - Identity Authentication application for this runtime and stores the credentials in a Secret in the new runtime.
+Eventing Auth Manager manages the credentials for SAP Cloud Identity Services - Identity Authentication applications used by webhooks in the `eventing` component. When a new managed Kyma runtime is provisioned, the component creates a new [OIDC](https://openid.net/connect/) SAP Cloud Identity Services - Identity Authentication application for this runtime and stores the credentials in a Secret in the new runtime.
 
 ![eventing-auth-manager-overview](./assets/overview.drawio.svg)
 
@@ -52,14 +52,14 @@ data:
 
 ### Name References Between Resources
 
-The Kyma CR, whose creation is the trigger for the creation of the EventingAuth CR, uses the unique runtime ID of the managed Kyma runtime as the name. This name is also used as the name for the EventingAuth CR and the IAS application. In this way, the EventingAuth CR and the IAS application can be assigned to the specific managed runtime.
+The Kyma CR, whose creation is the trigger for the creation of the EventingAuth CR, uses the unique runtime ID of the managed Kyma runtime as the name. This name is also used as the name for the EventingAuth CR and the SAP Cloud Identity Services - Identity Authentication application. In this way, the EventingAuth CR and the SAP Cloud Identity Services - Identity Authentication application can be assigned to the specific managed runtime.
 
 ### Resource Naming Constraints
 
 The controller makes assumptions about the names used in the control plane cluster to read the correct resources. The assumptions are the following:
 - The name of the Kyma CR is the unique runtime ID of the managed runtime.
 - The name of the Kyma CR can be used to read the kubeconfig of the managed runtimes from a Kubernetes Secret with the name format `kubeconfig-<runtime-id>` in the "kcp-system" namespace.
-- The IAS credentials are stored in a Kubernetes Secret named `eventing-auth-ias-creds` in the `kcp-system` namespace, and the data is stored in the following format:
+- The SAP Cloud Identity Services - Identity Authentication credentials are stored in a Kubernetes Secret named `eventing-auth-ias-creds` in the `kcp-system` namespace, and the data is stored in the following format:
 
   ```yaml
   apiVersion: v1

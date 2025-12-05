@@ -21,13 +21,13 @@ To run the controller locally, you need to have two clusters available. One clus
 
 #### Prepare the Cluster that Is Used to Run the Controller
 
-1. Create the namespace to deploy the manager and the IAS credential Secret:
+1. Create the namespace to deploy the manager and the SAP Cloud Identity Services - Identity Authentication credential Secret:
 
    ```sh
    kubectl create ns kcp-system
    ```
 
-2. Create the Secret for the IAS credentials specified by: 
+2. Create the Secret for the SAP Cloud Identity Services - Identity Authentication credentials specified by: 
 
 - `TEST_EVENTING_AUTH_IAS_USER`
 - `TEST_EVENTING_AUTH_IAS_PASSWORD`
@@ -103,9 +103,9 @@ To execute the tests, run:
 make test
 ```
 
-#### IAS Stub
+#### SAP Cloud Identity Services - Identity Authentication Stub
 
-By default, the integration tests use a stub for the IAS API. This stub returns. It's also possible to use the real IAS API by setting all the following environment variables:
+By default, the integration tests use a stub for the SAP Cloud Identity Services - Identity Authentication API. This stub returns. It's also possible to use the real SAP Cloud Identity Services - Identity Authentication API by setting all the following environment variables:
 
 ```sh
 export TEST_EVENTING_AUTH_IAS_URL=https://my-tenant.accounts.ondemand.com
@@ -140,7 +140,7 @@ For general contributing guidelines, see the [Contributing Rules](CONTRIBUTING.m
    make install
    ```
 
-2. In a new terminal window, run your controller
+2. In a new terminal window, run your controller:
 
    ```sh
    make run
