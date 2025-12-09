@@ -16,6 +16,7 @@ COPY cmd/main.go cmd/main.go
 COPY api/ api/
 COPY controllers/ controllers/
 COPY internal/ internal/
+COPY scripts/docker/entrypoint.sh entrypoint.sh
 
 # Build the GOARCH has not a default value to allow the binary be built according to the host where the command
 # was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
@@ -25,11 +26,14 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOFIPS140=v1.0.0 
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM alpine:3.22
 WORKDIR /
 COPY --from=builder /app/manager .
+COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
+
+RUN chmod +x ./entrypoint.sh
 USER 65532:65532
 
-ENTRYPOINT ["scripts/docker/entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["/manager"]
 
