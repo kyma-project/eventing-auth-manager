@@ -1,9 +1,7 @@
 module-name: eventing-auth-manager
 kind: kcp
-# The rc-tag (release candidate tag) marks the tag of the image that needs to be scanned before it can be released.
-# Remove the rc-tag field after a successful release.
 bdba:
-  - europe-docker.pkg.dev/kyma-project/prod/eventing-auth-manager:1.0.2
+  - europe-docker.pkg.dev/kyma-project/prod/eventing-auth-manager:main
 mend:
   language: golang-mod
   exclude:
