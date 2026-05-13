@@ -70,3 +70,7 @@ func (m MockClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersion
 func (m MockClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
 	return false, nil
 }
+
+func (m MockClient) Apply(ctx context.Context, obj runtime.ApplyConfiguration, opts ...kpkgclient.ApplyOption) error {
+	return nil
+}

@@ -92,8 +92,6 @@ spec:
                       description: |-
                         Name is a unique identifier of the module.
                         It is used to resolve a ModuleTemplate for creating a set of resources on the cluster.
-
-                        Name can only be the ModuleName label value of the module-template, e.g. operator.kyma-project.io/module-name=my-module
                       type: string
                     remoteModuleTemplateRef:
                       description: |-
@@ -206,10 +204,14 @@ spec:
                       type: string
                     fqdn:
                       description: |-
-                        FQDN is the fully qualified domain name of the module.
-                        In the ModuleTemplate it is located in .spec.descriptor.component.name of the ModuleTemplate
-                        FQDN is used to calculate Namespace and Name of the Manifest for tracking.
+                        Deprecated: This field is deprecated and will be removed in the upcoming API version.
+                        Use the `OCMComponentName` field instead to track the OCM component name of the module.
                       type: string
+                    maintenance:
+                      default: false
+                      description: Maintenance indicates whether the module is currently
+                        in a maintenance window.
+                      type: boolean
                     manifest:
                       description: Manifest contains the Information of a related
                         Manifest
@@ -270,6 +272,10 @@ spec:
                       description: |-
                         Name defines the name of the Module in the Spec that the status is used for.
                         It can be any kind of Reference format supported by Module.Name.
+                      type: string
+                    ocmComponentName:
+                      description: OCMComponentName represents the OCM (Open Component
+                        Model) component name of the module.
                       type: string
                     resource:
                       description: Resource contains information about the created
@@ -398,7 +404,8 @@ spec:
               state:
                 description: |-
                   State signifies current state of Kyma.
-                  Value can be one of ("Ready", "Processing", "Error", "Deleting").
+                  Value can be one of ("Ready", "Processing", "Warning", "Error", "Deleting").
+                  Note: The requeue interval in Error State is subject to rate limiting.
                 enum:
                 - Processing
                 - Deleting
