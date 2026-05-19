@@ -2,8 +2,8 @@
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.28.0
-K3D_K8S_VERSION = 1.28.4
+ENVTEST_K8S_VERSION = 1.34.1
+K3D_K8S_VERSION = 1.34.1
 
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
