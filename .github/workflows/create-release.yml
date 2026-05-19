@@ -6,7 +6,6 @@ env:
   EVENTING_AUTH_MANAGER_REPO: ${{ github.repository_owner }}/eventing-auth-manager
   GIT_EMAIL: kyma-eventing-bot@sap.com
   GIT_NAME: kyma-eventing-bot
-  BUMP_SEC_SCANNERS_BRANCH_NAME: sec-scanners-config-${{ inputs.name }}
   BUMP_EAM_BRANCH_NAME: bump-eam-${{ inputs.name }}
 
 on:
@@ -16,18 +15,10 @@ on:
         description: 'Release tag (i.e. x.y.z)'
         default: ""
         required: true
-      sec-scanners-config:
-        type: boolean
-        description: 'Create PR with sec-scanners-config bump'
-        default: true
       dry-run:
         type: boolean
         description: 'Do not publish'
         default: false
-
-# Required secrets:
-# - GITHUB_TOKEN
-# - BOT_TOKEN
 
 jobs:
   validate-release:
@@ -118,54 +109,9 @@ jobs:
           TEST_EVENTING_AUTH_IAS_USER: ${{ secrets.TEST_EVENTING_AUTH_IAS_USER }}
           TEST_EVENTING_AUTH_IAS_PASSWORD: ${{ secrets.TEST_EVENTING_AUTH_IAS_PASSWORD }}
 
-  bump-sec-scanners-config:
-    name: Bump sec-scanners-config
-    needs: validate-release
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: main
-
-      - name: Update sec-scanners-config.yaml
-        if: ${{ inputs.sec-scanners-config }}
-        run: ./hack/scripts/create_scan_config.sh "sec-scanners-config.yaml" ${{ inputs.name }}
-
-      - name: Create PR if anything changed
-        if: ${{ inputs.sec-scanners-config }}
-        env:
-          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
-        run: |
-          prs=$(gh pr list -A ${{ env.GIT_NAME }} --state open --json headRefName | jq -r '.[] | .headRefName')
-          if echo $prs | tr " " '\n' | grep -F -q -x ${{ env.BUMP_SEC_SCANNERS_BRANCH_NAME }}; then
-            echo "PR already exists, no need to create a new one"
-            echo "PR_NUMBER=$(gh pr list --search "base:main head:${{ env.BUMP_SEC_SCANNERS_BRANCH_NAME }}" --json number | jq -r '.[] | .number')" >> $GITHUB_ENV
-          elif [ -z "$(git status --porcelain)" ]; then
-            echo "Nothing changed, no need to create PR"
-            echo "PR_NUMBER=-1" >> $GITHUB_ENV
-          else
-            PR_STATUS=$(./hack/scripts/create_sec_scanner_bump_pr.sh ${{ inputs.name }})
-            echo "PR_NUMBER=$(echo "$PR_STATUS" | tail -n 1)" >> $GITHUB_ENV
-          fi
-
-      - name: Await PR merge
-        if: ${{ inputs.sec-scanners-config }}
-        timeout-minutes: 45
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ "$PR_NUMBER" -gt 0 ]; then
-            ./hack/scripts/await_pr_merge.sh
-          else
-            echo "Step skipped"
-          fi
-
   create-draft:
     name: Create draft release
-    needs: [ bump-sec-scanners-config, validate-release ]
+    needs: [ validate-release ]
     runs-on: ubuntu-latest
 
     steps:
@@ -197,7 +143,7 @@ jobs:
 
   wait-for-build-job:
     name: Wait for prow jobs
-    needs: [ create-draft, bump-sec-scanners-config ]
+    needs: [ create-draft ]
     runs-on: ubuntu-latest
 
     steps:
