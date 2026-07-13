@@ -1,0 +1,4 @@
+name: kyma-project.io/kyma-runtime/kcp-components/eventing-auth-manager
+team: kyma/phoenix
+images:
+  - europe-docker.pkg.dev/kyma-project/prod/eventing-auth-manager:main
