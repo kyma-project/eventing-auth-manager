@@ -6,7 +6,7 @@ Eventing Auth Manager is a central component that is deployed in Kyma Control Pl
 
 Eventing Auth Manager manages the credentials for SAP Cloud Identity Services - Identity Authentication applications used by webhooks in the `eventing` component. When a new managed Kyma runtime is provisioned, the component creates a new [OIDC](https://openid.net/connect/) SAP Cloud Identity Services - Identity Authentication application for this runtime and stores the credentials in a Secret in the new runtime.
 
-![eventing-auth-manager-overview](./assets/overview.drawio.svg)
+![eventing-auth-manager-overview](./assets/overview.drawio.png)
 
 A Kyma custom resource (CR) is created for each runtime. Eventing Auth Manager watches the creation and deletion of Kyma CRs. Once a Kyma CR is created, the Eventing Auth Manager creates an EventingAuth CR.
 
@@ -14,7 +14,7 @@ The reconciliation of the EventingAuth CR creates an application in SAP Cloud Id
 
 When the Kyma CR is deleted, the controller deletes the EventingAuth CR. Once the EventingAuth CR is deleted, the Eventing Auth Manager deletes the application in SAP Cloud Identity Services - Identity Authentication and the Secret in the runtime.
 
-![controller-flow](./assets/controller-flow.drawio.svg)
+![controller-flow](./assets/controller-flow.drawio.png)
 
 ## EventingAuth Custom Resource
 
