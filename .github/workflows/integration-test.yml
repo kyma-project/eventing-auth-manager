@@ -17,7 +17,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Setup Golang
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version-file: "go.mod" # This uses the Go version defined in the mod file, in contrast to setting a defined version.
         cache: true
