@@ -89,6 +89,10 @@ test-ci: envtest ## Run tests.
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/main.go
 
+.PHONY: build-for-codeql
+build-for-codeql: ## Build all packages for CodeQL analysis (no generators, no output).
+	go build -o /dev/null ./...
+
 .PHONY: build-ci
 build-ci: repoclean ## Build manager binary.
 	go build -o bin/manager cmd/main.go
