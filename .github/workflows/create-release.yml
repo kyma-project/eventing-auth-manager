@@ -28,6 +28,8 @@ jobs:
   validate-release:
     name: Validate release
     runs-on: ubuntu-latest
+    env:
+      RELEASE_NAME: ${{ inputs.name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,17 +38,17 @@ jobs:
           ref: main
 
       - name: Check if that release tag is correctly formatted
-        run: "./hack/scripts/check_release_tag.sh ${{ inputs.name }}"
+        run: "./hack/scripts/check_release_tag.sh $RELEASE_NAME"
 
       - name: Check if release tag already exists
         run: |
-          if [ $(git tag -l ${{ inputs.name }}) ]; then
+          if [ $(git tag -l "$RELEASE_NAME") ]; then
             echo "::error ::Tag ${{ inputs.name }} already exists"
             exit 1
           fi
 
       - name: Check for existing artifacts from previous release runs
-        run: "./hack/scripts/check_artifacts_existence.sh ${{ inputs.name }}"
+        run: "./hack/scripts/check_artifacts_existence.sh $RELEASE_NAME"
 
       - name: Setup python
         uses: actions/setup-python@v4
@@ -119,6 +121,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      RELEASE_NAME: ${{ inputs.name }}
 
     steps:
       - name: Checkout code
@@ -133,13 +137,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository_owner }}/eventing-auth-manager
         run: |
-          RELEASE_ID=$(./hack/scripts/create_draft_release.sh ${{ github.event.inputs.name }})
+          RELEASE_ID=$(./hack/scripts/create_draft_release.sh "$RELEASE_NAME")
           echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
 
       - name: Create lightweight tag
         run: |
-          git tag ${{ github.event.inputs.name }}
-          git push origin ${{ github.event.inputs.name }}
+          git tag "$RELEASE_NAME"
+          git push origin "$RELEASE_NAME"
 
     outputs:
       release_id: ${{ steps.create-draft.outputs.release_id }}
@@ -160,6 +164,8 @@ jobs:
     name: Check release pre-requisites
     needs: [ create-draft, ias-integration-test, build-image ]
     runs-on: ubuntu-latest
+    env:
+      RELEASE_NAME: ${{ inputs.name }}
 
     steps:
       - name: Checkout code
@@ -168,7 +174,7 @@ jobs:
           ref: main
 
       - name: Check pre-requisites before publishing release
-        run: ./hack/scripts/check_publish_release_prerequisites.sh ${{ inputs.name }}
+        run: ./hack/scripts/check_publish_release_prerequisites.sh "$RELEASE_NAME"
 
   publish-release:
     name: Publish release
@@ -177,6 +183,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      RELEASE_NAME: ${{ inputs.name }}
 
     steps:
       - name: Checkout code
