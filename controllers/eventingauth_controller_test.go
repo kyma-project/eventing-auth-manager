@@ -21,6 +21,8 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 )
 
+const testOwnerRefValue = "test"
+
 var appSecretObjectKey = kpkgclient.ObjectKey{Name: skr.ApplicationSecretName, Namespace: skr.ApplicationSecretNamespace}
 
 // Since all tests use the same target cluster and therefore share the same application secret, they need to be executed serially.
@@ -180,10 +182,10 @@ func createEventingAuthWithWrongOwnerRef(name string) *eamapiv1alpha1.EventingAu
 			Namespace: skr.KcpNamespace,
 			OwnerReferences: []kmetav1.OwnerReference{
 				{
-					APIVersion:         "test",
-					Kind:               "test",
-					Name:               "test",
-					UID:                "test",
+					APIVersion:         testOwnerRefValue,
+					Kind:               testOwnerRefValue,
+					Name:               testOwnerRefValue,
+					UID:                testOwnerRefValue,
 					Controller:         ptr.To(true),
 					BlockOwnerDeletion: ptr.To(true),
 				},

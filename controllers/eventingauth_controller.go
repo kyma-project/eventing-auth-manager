@@ -82,7 +82,7 @@ func (r *eventingAuthReconciler) Reconcile(ctx context.Context, req kcontrollerr
 		return kcontrollerruntime.Result{}, err
 	}
 	// check DeletionTimestamp to determine if object is under deletion
-	if cr.ObjectMeta.DeletionTimestamp.IsZero() {
+	if cr.DeletionTimestamp.IsZero() {
 		if err = r.addFinalizer(ctx, &cr); err != nil {
 			return kcontrollerruntime.Result{}, err
 		}
@@ -280,7 +280,7 @@ func (r *eventingAuthReconciler) updateEventingAuthStatus(ctx context.Context, c
 
 	// fetch the latest EventingAuth object, to avoid k8s conflict errors
 	actualEventingAuth := &eamapiv1alpha1.EventingAuth{}
-	if err := r.Client.Get(ctx, *namespacedName, actualEventingAuth); err != nil {
+	if err := r.Get(ctx, *namespacedName, actualEventingAuth); err != nil {
 		return err
 	}
 

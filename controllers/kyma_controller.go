@@ -52,7 +52,7 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req kcontrollerruntime.R
 		Version: klmapiv1beta2.GroupVersion.Version,
 		Kind:    string(shared.KymaKind),
 	})
-	err := r.Client.Get(ctx, req.NamespacedName, metadata)
+	err := r.Get(ctx, req.NamespacedName, metadata)
 	if err != nil {
 		return kcontrollerruntime.Result{}, client.IgnoreNotFound(err)
 	}
@@ -66,7 +66,7 @@ func (r *KymaReconciler) Reconcile(ctx context.Context, req kcontrollerruntime.R
 
 func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *kmetav1.PartialObjectMetadata) error {
 	actual := &eamapiv1alpha1.EventingAuth{}
-	err := r.Client.Get(ctx, types.NamespacedName{Namespace: kyma.Namespace, Name: kyma.Name}, actual)
+	err := r.Get(ctx, types.NamespacedName{Namespace: kyma.Namespace, Name: kyma.Name}, actual)
 	if err != nil {
 		if kapierrors.IsNotFound(err) {
 			desired := &eamapiv1alpha1.EventingAuth{
@@ -78,7 +78,7 @@ func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *kmetav1.P
 			if err = controllerutil.SetControllerReference(kyma, desired, r.Scheme); err != nil {
 				return err
 			}
-			err = r.Client.Create(ctx, desired)
+			err = r.Create(ctx, desired)
 			if err != nil {
 				return fmt.Errorf("failed to create EventingAuth resource: %w", err)
 			}
@@ -109,7 +109,7 @@ func (r *KymaReconciler) createEventingAuth(ctx context.Context, kyma *kmetav1.P
 		return err
 	}
 	if !reflect.DeepEqual(desired, actual) {
-		err = r.Client.Update(ctx, desired, &client.UpdateOptions{})
+		err = r.Update(ctx, desired, &client.UpdateOptions{})
 		if err != nil {
 			return errors.Wrap(err, "failed to patch EventingAuth resource")
 		}
