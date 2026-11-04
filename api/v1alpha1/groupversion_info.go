@@ -29,7 +29,7 @@ var (
 	groupVersion = schema.GroupVersion{Group: "operator.kyma-project.io", Version: "v1alpha1"} //nolint:gochecknoglobals // Used internally in the package.
 
 	// schemeBuilder is used to add go types to the GroupVersionKind scheme.
-	schemeBuilder = &scheme.Builder{GroupVersion: groupVersion} //nolint:gochecknoglobals // Used internally in the package.
+	schemeBuilder = &scheme.Builder{GroupVersion: groupVersion} //nolint:gochecknoglobals,staticcheck // Used internally in the package; scheme.Builder is the generated kubebuilder scaffolding for api packages.
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = schemeBuilder.AddToScheme //nolint:gochecknoglobals // Used outside the package.
